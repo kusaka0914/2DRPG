@@ -11,6 +11,17 @@ rpg_game_2d
 DragonQuestRPG
 *.exe
 
+# Debug files (macOS)
+*.dSYM/
+*.dSYM.zip
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Core dumps
+core
+
 # IDE files
 .vscode/
 .idea/
@@ -20,6 +31,12 @@ DragonQuestRPG
 
 # Mac files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # CMake generated files
 CMakeCache.txt
@@ -27,7 +44,16 @@ CMakeFiles/
 cmake_install.cmake
 Makefile.cmake
 
+# Assets (optional - remove if you want to track game assets)
+# assets/characters/*.png
+# assets/enemies/*.png
+
 # Temporary files
 *.tmp
 *.temp
-*.log 
+*.log
+
+# Backup files
+*.bak
+*.backup
+*~ 
