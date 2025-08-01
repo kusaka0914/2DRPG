@@ -45,6 +45,10 @@ private:
     // 防御状態
     bool playerDefending;
 
+    std::vector<std::string> currentOptions;
+    int selectedOption;
+    bool isShowingOptions;
+
 public:
     BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy);
     
@@ -58,7 +62,6 @@ public:
     
 private:
     void setupUI();
-    void updatePlayerTurnUI();
     void updateStatus();
     void addBattleLog(const std::string& message);
     void showMessage(const std::string& message);
@@ -74,4 +77,10 @@ private:
     void checkBattleEnd();
     void showResult();
     void endBattle();
+    void handleOptionSelection(const InputManager& input);
+    void showPlayerOptions();
+    void showSpellOptions();
+    void showItemOptions();
+    void updateOptionDisplay();
+    void executeSelectedOption();
 }; 

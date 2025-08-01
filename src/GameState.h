@@ -7,8 +7,10 @@ enum class StateType {
     FIELD,
     BATTLE,
     TOWN,
-    STATUS,
-    GAME_OVER
+    CASTLE,
+    ROOM,
+    NIGHT,
+    DEMON_CASTLE
 };
 
 // 前方宣言

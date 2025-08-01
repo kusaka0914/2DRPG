@@ -4,7 +4,7 @@
 #include "Player.h"
 #include <memory>
 
-class CastleState : public GameState {
+class DemonCastleState : public GameState {
 private:
     std::shared_ptr<Player> player;
     UIManager ui;
@@ -15,9 +15,8 @@ private:
     const int ROOM_WIDTH = 25;
     const int ROOM_HEIGHT = 20;
     
-    // 城のオブジェクト位置
-    int throneX, throneY;    // 王座
-    int guardX, guardY;      // 衛兵
+    // 魔王の位置
+    int demonX, demonY;
     int doorX, doorY;        // 出口ドア
     
     // 移動タイマー
@@ -28,17 +27,14 @@ private:
     Label* messageBoard;
     bool isShowingMessage;
     
-    // 王様との会話
-    bool isTalkingToKing;
+    // 魔王との会話
+    bool isTalkingToDemon;
     int dialogueStep;
-    std::vector<std::string> kingDialogues;
-    bool hasReceivedQuest;
-    
-    // 魔王の城への移行フラグ
-    bool shouldGoToDemonCastle;
+    std::vector<std::string> demonDialogues;
+    bool hasReceivedEvilQuest;
     
 public:
-    CastleState(std::shared_ptr<Player> player);
+    DemonCastleState(std::shared_ptr<Player> player);
     
     void enter() override;
     void exit() override;
@@ -46,11 +42,11 @@ public:
     void render(Graphics& graphics) override;
     void handleInput(const InputManager& input) override;
     
-    StateType getType() const override { return StateType::CASTLE; }
+    StateType getType() const override { return StateType::DEMON_CASTLE; }
     
 private:
     void setupUI();
-    void setupCastle();
+    void setupDemonCastle();
     void handleMovement(const InputManager& input);
     void checkInteraction();
     void startDialogue();
@@ -58,13 +54,12 @@ private:
     void showCurrentDialogue();
     void showMessage(const std::string& message);
     void clearMessage();
-    void drawCastle(Graphics& graphics);
-    void drawCastleObjects(Graphics& graphics);
+    void drawDemonCastle(Graphics& graphics);
+    void drawDemonCastleObjects(Graphics& graphics);
     void drawPlayer(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
     bool isNearObject(int x, int y) const;
     bool isNearDoor() const;
-    void interactWithThrone();
-    void interactWithGuard();
+    void interactWithDemon();
     void exitToTown();
 }; 

@@ -22,6 +22,15 @@ private:
     bool hasLevelUpStoryToShow;
     int levelUpStoryLevel;
 
+    // 信頼度システム（新しいストーリー用）
+    int trustLevel; // 王様からの信頼度 (0-100)
+    bool isEvil; // 魔王の手下かどうか
+    int evilActions; // 悪行の回数
+    int goodActions; // 善行の回数
+    
+    // 夜間システム
+    bool isNightTime; // 夜間かどうか
+
 public:
     Player(const std::string& name);
     
@@ -72,4 +81,18 @@ public:
     bool hasLevelUpStory() const { return hasLevelUpStoryToShow; }
     int getLevelUpStoryLevel() const { return levelUpStoryLevel; }
     void clearLevelUpStoryFlag() { hasLevelUpStoryToShow = false; }
+
+    // 信頼度システムのメソッド
+    int getTrustLevel() const { return trustLevel; }
+    void changeTrustLevel(int amount);
+    bool isEvilCharacter() const { return isEvil; }
+    void performEvilAction();
+    void performGoodAction();
+    int getEvilActions() const { return evilActions; }
+    int getGoodActions() const { return goodActions; }
+    
+    // 夜間システム
+    bool isNightTimeMode() const { return isNightTime; }
+    void setNightTime(bool night);
+    void toggleNightTime();
 }; 

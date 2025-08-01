@@ -10,8 +10,8 @@ static int s_staticPlayerX = 12;  // 25の中央：12
 static int s_staticPlayerY = 9;   // 18の中央：9
 static bool s_positionInitialized = false;
 
-FieldState::FieldState(std::shared_ptr<Player> player) 
-    : player(player), moveTimer(0), storyBox(nullptr) {
+FieldState::FieldState(std::shared_ptr<Player> player)
+    : player(player), moveTimer(0), storyBox(nullptr), hasMoved(false) {
     // 多様な地形マップ生成（画面いっぱいサイズ25x18）
     static std::vector<std::vector<MapTile>> staticTerrainMap;
     static bool mapGenerated = false;
@@ -119,7 +119,7 @@ void FieldState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     // ESCキーでメインメニューに戻る
-    if (input.isKeyJustPressed(InputKey::ESCAPE)) {
+    if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
             stateManager->changeState(std::make_unique<MainMenuState>(player));
         }
@@ -127,7 +127,7 @@ void FieldState::handleInput(const InputManager& input) {
     }
     
     // スペースキーで街に入る
-    if (input.isKeyJustPressed(InputKey::SPACE)) {
+    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         checkTownEntrance();
         return;
     }
@@ -150,7 +150,7 @@ void FieldState::setupUI() {
     ui.addElement(std::move(terrainLabel));
     
     // 操作説明
-    auto controlsLabel = std::make_unique<Label>(10, 550, "方向キー: 移動（敵遭遇あり）, スペース: 街へ入る, ESC: メニューに戻る", "default");
+    auto controlsLabel = std::make_unique<Label>(10, 550, "方向キー/WASD/ゲームパッド: 移動（敵遭遇あり）, スペース/Aボタン: 街へ入る, ESC/Bボタン: メニューに戻る", "default");
     controlsLabel->setColor({200, 200, 200, 255});
     ui.addElement(std::move(controlsLabel));
     
@@ -170,34 +170,69 @@ void FieldState::handleMovement(const InputManager& input) {
     int newX = playerX;
     int newY = playerY;
     
-    if (input.isKeyPressed(InputKey::UP)) {
+    // キーボード入力
+    if (input.isKeyPressed(InputKey::UP) || input.isKeyPressed(InputKey::W)) {
         newY--;
-    } else if (input.isKeyPressed(InputKey::DOWN)) {
+    } else if (input.isKeyPressed(InputKey::DOWN) || input.isKeyPressed(InputKey::S)) {
         newY++;
-    } else if (input.isKeyPressed(InputKey::LEFT)) {
+    } else if (input.isKeyPressed(InputKey::LEFT) || input.isKeyPressed(InputKey::A)) {
         newX--;
-    } else if (input.isKeyPressed(InputKey::RIGHT)) {
+    } else if (input.isKeyPressed(InputKey::RIGHT) || input.isKeyPressed(InputKey::D)) {
         newX++;
-    } else {
-        return; // 移動なし
+    }
+    
+    // ゲームパッドのアナログスティック入力
+    const float DEADZONE = 0.3f;
+    float stickX = input.getLeftStickX();
+    float stickY = input.getLeftStickY();
+    
+    if (abs(stickX) > DEADZONE || abs(stickY) > DEADZONE) {
+        if (abs(stickX) > abs(stickY)) {
+            if (stickX < -DEADZONE) {
+                newX--;
+            } else if (stickX > DEADZONE) {
+                newX++;
+            }
+        } else {
+            if (stickY < -DEADZONE) {
+                newY--;
+            } else if (stickY > DEADZONE) {
+                newY++;
+            }
+        }
     }
     
     if (isValidPosition(newX, newY)) {
-        playerX = newX;
-        playerY = newY;
+        // 実際に移動したかチェック
+        bool actuallyMoved = (newX != playerX || newY != playerY);
         
-        // 静的位置変数も更新（位置を保持するため）
-        s_staticPlayerX = newX;
-        s_staticPlayerY = newY;
-        
-        moveTimer = MOVE_DELAY;
-        
-        // 移動した時のみエンカウントチェック
-        checkEncounter();
+        if (actuallyMoved) {
+            playerX = newX;
+            playerY = newY;
+            
+            // 静的位置変数も更新（位置を保持するため）
+            s_staticPlayerX = newX;
+            s_staticPlayerY = newY;
+            
+            moveTimer = MOVE_DELAY;
+            hasMoved = true; // 移動フラグを設定
+            
+            std::cout << "実際に移動: (" << playerX << ", " << playerY << ")" << std::endl;
+            
+            // 移動した時のみエンカウントチェック
+            checkEncounter();
+        } else {
+            std::cout << "移動していません: 同じ位置 (" << playerX << ", " << playerY << ")" << std::endl;
+        }
     }
 }
 
 void FieldState::checkEncounter() {
+    // 移動していない場合は敵出現しない
+    if (!hasMoved) {
+        return;
+    }
+    
     // 現在の地形に基づいてエンカウント率を決定
     TerrainType currentTerrain = getCurrentTerrain();
     TerrainData terrainData = TerrainRenderer::getTerrainData(currentTerrain);
@@ -212,11 +247,15 @@ void FieldState::checkEncounter() {
     std::uniform_int_distribution<> dis(1, 100);
     
     if (dis(gen) <= terrainData.encounterRate) {
+        std::cout << "敵遭遇: 地形=" << (int)currentTerrain << ", 遭遇率=" << terrainData.encounterRate << std::endl;
         Enemy enemy = Enemy::createRandomEnemy(player->getLevel());
         if (stateManager) {
             stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
         }
     }
+    
+    // 移動フラグをリセット
+    hasMoved = false;
 }
 
 void FieldState::drawMap(Graphics& graphics) {

@@ -71,6 +71,7 @@ public:
     void render(Graphics& graphics) override;
     void setText(const std::string& newText);
     void setColor(SDL_Color color) { textColor = color; }
+    const std::string& getText() const { return text; }
     
 private:
     void updateTexture(Graphics& graphics);

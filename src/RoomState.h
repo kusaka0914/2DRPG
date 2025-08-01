@@ -1,0 +1,64 @@
+#pragma once
+#include "GameState.h"
+#include "UI.h"
+#include "Player.h"
+#include <memory>
+
+class RoomState : public GameState {
+private:
+    std::shared_ptr<Player> player;
+    UIManager ui;
+    
+    // メッセージボード用UI
+    Label* messageBoard;
+    
+    // プレイヤーの位置
+    int playerX, playerY;
+    const int TILE_SIZE = 32;
+    const int ROOM_WIDTH = 15;   // 小さな部屋
+    const int ROOM_HEIGHT = 12;
+    
+    // 移動タイマー
+    float moveTimer;
+    const float MOVE_DELAY = 0.2f;
+    
+    // 部屋のオブジェクト位置
+    int bedX, bedY;      // ベッド
+    int deskX, deskY;    // 机
+    int chestX, chestY;  // 宝箱
+    int doorX, doorY;    // 出口ドア
+    
+    // ゲーム状態
+    bool hasOpenedChest; // 宝箱を開けたか
+    bool isFirstTime;    // 初回プレイか
+    bool isShowingMessage; // メッセージ表示中か
+
+public:
+    RoomState(std::shared_ptr<Player> player);
+    
+    void enter() override;
+    void exit() override;
+    void update(float deltaTime) override;
+    void render(Graphics& graphics) override;
+    void handleInput(const InputManager& input) override;
+    StateType getType() const override;
+    
+private:
+    void setupUI();
+    void setupRoom();
+    void handleMovement(const InputManager& input);
+    void checkInteraction();
+    void drawRoom(Graphics& graphics);
+    void drawPlayer(Graphics& graphics);
+    void drawRoomObjects(Graphics& graphics);
+    bool isValidPosition(int x, int y) const;
+    bool isNearObject(int x, int y) const;
+    bool isNearDoor() const;
+    void showWelcomeMessage();
+    void interactWithBed();
+    void interactWithDesk();
+    void interactWithChest();
+    void exitToTown();
+    void showMessage(const std::string& message);
+    void clearMessage();
+}; 

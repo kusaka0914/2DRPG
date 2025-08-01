@@ -13,7 +13,7 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
     screenHeight = height;
     
     // SDL初期化
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0) {
         std::cerr << "SDL初期化エラー: " << SDL_GetError() << std::endl;
         return false;
     }

@@ -1,56 +1,47 @@
-#include "CastleState.h"
-#include "TownState.h"
 #include "DemonCastleState.h"
+#include "TownState.h"
 #include "Graphics.h"
 #include "InputManager.h"
 #include <iostream>
 
-CastleState::CastleState(std::shared_ptr<Player> player)
+DemonCastleState::DemonCastleState(std::shared_ptr<Player> player)
     : player(player), playerX(12), playerY(15), moveTimer(0),
       messageBoard(nullptr), isShowingMessage(false),
-      isTalkingToKing(false), dialogueStep(0), hasReceivedQuest(false), shouldGoToDemonCastle(false) {
+      isTalkingToDemon(false), dialogueStep(0), hasReceivedEvilQuest(false) {
     
-    // 王様の会話を初期化
-    kingDialogues = {
-        "勇者よ、ようこそ我が城へ。",
-        "魔王が世界を脅かしている。",
-        "お前の力で魔王を倒してほしい。",
-        "頼んだぞ、勇者！"
+    // 魔王の会話を初期化
+    demonDialogues = {
+        "お前が勇者か...",
+        "実はお前は私の手下だ。",
+        "街を滅ぼしてくれ。",
+        "王様に悟られないように行動しろ。"
     };
     
-    setupCastle();
+    setupDemonCastle();
     setupUI();
 }
 
-void CastleState::enter() {
-    std::cout << "城に入りました" << std::endl;
-    showMessage("王様の城に到着しました。王様と会話できます。");
+void DemonCastleState::enter() {
+    std::cout << "魔王の城に入りました" << std::endl;
+    showMessage("魔王の城に到着しました。魔王との会話が始まります。");
 }
 
-void CastleState::exit() {
-    std::cout << "城を出ました" << std::endl;
+void DemonCastleState::exit() {
+    std::cout << "魔王の城を出ました" << std::endl;
 }
 
-void CastleState::update(float deltaTime) {
+void DemonCastleState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
-    
-    // 魔王の城への移行チェック
-    if (shouldGoToDemonCastle) {
-        shouldGoToDemonCastle = false;
-        if (stateManager) {
-            stateManager->changeState(std::make_unique<DemonCastleState>(player));
-        }
-    }
 }
 
-void CastleState::render(Graphics& graphics) {
-    // 背景色を設定（城風）
-    graphics.setDrawColor(139, 69, 19, 255);
+void DemonCastleState::render(Graphics& graphics) {
+    // 背景色を設定（暗い魔王の城）
+    graphics.setDrawColor(20, 0, 20, 255);
     graphics.clear();
     
-    drawCastle(graphics);
-    drawCastleObjects(graphics);
+    drawDemonCastle(graphics);
+    drawDemonCastleObjects(graphics);
     drawPlayer(graphics);
     
     // メッセージがある時のみメッセージボードの黒背景を描画
@@ -67,7 +58,7 @@ void CastleState::render(Graphics& graphics) {
     graphics.present();
 }
 
-void CastleState::handleInput(const InputManager& input) {
+void DemonCastleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     // メッセージ表示中の場合はスペースキーでクリア
@@ -79,7 +70,7 @@ void CastleState::handleInput(const InputManager& input) {
     }
     
     // 会話中の処理
-    if (isTalkingToKing) {
+    if (isTalkingToDemon) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue();
         }
@@ -94,7 +85,7 @@ void CastleState::handleInput(const InputManager& input) {
     // スペースキーで相互作用またはドアから出る
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (isNearDoor()) {
-            std::cout << "城を出て街に向かいます..." << std::endl;
+            std::cout << "魔王の城を出て街に向かいます..." << std::endl;
             exitToTown();
         } else {
             checkInteraction();
@@ -102,7 +93,7 @@ void CastleState::handleInput(const InputManager& input) {
     }
 }
 
-void CastleState::setupUI() {
+void DemonCastleState::setupUI() {
     ui.clear();
     
     // プレイヤー情報表示
@@ -122,19 +113,18 @@ void CastleState::setupUI() {
     // メッセージボード（黒背景）
     auto messageBoardLabel = std::make_unique<Label>(50, 450, "", "default");
     messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
-    messageBoardLabel->setText("城を探索してみましょう");
+    messageBoardLabel->setText("魔王の城を探索してみましょう");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
 }
 
-void CastleState::setupCastle() {
-    // 城のオブジェクト配置
-    throneX = 12; throneY = 5;    // 王座（中央上部）
-    guardX = 8; guardY = 8;       // 衛兵（左側）
-    doorX = 12; doorY = 18;       // ドア（下部中央）
+void DemonCastleState::setupDemonCastle() {
+    // 魔王の城のオブジェクト配置
+    demonX = 12; demonY = 5;    // 魔王（中央上部）
+    doorX = 12; doorY = 18;     // ドア（下部中央）
 }
 
-void CastleState::handleMovement(const InputManager& input) {
+void DemonCastleState::handleMovement(const InputManager& input) {
     int newX = playerX;
     int newY = playerY;
     
@@ -177,62 +167,55 @@ void CastleState::handleMovement(const InputManager& input) {
     }
 }
 
-void CastleState::checkInteraction() {
-    // 王座との相互作用
-    if (isNearObject(throneX, throneY)) {
-        interactWithThrone();
-    }
-    // 衛兵との相互作用
-    else if (isNearObject(guardX, guardY)) {
-        interactWithGuard();
+void DemonCastleState::checkInteraction() {
+    // 魔王との相互作用
+    if (isNearObject(demonX, demonY)) {
+        interactWithDemon();
     }
 }
 
-void CastleState::interactWithThrone() {
-    if (!hasReceivedQuest) {
+void DemonCastleState::interactWithDemon() {
+    if (!hasReceivedEvilQuest) {
         startDialogue();
     } else {
-        showMessage("王様: 勇者よ、魔王討伐を頼んだぞ！頑張れ！");
+        showMessage("魔王: 街を滅ぼすのを忘れるな！");
     }
 }
 
-void CastleState::interactWithGuard() {
-    showMessage("衛兵: 王様の城を守るのが私の使命です。");
-}
-
-void CastleState::exitToTown() {
+void DemonCastleState::exitToTown() {
     if (stateManager) {
         stateManager->changeState(std::make_unique<TownState>(player));
     }
 }
 
-void CastleState::startDialogue() {
-    isTalkingToKing = true;
+void DemonCastleState::startDialogue() {
+    isTalkingToDemon = true;
     dialogueStep = 0;
     showCurrentDialogue();
 }
 
-void CastleState::nextDialogue() {
+void DemonCastleState::nextDialogue() {
     dialogueStep++;
-    if (dialogueStep >= kingDialogues.size()) {
+    if (dialogueStep >= demonDialogues.size()) {
         // 会話終了
-        isTalkingToKing = false;
-        hasReceivedQuest = true;
-        shouldGoToDemonCastle = true;
-        std::cout << "王様との会話が終了しました。魔王の城に向かいます。" << std::endl;
+        isTalkingToDemon = false;
+        hasReceivedEvilQuest = true;
+        player->performEvilAction(); // 悪行として記録
+        std::cout << "魔王との会話が終了しました。街に向かいます。" << std::endl;
+        showMessage("魔王との会話が終了しました。街に向かいます。");
     } else {
         showCurrentDialogue();
     }
 }
 
-void CastleState::showCurrentDialogue() {
-    if (dialogueStep < kingDialogues.size()) {
-        std::cout << "王様: " << kingDialogues[dialogueStep] << std::endl;
-        showMessage("王様: " + kingDialogues[dialogueStep]);
+void DemonCastleState::showCurrentDialogue() {
+    if (dialogueStep < demonDialogues.size()) {
+        std::cout << "魔王: " << demonDialogues[dialogueStep] << std::endl;
+        showMessage("魔王: " + demonDialogues[dialogueStep]);
     }
 }
 
-void CastleState::showMessage(const std::string& message) {
+void DemonCastleState::showMessage(const std::string& message) {
     if (messageBoard) {
         messageBoard->setText(message);
         isShowingMessage = true;
@@ -240,7 +223,7 @@ void CastleState::showMessage(const std::string& message) {
     }
 }
 
-void CastleState::clearMessage() {
+void DemonCastleState::clearMessage() {
     if (messageBoard) {
         messageBoard->setText("");
         isShowingMessage = false;
@@ -248,17 +231,17 @@ void CastleState::clearMessage() {
     }
 }
 
-void CastleState::drawCastle(Graphics& graphics) {
-    // 床を描画（大理石風）
-    graphics.setDrawColor(220, 220, 220, 255); // ライトグレー
+void DemonCastleState::drawDemonCastle(Graphics& graphics) {
+    // 床を描画（暗い魔王の城）
+    graphics.setDrawColor(40, 0, 40, 255); // 暗い紫
     for (int y = 1; y < ROOM_HEIGHT - 1; y++) {
         for (int x = 1; x < ROOM_WIDTH - 1; x++) {
             graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
         }
     }
     
-    // 壁を描画（石造り）
-    graphics.setDrawColor(105, 105, 105, 255); // ディムグレー
+    // 壁を描画（暗い石造り）
+    graphics.setDrawColor(20, 0, 20, 255); // 暗い紫
     // 上下の壁
     for (int x = 0; x < ROOM_WIDTH; x++) {
         graphics.drawRect(x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, true);
@@ -271,31 +254,25 @@ void CastleState::drawCastle(Graphics& graphics) {
     }
 }
 
-void CastleState::drawCastleObjects(Graphics& graphics) {
-    // 王座を描画（金色）
-    graphics.setDrawColor(255, 215, 0, 255);
-    graphics.drawRect(throneX * TILE_SIZE, throneY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2, true);
+void DemonCastleState::drawDemonCastleObjects(Graphics& graphics) {
+    // 魔王を描画（赤色）
+    graphics.setDrawColor(255, 0, 0, 255);
+    graphics.drawRect(demonX * TILE_SIZE, demonY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2, true);
     graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(throneX * TILE_SIZE, throneY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2);
+    graphics.drawRect(demonX * TILE_SIZE, demonY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2);
     
-    // 王座の装飾
-    graphics.setDrawColor(139, 69, 19, 255);
-    graphics.drawRect((throneX + 1) * TILE_SIZE, (throneY + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    // 魔王の装飾
+    graphics.setDrawColor(139, 0, 0, 255);
+    graphics.drawRect((demonX + 1) * TILE_SIZE, (demonY + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     
-    // 衛兵を描画（銀色の鎧）
-    graphics.setDrawColor(192, 192, 192, 255);
-    graphics.drawRect(guardX * TILE_SIZE, guardY * TILE_SIZE, TILE_SIZE, TILE_SIZE * 2, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(guardX * TILE_SIZE, guardY * TILE_SIZE, TILE_SIZE, TILE_SIZE * 2);
-    
-    // ドアを描画（茶色）
-    graphics.setDrawColor(139, 69, 19, 255);
+    // ドアを描画（暗い茶色）
+    graphics.setDrawColor(80, 40, 20, 255);
     graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
     graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE);
 }
 
-void CastleState::drawPlayer(Graphics& graphics) {
+void DemonCastleState::drawPlayer(Graphics& graphics) {
     int drawX = playerX * TILE_SIZE + 4;
     int drawY = playerY * TILE_SIZE + 4;
     int size = TILE_SIZE - 8;
@@ -307,17 +284,17 @@ void CastleState::drawPlayer(Graphics& graphics) {
     graphics.drawRect(drawX, drawY, size, size, false);
 }
 
-bool CastleState::isValidPosition(int x, int y) const {
+bool DemonCastleState::isValidPosition(int x, int y) const {
     return x >= 1 && x < ROOM_WIDTH - 1 && y >= 1 && y < ROOM_HEIGHT - 1;
 }
 
-bool CastleState::isNearObject(int x, int y) const {
+bool DemonCastleState::isNearObject(int x, int y) const {
     int dx = abs(playerX - x);
     int dy = abs(playerY - y);
     return (dx <= 1 && dy <= 1);
 }
 
-bool CastleState::isNearDoor() const {
+bool DemonCastleState::isNearDoor() const {
     int dx = abs(playerX - doorX);
     int dy = abs(playerY - doorY);
     return (dx <= 1 && dy <= 1);

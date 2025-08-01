@@ -3,11 +3,12 @@
 #include "MainMenuState.h"
 #include <sstream>
 #include <random>
+#include <cmath> // abs関数のために追加
+#include <iostream> // デバッグ情報のために追加
 
 BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy)
-    : player(player), enemy(std::move(enemy)), currentPhase(BattlePhase::INTRO), phaseTimer(0),
-      battleLogLabel(nullptr), playerStatusLabel(nullptr), enemyStatusLabel(nullptr), messageLabel(nullptr),
-      hasLeveledUp(false), oldLevel(0), oldMaxHp(0), oldMaxMp(0), oldAttack(0), oldDefense(0), playerDefending(false) {
+    : player(player), enemy(std::move(enemy)), currentPhase(BattlePhase::INTRO),
+      battleLog(""), playerDefending(false), currentOptions(), selectedOption(0), isShowingOptions(false) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -22,8 +23,15 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
 void BattleState::enter() {
     setupUI();
     loadBattleImages();
-    addBattleLog(enemy->getTypeName() + "が現れた！");
-    currentPhase = BattlePhase::PLAYER_TURN;
+    
+    // 敵出現メッセージを画面中央に表示
+    std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
+    addBattleLog(enemyAppearMessage);
+    showMessage(enemyAppearMessage);
+    
+    // INTROフェーズから開始
+    currentPhase = BattlePhase::INTRO;
+    phaseTimer = 0;
     updateStatus();
 }
 
@@ -35,12 +43,18 @@ void BattleState::update(float deltaTime) {
     phaseTimer += deltaTime;
     ui.update(deltaTime);
     
+    // スティックタイマーを更新
+    static float stickTimer = 0.0f;
+    if (stickTimer > 0.0f) {
+        stickTimer -= deltaTime;
+    }
+    
     switch (currentPhase) {
         case BattlePhase::INTRO:
-            if (phaseTimer > 1.5f) {
+            if (phaseTimer > 2.0f) { // 1.5秒から2.0秒に変更
                 currentPhase = BattlePhase::PLAYER_TURN;
-                updatePlayerTurnUI();
                 hideMessage();
+                isShowingOptions = false; // 選択肢表示をリセット
                 phaseTimer = 0;
             }
             break;
@@ -91,6 +105,11 @@ void BattleState::render(Graphics& graphics) {
         graphics.drawRect(350, 150, 100, 100, false);
     }
     
+    // 敵の体力表示（敵の真上）
+    graphics.setDrawColor(255, 255, 255, 255);
+    std::string enemyHpText = "HP: " + std::to_string(enemy->getHp()) + "/" + std::to_string(enemy->getMaxHp());
+    graphics.drawText(enemyHpText, 350, 120, "default");
+    
     // プレイヤーキャラクター描画
     SDL_Texture* playerTexture = graphics.getTexture("player");
     if (playerTexture) {
@@ -104,6 +123,13 @@ void BattleState::render(Graphics& graphics) {
         graphics.drawRect(150, 300, 60, 60, false);
     }
     
+    // プレイヤーの体力・MP表示（プレイヤーの真上）
+    graphics.setDrawColor(255, 255, 255, 255);
+    std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
+    std::string playerMpText = "MP: " + std::to_string(player->getMp()) + "/" + std::to_string(player->getMaxMp());
+    graphics.drawText(playerHpText, 150, 270, "default");
+    graphics.drawText(playerMpText, 150, 290, "default");
+    
     ui.render(graphics);
     graphics.present();
 }
@@ -111,38 +137,19 @@ void BattleState::render(Graphics& graphics) {
 void BattleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    if (currentPhase == BattlePhase::PLAYER_TURN) {
-        if (input.isKeyJustPressed(InputKey::KEY_1)) {
-            handlePlayerAction(1); // 攻撃
-        } else if (input.isKeyJustPressed(InputKey::KEY_2)) {
-            currentPhase = BattlePhase::SPELL_SELECTION;
-            showSpellMenu();
-        } else if (input.isKeyJustPressed(InputKey::KEY_3)) {
-            currentPhase = BattlePhase::ITEM_SELECTION;
-            showItemMenu();
-        } else if (input.isKeyJustPressed(InputKey::KEY_4)) {
-            handlePlayerAction(4); // 防御
-        } else if (input.isKeyJustPressed(InputKey::KEY_5)) {
-            handlePlayerAction(5); // 逃げる
-        }
-    } else if (currentPhase == BattlePhase::SPELL_SELECTION) {
-        if (input.isKeyJustPressed(InputKey::KEY_1)) {
-            handleSpellSelection(1);
-        } else if (input.isKeyJustPressed(InputKey::KEY_2)) {
-            handleSpellSelection(2);
-        } else if (input.isKeyJustPressed(InputKey::KEY_3)) {
-            handleSpellSelection(3);
-        } else if (input.isKeyJustPressed(InputKey::KEY_4)) {
-            handleSpellSelection(4);
-        } else if (input.isKeyJustPressed(InputKey::KEY_5) || input.isKeyJustPressed(InputKey::ESCAPE)) {
-            returnToPlayerTurn();
-        }
-    } else if (currentPhase == BattlePhase::ITEM_SELECTION) {
-        if (input.isKeyJustPressed(InputKey::KEY_1)) {
-            handleItemSelection(1);
-        } else if (input.isKeyJustPressed(InputKey::ESCAPE)) {
-            returnToPlayerTurn();
-        }
+    // メッセージボード形式の選択処理
+    if (isShowingOptions) {
+        handleOptionSelection(input);
+        return;
+    }
+    
+    // プレイヤーターンで選択肢が表示されていない場合は表示
+    if (currentPhase == BattlePhase::PLAYER_TURN && !isShowingOptions) {
+        showPlayerOptions();
+    } else if (currentPhase == BattlePhase::SPELL_SELECTION && !isShowingOptions) {
+        showSpellOptions();
+    } else if (currentPhase == BattlePhase::ITEM_SELECTION && !isShowingOptions) {
+        showItemOptions();
     }
 }
 
@@ -164,49 +171,41 @@ void BattleState::setupUI() {
     enemyStatusLabel = enemyStatusLabelPtr.get();
     ui.addElement(std::move(enemyStatusLabelPtr));
     
-    // メッセージラベル（中央に大きく表示）
-    auto messageLabelPtr = std::make_unique<Label>(100, 250, "", "default");
-    messageLabelPtr->setColor({255, 255, 0, 255});
+    // メッセージラベル（画面下部に表示）
+    auto messageLabelPtr = std::make_unique<Label>(50, 450, "", "default");
+    messageLabelPtr->setColor({255, 255, 255, 255}); // 白色
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
     
-    updatePlayerTurnUI();
-}
-
-void BattleState::updatePlayerTurnUI() {
-    // 既存のアクションラベルを削除（重複防止）
-    // 注意: 簡易実装のため、現在はラベルの重複を許可
-    
-    // アクションボタンのラベル
-    auto actionsLabel = std::make_unique<Label>(50, 500, 
-        "1:攻撃 2:呪文 3:アイテム 4:防御 5:逃げる", "default");
-    actionsLabel->setColor({255, 255, 0, 255});
-    ui.addElement(std::move(actionsLabel));
+    // 操作説明
+    // auto controlsLabel = std::make_unique<Label>(10, 550, "上下キー/スティック: 選択, Aボタン/スペース: 決定, Bボタン/ESC: キャンセル", "default");
+    // controlsLabel->setColor({200, 200, 200, 255});
+    // ui.addElement(std::move(controlsLabel));
 }
 
 void BattleState::updateStatus() {
-    if (playerStatusLabel) {
-        std::ostringstream playerInfo;
-        playerInfo << "【" << player->getName() << "】\n";
-        playerInfo << "HP: " << player->getHp() << "/" << player->getMaxHp() << "\n";
-        playerInfo << "MP: " << player->getMp() << "/" << player->getMaxMp() << "\n";
-        std::string playerStatus = player->getStatusEffectString();
-        if (!playerStatus.empty()) {
-            playerInfo << playerStatus;
-        }
-        playerStatusLabel->setText(playerInfo.str());
-    }
+    // if (playerStatusLabel) {
+    //     std::ostringstream playerInfo;
+    //     playerInfo << "【" << player->getName() << "】\n";
+    //     playerInfo << "HP: " << player->getHp() << "/" << player->getMaxHp() << "\n";
+    //     playerInfo << "MP: " << player->getMp() << "/" << player->getMaxMp() << "\n";
+    //     std::string playerStatus = player->getStatusEffectString();
+    //     if (!playerStatus.empty()) {
+    //         playerInfo << playerStatus;
+    //     }
+    //     playerStatusLabel->setText(playerInfo.str());
+    // }
     
-    if (enemyStatusLabel) {
-        std::ostringstream enemyInfo;
-        enemyInfo << "【" << enemy->getTypeName() << "】\n";
-        enemyInfo << "HP: " << enemy->getHp() << "/" << enemy->getMaxHp() << "\n";
-        std::string enemyStatus = enemy->getStatusEffectString();
-        if (!enemyStatus.empty()) {
-            enemyInfo << enemyStatus;
-        }
-        enemyStatusLabel->setText(enemyInfo.str());
-    }
+    // if (enemyStatusLabel) {
+    //     std::ostringstream enemyInfo;
+    //     enemyInfo << "【" << enemy->getTypeName() << "】\n";
+    //     enemyInfo << "HP: " << enemy->getHp() << "/" << enemy->getMaxHp() << "\n";
+    //     std::string enemyStatus = enemy->getStatusEffectString();
+    //     if (!enemyStatus.empty()) {
+    //         enemyInfo << enemyStatus;
+    //     }
+    //     enemyStatusLabel->setText(enemyInfo.str());
+    // }
 }
 
 void BattleState::addBattleLog(const std::string& message) {
@@ -290,16 +289,32 @@ void BattleState::handleSpellSelection(int spellChoice) {
         
         switch (selectedSpell) {
             case SpellType::HEAL:
-                addBattleLog(player->getName() + "はホイミを唱えた！HP" + std::to_string(result) + "回復！");
+                {
+                    std::string healMessage = player->getName() + "はホイミを唱えた！\nHP" + std::to_string(result) + "回復！";
+                    addBattleLog(healMessage);
+                    showMessage(healMessage);
+                }
                 break;
             case SpellType::FIREBALL:
-                addBattleLog(player->getName() + "はメラを唱えた！" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！");
+                {
+                    std::string damageMessage = player->getName() + "はメラを唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！";
+                    addBattleLog(damageMessage);
+                    showMessage(damageMessage);
+                }
                 break;
             case SpellType::LIGHTNING:
-                addBattleLog(player->getName() + "はいなずまを唱えた！" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！");
+                {
+                    std::string damageMessage = player->getName() + "はいなずまを唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！";
+                    addBattleLog(damageMessage);
+                    showMessage(damageMessage);
+                }
                 break;
             case SpellType::POISON_DART:
-                addBattleLog(player->getName() + "は毒の針を唱えた！" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージ＋毒状態！");
+                {
+                    std::string damageMessage = player->getName() + "は毒の針を唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージ＋毒状態！";
+                    addBattleLog(damageMessage);
+                    showMessage(damageMessage);
+                }
                 break;
         }
         
@@ -364,7 +379,6 @@ void BattleState::handleItemSelection(int itemChoice) {
 void BattleState::returnToPlayerTurn() {
     currentPhase = BattlePhase::PLAYER_TURN;
     hideMessage();
-    updatePlayerTurnUI();
 }
 
 void BattleState::handlePlayerAction(int action) {
@@ -385,9 +399,13 @@ void BattleState::handlePlayerAction(int action) {
                 if (criticalDis(gen) <= 8) {
                     damage = baseDamage * 2;
                     isCritical = true;
-                    addBattleLog(player->getName() + "の攻撃！【会心の一撃！】" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！");
+                    std::string damageMessage = player->getName() + "の攻撃！【会心の一撃！】\n" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！";
+                    addBattleLog(damageMessage);
+                    showMessage(damageMessage);
                 } else {
-                    addBattleLog(player->getName() + "の攻撃！" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！");
+                    std::string damageMessage = player->getName() + "の攻撃！\n" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！";
+                    addBattleLog(damageMessage);
+                    showMessage(damageMessage);
                 }
                 
                 enemy->takeDamage(damage);
@@ -507,7 +525,6 @@ void BattleState::checkBattleEnd() {
         }
     } else if (currentPhase == BattlePhase::ENEMY_TURN_DISPLAY) {
         currentPhase = BattlePhase::PLAYER_TURN;
-        updatePlayerTurnUI();
         hideMessage();
     }
     
@@ -526,6 +543,216 @@ void BattleState::endBattle() {
         } else {
             // フィールドに戻る
             stateManager->changeState(std::make_unique<FieldState>(player));
+        }
+    }
+} 
+
+void BattleState::handleOptionSelection(const InputManager& input) {
+    // 上下キーで選択肢を変更
+    if (input.isKeyJustPressed(InputKey::UP) || input.isKeyJustPressed(InputKey::W)) {
+        selectedOption = (selectedOption - 1 + currentOptions.size()) % currentOptions.size();
+        updateOptionDisplay();
+    } else if (input.isKeyJustPressed(InputKey::DOWN) || input.isKeyJustPressed(InputKey::S)) {
+        selectedOption = (selectedOption + 1) % currentOptions.size();
+        updateOptionDisplay();
+    }
+    
+    // アナログスティックで選択肢を変更
+    const float DEADZONE = 0.3f;
+    float stickX = input.getLeftStickX();
+    float stickY = input.getLeftStickY();
+    
+    static float lastStickX = 0.0f;
+    static float lastStickY = 0.0f;
+    static float stickTimer = 0.0f;
+    const float STICK_DELAY = 0.15f; // スティック入力の遅延（短く設定）
+    
+    if (abs(stickX) > DEADZONE || abs(stickY) > DEADZONE) {
+        if (stickTimer <= 0.0f) {
+            // 上下移動
+            if (stickY < -DEADZONE) {
+                std::cout << "戦闘: スティック上入力 - 選択肢変更" << std::endl;
+                selectedOption = (selectedOption - 1 + currentOptions.size()) % currentOptions.size();
+                updateOptionDisplay();
+                stickTimer = STICK_DELAY;
+            } else if (stickY > DEADZONE) {
+                std::cout << "戦闘: スティック下入力 - 選択肢変更" << std::endl;
+                selectedOption = (selectedOption + 1) % currentOptions.size();
+                updateOptionDisplay();
+                stickTimer = STICK_DELAY;
+            }
+            // 左右移動（選択肢をスキップ）
+            else if (stickX < -DEADZONE) {
+                std::cout << "戦闘: スティック左入力 - 選択肢スキップ" << std::endl;
+                selectedOption = (selectedOption - 2 + currentOptions.size()) % currentOptions.size();
+                updateOptionDisplay();
+                stickTimer = STICK_DELAY;
+            } else if (stickX > DEADZONE) {
+                std::cout << "戦闘: スティック右入力 - 選択肢スキップ" << std::endl;
+                selectedOption = (selectedOption + 2) % currentOptions.size();
+                updateOptionDisplay();
+                stickTimer = STICK_DELAY;
+            }
+        }
+        lastStickX = stickX;
+        lastStickY = stickY;
+    } else {
+        lastStickX = 0.0f;
+        lastStickY = 0.0f;
+        stickTimer = 0.0f;
+    }
+    
+    // Aボタンまたはスペースキーで選択
+    if (input.isKeyJustPressed(InputKey::GAMEPAD_A) || input.isKeyJustPressed(InputKey::SPACE)) {
+        executeSelectedOption();
+    }
+    
+    // BボタンまたはESCキーでキャンセル
+    if (input.isKeyJustPressed(InputKey::GAMEPAD_B) || input.isKeyJustPressed(InputKey::ESCAPE)) {
+        if (currentPhase == BattlePhase::SPELL_SELECTION || currentPhase == BattlePhase::ITEM_SELECTION) {
+            returnToPlayerTurn();
+        }
+    }
+}
+
+void BattleState::showPlayerOptions() {
+    if (!isShowingOptions) {
+        currentOptions.clear();
+        currentOptions.push_back("戦う");
+        currentOptions.push_back("呪文");
+        currentOptions.push_back("アイテム");
+        currentOptions.push_back("防御");
+        currentOptions.push_back("逃げる");
+        selectedOption = 0; // 最初の選択肢（戦う）を選択
+        isShowingOptions = true;
+        updateOptionDisplay();
+    }
+}
+
+void BattleState::showSpellOptions() {
+    if (!isShowingOptions) {
+        currentOptions.clear();
+        if (player->canCastSpell(SpellType::HEAL)) {
+            currentOptions.push_back("ホイミ (HP回復, 3MP)");
+        }
+        if (player->canCastSpell(SpellType::FIREBALL)) {
+            currentOptions.push_back("メラ (攻撃魔法, 5MP)");
+        }
+        if (player->canCastSpell(SpellType::LIGHTNING)) {
+            currentOptions.push_back("いなずま (強力攻撃, 8MP)");
+        }
+        if (player->canCastSpell(SpellType::POISON_DART)) {
+            currentOptions.push_back("毒の針 (毒付与, 6MP)");
+        }
+        currentOptions.push_back("やめる");
+        selectedOption = 0;
+        isShowingOptions = true;
+        updateOptionDisplay();
+    }
+}
+
+void BattleState::showItemOptions() {
+    if (!isShowingOptions) {
+        currentOptions.clear();
+        // アイテムリストを動的に生成
+        for (int i = 0; i < player->getInventory().getMaxSlots(); ++i) {
+            const InventorySlot* slot = player->getInventory().getSlot(i);
+            if (slot && slot->item) {
+                currentOptions.push_back(slot->item->getName() + " x" + std::to_string(slot->quantity));
+            }
+        }
+        currentOptions.push_back("やめる");
+        selectedOption = 0;
+        isShowingOptions = true;
+        updateOptionDisplay();
+    }
+}
+
+void BattleState::updateOptionDisplay() {
+    std::string displayText = "選択してください:\n";
+    for (size_t i = 0; i < currentOptions.size(); ++i) {
+        if (i == selectedOption) {
+            displayText += "▶ " + currentOptions[i] + " ";
+        } else {
+            displayText += "   " + currentOptions[i] + " ";
+        }
+    }
+    showMessage(displayText);
+    
+    // 選択肢の色を白色に設定
+    if (messageLabel) {
+        messageLabel->setColor({255, 255, 255, 255}); // 白色
+    }
+}
+
+void BattleState::executeSelectedOption() {
+    if (currentOptions.empty()) return;
+    
+    std::string selected = currentOptions[selectedOption];
+    isShowingOptions = false;
+    
+    if (currentPhase == BattlePhase::PLAYER_TURN) {
+        if (selected == "戦う") {
+            handlePlayerAction(1);
+        } else if (selected == "呪文") {
+            currentPhase = BattlePhase::SPELL_SELECTION;
+        } else if (selected == "アイテム") {
+            currentPhase = BattlePhase::ITEM_SELECTION;
+        } else if (selected == "防御") {
+            handlePlayerAction(4);
+        } else if (selected == "逃げる") {
+            handlePlayerAction(5);
+        }
+    } else if (currentPhase == BattlePhase::SPELL_SELECTION) {
+        if (selected == "やめる") {
+            returnToPlayerTurn();
+        } else {
+            // 呪文の選択を処理
+            int spellIndex = 0;
+            if (player->canCastSpell(SpellType::HEAL)) {
+                if (selected.find("ホイミ") != std::string::npos) {
+                    handleSpellSelection(1);
+                    return;
+                }
+                spellIndex++;
+            }
+            if (player->canCastSpell(SpellType::FIREBALL)) {
+                if (selected.find("メラ") != std::string::npos) {
+                    handleSpellSelection(2);
+                    return;
+                }
+                spellIndex++;
+            }
+            if (player->canCastSpell(SpellType::LIGHTNING)) {
+                if (selected.find("いなずま") != std::string::npos) {
+                    handleSpellSelection(3);
+                    return;
+                }
+                spellIndex++;
+            }
+            if (player->canCastSpell(SpellType::POISON_DART)) {
+                if (selected.find("毒の針") != std::string::npos) {
+                    handleSpellSelection(4);
+                    return;
+                }
+            }
+        }
+    } else if (currentPhase == BattlePhase::ITEM_SELECTION) {
+        if (selected == "やめる") {
+            returnToPlayerTurn();
+        } else {
+            // アイテムの選択を処理
+            int itemIndex = 0;
+            for (int i = 0; i < player->getInventory().getMaxSlots(); ++i) {
+                const InventorySlot* slot = player->getInventory().getSlot(i);
+                if (slot && slot->item) {
+                    if (itemIndex == selectedOption) {
+                        handleItemSelection(i + 1);
+                        return;
+                    }
+                    itemIndex++;
+                }
+            }
         }
     }
 } 

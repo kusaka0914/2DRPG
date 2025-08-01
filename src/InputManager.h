@@ -3,18 +3,11 @@
 #include <unordered_map>
 
 enum class InputKey {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    ENTER,
-    ESCAPE,
-    SPACE,
-    KEY_1,
-    KEY_2,
-    KEY_3,
-    KEY_4,
-    KEY_5
+    UP, DOWN, LEFT, RIGHT,
+    W, A, S, D,
+    SPACE, ESCAPE,
+    GAMEPAD_A, GAMEPAD_B, GAMEPAD_X, GAMEPAD_Y,
+    N
 };
 
 struct MouseState {
@@ -32,10 +25,16 @@ private:
     MouseState mouse;
     MouseState previousMouse;
     
+    // ゲームパッド関連
+    SDL_GameController* gameController;
+    bool gameControllerConnected;
+    
     InputKey sdlKeyToInputKey(SDL_Keycode key);
+    InputKey sdlGameControllerButtonToInputKey(SDL_GameControllerButton button);
 
 public:
     InputManager();
+    ~InputManager();
     
     void update();
     void handleEvent(const SDL_Event& event);
@@ -49,4 +48,13 @@ public:
     const MouseState& getMouseState() const { return mouse; }
     bool isMouseClicked() const { return mouse.leftClicked; }
     bool isMousePressed() const { return mouse.leftPressed; }
+    
+    // ゲームパッド状態
+    bool isGameControllerConnected() const { return gameControllerConnected; }
+    
+    // アナログスティック状態
+    float getLeftStickX() const;
+    float getLeftStickY() const;
+    float getRightStickX() const;
+    float getRightStickY() const;
 }; 

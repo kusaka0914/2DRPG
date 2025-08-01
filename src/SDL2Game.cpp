@@ -1,5 +1,7 @@
 #include "SDL2Game.h"
 #include "MainMenuState.h"
+#include "RoomState.h"
+#include "CastleState.h"
 #include <iostream>
 #include <string>
 
@@ -76,8 +78,8 @@ void SDL2Game::initializeGame() {
     
     player = std::make_shared<Player>(playerName);
     
-    // 元の構成に戻す（MainMenuStateから開始）
-    stateManager.changeState(std::make_unique<MainMenuState>(player));
+    // 自室から冒険開始（RoomStateから開始）
+    stateManager.changeState(std::make_unique<RoomState>(player));
 }
 
 void SDL2Game::loadResources() {

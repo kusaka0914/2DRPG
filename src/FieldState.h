@@ -26,6 +26,7 @@ private:
     
     // 地形マップ
     std::vector<std::vector<MapTile>> terrainMap;
+    bool hasMoved;
 
 public:
     FieldState(std::shared_ptr<Player> player);

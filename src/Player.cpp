@@ -2,8 +2,10 @@
 #include <iostream>
 #include <random>
 
-Player::Player(const std::string& name) 
-    : Character(name, 50, 20, 15, 8, 1), gold(100), inventory(20), hasLevelUpStoryToShow(false), levelUpStoryLevel(1) {
+Player::Player(const std::string& name)
+    : Character(name, 20, 20, 5, 3, 1), gold(0), inventory(20), equipmentManager(),
+      hasLevelUpStoryToShow(false), levelUpStoryLevel(0),
+      trustLevel(50), isEvil(true), evilActions(0), goodActions(0), isNightTime(false) {
     // 初期呪文を覚える
     learnSpell(SpellType::HEAL, 3);
     learnSpell(SpellType::FIREBALL, 5);
@@ -333,4 +335,34 @@ std::vector<std::string> Player::getLevelUpStory(int newLevel) const {
     }
     
     return story;
+}
+
+// 信頼度システムの実装
+void Player::changeTrustLevel(int amount) {
+    trustLevel += amount;
+    if (trustLevel > 100) trustLevel = 100;
+    if (trustLevel < 0) trustLevel = 0;
+    
+    std::cout << "信頼度が " << amount << " 変化しました。現在: " << trustLevel << std::endl;
+}
+
+void Player::performEvilAction() {
+    evilActions++;
+    changeTrustLevel(-5); // 悪行で信頼度が下がる
+    std::cout << "悪行を実行: 魔王の手下としての使命を果たした" << std::endl;
+}
+
+void Player::performGoodAction() {
+    goodActions++;
+    changeTrustLevel(3); // 善行で信頼度が上がる
+    std::cout << "善行を実行: 勇者としての評判が上がった" << std::endl;
+}
+
+void Player::setNightTime(bool night) {
+    isNightTime = night;
+}
+
+void Player::toggleNightTime() {
+    isNightTime = !isNightTime;
+    std::cout << (isNightTime ? "夜になりました" : "朝になりました") << std::endl;
 } 
