@@ -9,10 +9,12 @@
 enum class BattlePhase {
     INTRO,
     PLAYER_TURN,
+    PLAYER_ATTACK_DISPLAY,  // プレイヤーの攻撃表示後、1秒待機
     SPELL_SELECTION,
     ITEM_SELECTION,
     ENEMY_TURN,
     ENEMY_TURN_DISPLAY,
+    VICTORY_DISPLAY,        // 勝利メッセージ表示
     RESULT,
     LEVEL_UP_DISPLAY,
     END

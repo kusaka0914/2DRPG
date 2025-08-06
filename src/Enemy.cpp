@@ -407,76 +407,76 @@ Enemy Enemy::createRandomEnemy(int playerLevel) {
     std::vector<EnemyType> possibleEnemies;
     
     // 基本的な敵
-    if(playerLevel >=1 && playerLevel <=5){
+    if(playerLevel >=1 && playerLevel <=15){
         possibleEnemies.push_back(EnemyType::SLIME);
     }
     
-    if (playerLevel >= 3 && playerLevel <=10) {
+    if (playerLevel >= 3 && playerLevel <=20) {
         possibleEnemies.push_back(EnemyType::GOBLIN);
     }
     
-    if (playerLevel >= 10 && playerLevel <=15) {
+    if (playerLevel >= 10 && playerLevel <=20) {
         possibleEnemies.push_back(EnemyType::ORC);
     }
     
-    if (playerLevel >= 15 && playerLevel <=25) {
+    if (playerLevel >= 15 && playerLevel <=30) {
         possibleEnemies.push_back(EnemyType::DRAGON);
     }
     
     // === 新しいモンスタータイプ ===
-    if (playerLevel >= 20 && playerLevel <=30) {
+    if (playerLevel >= 20 && playerLevel <=40) {
         possibleEnemies.push_back(EnemyType::SKELETON);
     }
     
-    if (playerLevel >= 25 && playerLevel <=35) {
+    if (playerLevel >= 25 && playerLevel <=45) {
         possibleEnemies.push_back(EnemyType::GHOST);
     }
     
-    if (playerLevel >= 30 && playerLevel <=40) {
+    if (playerLevel >= 30 && playerLevel <=50) {
         possibleEnemies.push_back(EnemyType::VAMPIRE);
     }
     
-    if (playerLevel >= 35 && playerLevel <=45) {
+    if (playerLevel >= 35 && playerLevel <=55) {
         possibleEnemies.push_back(EnemyType::DEMON_SOLDIER);
     }
     
-    if (playerLevel >= 40 && playerLevel <=50) {
+    if (playerLevel >= 40 && playerLevel <=60) {
         possibleEnemies.push_back(EnemyType::WEREWOLF);
     }
     
-    if (playerLevel >= 45 && playerLevel <=55) {
+    if (playerLevel >= 45 && playerLevel <=65) {
         possibleEnemies.push_back(EnemyType::MINOTAUR);
     }
     
-    if (playerLevel >= 50 && playerLevel <=60) {
+    if (playerLevel >= 50 && playerLevel <=70) {
         possibleEnemies.push_back(EnemyType::CYCLOPS);
     }
     
-    if (playerLevel >= 55 && playerLevel <=65) {
+    if (playerLevel >= 55 && playerLevel <=75) {
         possibleEnemies.push_back(EnemyType::GARGOYLE);
     }
     
-    if (playerLevel >= 60 && playerLevel <=70) {
+    if (playerLevel >= 60 && playerLevel <=80) {
         possibleEnemies.push_back(EnemyType::PHANTOM);
     }
     
-    if (playerLevel >= 65 && playerLevel <=75) {
+    if (playerLevel >= 65 && playerLevel <=85) {
         possibleEnemies.push_back(EnemyType::DARK_KNIGHT);
     }
     
-    if (playerLevel >= 70 && playerLevel <=80) {
+    if (playerLevel >= 70 && playerLevel <=90) {
         possibleEnemies.push_back(EnemyType::ICE_GIANT);
     }
     
-    if (playerLevel >= 75 && playerLevel <=85) {
+    if (playerLevel >= 75 && playerLevel <=95) {
         possibleEnemies.push_back(EnemyType::FIRE_DEMON);
     }
     
-    if (playerLevel >= 80 && playerLevel <=90) {
+    if (playerLevel >= 80 && playerLevel <=100) {
         possibleEnemies.push_back(EnemyType::SHADOW_LORD);
     }
     
-    if (playerLevel >= 85 && playerLevel <=95) {
+    if (playerLevel >= 85 && playerLevel <=100) {
         possibleEnemies.push_back(EnemyType::ANCIENT_DRAGON);
     }
     

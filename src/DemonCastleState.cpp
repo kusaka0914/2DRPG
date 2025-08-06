@@ -117,15 +117,6 @@ void DemonCastleState::handleInput(const InputManager& input) {
 void DemonCastleState::setupUI() {
     ui.clear();
     
-    // プレイヤー情報表示
-    auto playerInfoLabel = std::make_unique<Label>(10, 10, "", "default");
-    playerInfoLabel->setColor({255, 255, 255, 255});
-    playerInfoLabel->setText(player->getName() + " Lv:" + std::to_string(player->getLevel()) + 
-                           " HP:" + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) +
-                           " ゴールド:" + std::to_string(player->getGold()));
-    ui.addElement(std::move(playerInfoLabel));
-    
-    
     // メッセージボード（画面中央下部）
     auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
     messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字

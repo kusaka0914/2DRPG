@@ -286,18 +286,18 @@ void FieldState::render(Graphics& graphics) {
     if (nightTimerActive) {
         // パラメータ背景
         graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 150, 300, 80, true);
+        graphics.drawRect(800, 10, 300, 80, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 150, 300, 80, false);
+        graphics.drawRect(800, 10, 300, 80, false);
         
         // パラメータテキスト
         std::string mentalText = "メンタル: " + std::to_string(player->getMental());
         std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
         std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
         
-        graphics.drawText(mentalText, 20, 160, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 20, 180, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 20, 200, "default", {100, 100, 255, 255}); // 青色
+        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
     }
     
     graphics.present();
@@ -326,33 +326,6 @@ void FieldState::handleInput(const InputManager& input) {
 
 void FieldState::setupUI() {
     ui.clear();
-    
-    // プレイヤー情報表示
-    auto playerInfoLabel = std::make_unique<Label>(10, 10, "", "default");
-    playerInfoLabel->setColor({255, 255, 255, 255});
-    ui.addElement(std::move(playerInfoLabel));
-    
-    // 現在レベル表示（上に追加）
-    auto currentLevelLabel = std::make_unique<Label>(10, 30, "", "default");
-    currentLevelLabel->setColor({255, 255, 0, 255}); // 黄色
-    ui.addElement(std::move(currentLevelLabel));
-    
-    // 目標レベル表示（上に追加）
-    auto targetLevelLabel = std::make_unique<Label>(10, 50, "", "default");
-    targetLevelLabel->setColor({255, 200, 0, 255}); // オレンジ
-    ui.addElement(std::move(targetLevelLabel));
-    
-    // 現在の地形情報表示（元の位置）
-    auto terrainLabel = std::make_unique<Label>(10, 70, "", "default");
-    terrainLabel->setColor({200, 255, 200, 255});
-    ui.addElement(std::move(terrainLabel));
-    
-    // ストーリーメッセージ用のLabel（StoryMessageBoxの代わり）
-    auto storyLabel = std::make_unique<Label>(50, 380, "", "default");
-    storyLabel->setColor({255, 255, 255, 255});
-    storyLabel->setText("フィールドを探索中... 敵に遭遇する可能性があります。");
-    ui.addElement(std::move(storyLabel));
-    
     // StoryMessageBoxは無効化
     storyBox = nullptr;
 }
@@ -414,6 +387,9 @@ void FieldState::handleMovement(const InputManager& input) {
             
             // 移動した時のみエンカウントチェック
             checkEncounter();
+            
+            // 街の入り口チェック
+            checkTownEntrance();
         } else {
             
         }
@@ -514,6 +490,15 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
             break;
     }
     
+    // 岩の場合は背景に草原タイルを描画（最初に描画）
+    if (tile.terrain == TerrainType::ROCK) {
+        SDL_Texture* grassTexture = graphics.getTexture("grass");
+        if (grassTexture) {
+            // 草原タイルを背景として描画
+            graphics.drawTexture(grassTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
+        }
+    }
+    
     terrainTexture = graphics.getTexture(textureName);
     if (terrainTexture) {
         // 画像がある場合は画像を描画
@@ -575,7 +560,7 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
                 // 敵のレベルを表示
                 Enemy tempEnemy(enemyType);
                 std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
-                graphics.drawText(levelText, drawX + 2, drawY + 2, "default", {255, 255, 255, 255});
+                graphics.drawText(levelText, drawX + 6, drawY - 10, "default", {255, 255, 255, 255});
             } else {
                 // 画像がない場合は赤色で表示
                 graphics.setDrawColor(255, 0, 0, 255);
@@ -584,12 +569,17 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
                 // 敵のレベルを表示
                 Enemy tempEnemy(enemyType);
                 std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
-                graphics.drawText(levelText, drawX + 2, drawY + 2, "default", {255, 255, 255, 255});
+                graphics.drawText(levelText, drawX + 6, drawY - 10, "default", {255, 255, 255, 255});
             }
 
         } else { // 岩や木の場合は四角形
             graphics.drawRect(objX, objY, objSize, objSize, true);
         }
+    }
+    
+    // 街の入り口の場合は鳥居を描画
+    if (tile.terrain == TerrainType::TOWN_ENTRANCE) {
+        drawFieldGate(graphics);
     }
 }
 
@@ -612,15 +602,13 @@ void FieldState::drawPlayer(Graphics& graphics) {
 }
 
 void FieldState::checkTownEntrance() {
-    // 現在の地形が街の入り口かチェック
+    // プレイヤーが街の入り口の上にいる場合のみ遷移
     TerrainType currentTerrain = getCurrentTerrain();
     if (currentTerrain == TerrainType::TOWN_ENTRANCE) {
         std::cout << "街に入ります..." << std::endl;
         if (stateManager) {
             stateManager->changeState(std::make_unique<TownState>(player));
         }
-    } else {
-        std::cout << "ここには街の入り口がありません。" << std::endl;
     }
 }
 
@@ -763,5 +751,37 @@ void FieldState::showLevelUpStory(int newLevel) {
     // レベルアップメッセージ（Labelで表示）
     if (ui.getElements().size() >= 3) {
         static_cast<Label*>(ui.getElements()[2].get())->setText("レベルアップ！新しい力が目覚めた！");
+    }
+}
+
+void FieldState::drawFieldGate(Graphics& graphics) {
+    // フィールドの鳥居描画（街の入り口: 26, 8）
+    int gateX = 26;
+    int gateY = 8;
+    
+    // 草原タイルを背景として描画
+    SDL_Texture* grassTexture = graphics.getTexture("grass");
+    if (grassTexture) {
+        int drawX = gateX * TILE_SIZE;
+        int drawY = gateY * TILE_SIZE;
+        graphics.drawTexture(grassTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
+    }
+    
+    // 鳥居画像を描画（前景）
+    SDL_Texture* toriiTexture = graphics.getTexture("torii");
+    if (toriiTexture) {
+        int drawX = gateX * TILE_SIZE;
+        int drawY = gateY * TILE_SIZE;
+        // 鳥居は少し大きく描画（2タイルサイズ）
+        graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
+                           TILE_SIZE * 2, TILE_SIZE * 2);
+    } else {
+        // フォールバック：鳥居の代わりに赤い四角を描画
+        int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
+        int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
+        graphics.setDrawColor(255, 0, 0, 255); // 赤色
+        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
     }
 } 

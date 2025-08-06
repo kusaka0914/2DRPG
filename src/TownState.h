@@ -87,6 +87,12 @@ private:
     SDL_Texture* houseTexture;
     SDL_Texture* castleTexture;
     SDL_Texture* stoneTileTexture;
+    
+    // 住人画像テクスチャ
+    SDL_Texture* residentTextures[6]; // resident_1 から resident_5
+    SDL_Texture* guardTexture; // 衛兵画像
+    SDL_Texture* toriiTexture; // 鳥居画像
+    SDL_Texture* residentHomeTexture; // 住人の家画像
 
 public:
     TownState(std::shared_ptr<Player> player);
@@ -115,6 +121,9 @@ public:
     // DemonCastleStateから来たことを示すフラグ
     static bool s_fromDemonCastle;
     
+    // 夜の回数を追跡
+    static int s_nightCount;
+    
     // ゲーム説明機能
     bool showGameExplanation;
     int explanationStep;
@@ -138,6 +147,7 @@ private:
     void drawPlayer(Graphics& graphics);
     void drawNPCs(Graphics& graphics);
     void drawBuildings(Graphics& graphics);
+    void drawGate(Graphics& graphics);
     void drawBuildingInterior(Graphics& graphics);
     
     // メッセージボード関連

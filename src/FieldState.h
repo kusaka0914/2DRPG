@@ -70,4 +70,5 @@ private:
     void loadFieldImages();
     void generateMonsterSpawnPoints();
     void relocateMonsterSpawnPoint(int oldX, int oldY);
+    void drawFieldGate(Graphics& graphics);
 }; 

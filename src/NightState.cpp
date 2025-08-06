@@ -104,18 +104,18 @@ void NightState::render(Graphics& graphics) {
     // メンタルなどのUIを表示（街と同じ見た目）
     // パラメータ背景
     graphics.setDrawColor(0, 0, 0, 200);
-    graphics.drawRect(10, 10, 300, 80, true);
+    graphics.drawRect(800, 10, 300, 80, true);
     graphics.setDrawColor(255, 255, 255, 255);
-    graphics.drawRect(10, 10, 300, 80, false);
+    graphics.drawRect(800, 10, 300, 80, false);
     
     // パラメータテキスト
     std::string mentalText = "メンタル: " + std::to_string(player->getMental());
     std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
     std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
     
-    graphics.drawText(mentalText, 20, 20, "default", {255, 255, 255, 255});
-    graphics.drawText(demonTrustText, 20, 40, "default", {255, 100, 100, 255}); // 赤色
-    graphics.drawText(kingTrustText, 20, 60, "default", {100, 100, 255, 255}); // 青色
+    graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
+    graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
+    graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
     
     // UI更新
     updateUI();
@@ -136,6 +136,8 @@ void NightState::handleInput(const InputManager& input) {
             // 3人倒した後のメッセージの場合は街に戻る
             if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
                 if (stateManager) {
+                    // 夜の回数を増加
+                    TownState::s_nightCount++;
                     // タイマーを再起動して街に戻る
                     TownState::s_nightTimerActive = true;
                     TownState::s_nightTimer = 300.0f; // 5分 = 300秒
@@ -149,6 +151,8 @@ void NightState::handleInput(const InputManager& input) {
     // ESCキーで街に戻る
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
+            // 夜の回数を増加
+            TownState::s_nightCount++;
             // タイマーを再起動して街に戻る
             TownState::s_nightTimerActive = true;
             TownState::s_nightTimer = 300.0f; // 5分 = 300秒

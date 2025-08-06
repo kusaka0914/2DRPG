@@ -13,9 +13,13 @@ float TownState::s_nightTimer = 0.0f;
 int TownState::s_targetLevel = 0;
 bool TownState::s_levelGoalAchieved = false;
 bool TownState::s_fromDemonCastle = false;
+int TownState::s_nightCount = 0; // 夜の回数を追跡
+std::vector<std::pair<int, int>> residentHomes = {
+    {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
+};
 
 TownState::TownState(std::shared_ptr<Player> player)
-    : player(player), playerX(14), playerY(13), 
+    : player(player), playerX(14), playerY(14), 
       messageBoard(nullptr), isShowingMessage(false), 
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       showGameExplanation(false), explanationStep(0) {
@@ -134,16 +138,7 @@ void TownState::render(Graphics& graphics) {
         drawMap(graphics);
         drawBuildings(graphics);
         drawNPCs(graphics);
-        
-        // フィールドへの入り口（街の一番下）
-        int fieldEntranceX = 14; // 街の中央
-        int fieldEntranceY = 15; // 街の一番下
-        
-        // フィールドへの入り口を描画（緑色の四角）
-        graphics.setDrawColor(0, 128, 0, 255); // 緑色
-        graphics.drawRect(fieldEntranceX * TILE_SIZE, fieldEntranceY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(fieldEntranceX * TILE_SIZE, fieldEntranceY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // ゲートはdrawMap内で描画されるため、ここでは削除
     } else {
         drawBuildingInterior(graphics);
     }
@@ -207,18 +202,18 @@ void TownState::render(Graphics& graphics) {
     if (nightTimerActive && !showGameExplanation) {
         // パラメータ背景
         graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.drawRect(800, 10, 300, 80, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 120, 300, 80, false);
+        graphics.drawRect(800, 10, 300, 80, false);
         
         // パラメータテキスト
         std::string mentalText = "メンタル: " + std::to_string(player->getMental());
         std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
         std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
         
-        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
     }
     
     // ゲームパッド接続状態を表示（画面右上）
@@ -381,21 +376,30 @@ void TownState::setupUI() {
 void TownState::setupNPCs() {
     npcs.clear();
     
-    // 道具屋の店主
-    npcs.emplace_back(NPCType::SHOPKEEPER, "道具屋のおじさん", 
-                      "いらっしゃい！何か買っていくかい？", 8, 9);
+    // {
+    //     {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
+    // };
     
-    // 宿屋の女将
-    npcs.emplace_back(NPCType::INNKEEPER, "宿屋のおかみ", 
-                      "疲れたでしょう？ゆっくり休んでいって", 18, 9);
+    // 町の人たち（住民画像を使用）
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人1", 
+                      "最近魔物が増えて困っているんだ...", 3, 7);
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人2", 
+                      "今日は良い天気だね。", 7, 6);
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人3", 
+                      "王様の城は立派だね。", 11, 8);
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人4", 
+                      "冒険者さん、頑張ってね！", 5, 10);
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人5", 
+                      "街は平和でいいね。", 19, 8);
+    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人6", 
+                        "今日も気持ちがいい天気！", 21, 13);
     
-    // 町の人
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人", 
-                      "最近魔物が増えて困っているんだ...", 6, 14);
-    
-    // 衛兵
-    npcs.emplace_back(NPCType::GUARD, "衛兵", 
-                      "町の平和を守るのが私の仕事だ！", 22, 12);
+    npcs.emplace_back(NPCType::GUARD, "衛兵1", 
+                      "町の平和を守るのが私の仕事だ！", 23, 6);
+    npcs.emplace_back(NPCType::GUARD, "衛兵2", 
+                      "何か困ったことがあれば声をかけてくれ。", 24, 7);
+    npcs.emplace_back(NPCType::GUARD, "衛兵3", 
+                      "街の見回りは大切な仕事だ。", 6, 13);
 }
 
 void TownState::setupShopItems() {
@@ -501,6 +505,23 @@ void TownState::loadTextures(Graphics& graphics) {
     houseTexture = graphics.loadTexture("assets/buildings/house.png", "house");
     castleTexture = graphics.loadTexture("assets/buildings/castle.png", "castle");    
     stoneTileTexture = graphics.loadTexture("assets/tiles/stonetile.png", "stone_tile");
+    
+    // 住人画像を読み込み
+    residentTextures[0] = graphics.getTexture("resident_1");
+    residentTextures[1] = graphics.getTexture("resident_2");
+    residentTextures[2] = graphics.getTexture("resident_3");
+    residentTextures[3] = graphics.getTexture("resident_4");
+    residentTextures[4] = graphics.getTexture("resident_5");
+    residentTextures[5] = graphics.getTexture("resident_6");
+    
+    // 衛兵画像を読み込み
+    guardTexture = graphics.getTexture("guard");
+    
+    // 鳥居画像を読み込み
+    toriiTexture = graphics.getTexture("torii");
+    
+    // 住人の家画像を読み込み
+    residentHomeTexture = graphics.getTexture("resident_home");
 }
 
 void TownState::drawMap(Graphics& graphics) {
@@ -532,6 +553,9 @@ void TownState::drawMap(Graphics& graphics) {
             }
         }
     }
+    
+    // ゲート（出口）の描画
+    drawGate(graphics);
 }
 
 void TownState::drawBuildings(Graphics& graphics) {
@@ -575,6 +599,55 @@ void TownState::drawBuildings(Graphics& graphics) {
             graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
                             BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
         }
+    }
+    
+    for (const auto& home : residentHomes) {
+        int x = home.first;
+        int y = home.second;
+        
+        if (residentHomeTexture) {
+            // 住人の家画像を描画（2タイルサイズ）
+            graphics.drawTexture(residentHomeTexture, x * TILE_SIZE, y * TILE_SIZE, 
+                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
+        } else {
+            // フォールバック：茶色の四角
+            graphics.setDrawColor(139, 69, 19, 255); // 茶色
+            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
+                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE, true);
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
+                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
+        }
+    }
+}
+
+void TownState::drawGate(Graphics& graphics) {
+    // ゲートの位置（出口: 14, 15）
+    int gateX = 14;
+    int gateY = 15;
+    
+    // 石のタイルを描画（背景）
+    if (stoneTileTexture) {
+        int drawX = gateX * TILE_SIZE;
+        int drawY = gateY * TILE_SIZE;
+        graphics.drawTexture(stoneTileTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
+    }
+    
+    // 鳥居画像を描画（前景）
+    if (toriiTexture) {
+        int drawX = gateX * TILE_SIZE;
+        int drawY = gateY * TILE_SIZE;
+        // 鳥居は少し大きく描画（2タイルサイズ）
+        graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
+                           TILE_SIZE * 2, TILE_SIZE * 2);
+    } else {
+        // フォールバック：鳥居の代わりに赤い四角を描画
+        int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
+        int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
+        graphics.setDrawColor(255, 0, 0, 255); // 赤色
+        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
     }
 }
 
@@ -675,12 +748,13 @@ void TownState::drawBuildingInterior(Graphics& graphics) {
 }
 
 void TownState::drawNPCs(Graphics& graphics) {
-    for (const auto& npc : npcs) {
-        int drawX = npc.x * TILE_SIZE + 8;
-        int drawY = npc.y * TILE_SIZE + 8;
-        int size = TILE_SIZE - 16;
+    for (size_t i = 0; i < npcs.size(); i++) {
+        const auto& npc = npcs[i];
+        int drawX = npc.x * TILE_SIZE;
+        int drawY = npc.y * TILE_SIZE;
+        int size = TILE_SIZE;  // 38pxで描画
         
-        // NPCタイプによって色分け
+        // NPCタイプによって画像または色分け
         switch (npc.type) {
             case NPCType::SHOPKEEPER:
                 graphics.setDrawColor(255, 165, 0, 255); // オレンジ
@@ -689,16 +763,35 @@ void TownState::drawNPCs(Graphics& graphics) {
                 graphics.setDrawColor(255, 20, 147, 255); // ピンク
                 break;
             case NPCType::TOWNSPERSON:
-                graphics.setDrawColor(128, 0, 128, 255); // 紫
+                // 住人画像を使用（インデックスを循環使用）
+                {
+                    int residentIndex = (i - 2) % 5; // 最初の2つ（店主と女将）を除く
+                    if (residentIndex >= 0 && residentIndex < 5 && residentTextures[residentIndex]) {
+                        graphics.drawTexture(residentTextures[residentIndex], drawX, drawY, size, size);
+                        continue; // 画像を描画したら色の描画はスキップ
+                    } else {
+                        graphics.setDrawColor(128, 0, 128, 255); // 紫（フォールバック）
+                    }
+                }
                 break;
             case NPCType::GUARD:
-                graphics.setDrawColor(255, 0, 0, 255); // 赤
+                // 衛兵画像を使用
+                if (guardTexture) {
+                    graphics.drawTexture(guardTexture, drawX, drawY, size, size);
+                    continue; // 画像を描画したら色の描画はスキップ
+                } else {
+                    graphics.setDrawColor(255, 0, 0, 255); // 赤（フォールバック）
+                }
                 break;
         }
         
-        graphics.drawRect(drawX, drawY, size, size, true);
+        // フォールバック用の色付き四角（画像がない場合）
+        int fallbackX = npc.x * TILE_SIZE + 4;
+        int fallbackY = npc.y * TILE_SIZE + 4;
+        int fallbackSize = TILE_SIZE - 8;
+        graphics.drawRect(fallbackX, fallbackY, fallbackSize, fallbackSize, true);
         graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(drawX, drawY, size, size, false);
+        graphics.drawRect(fallbackX, fallbackY, fallbackSize, fallbackSize, false);
     }
 }
 
@@ -737,7 +830,15 @@ bool TownState::isCollidingWithBuilding(int x, int y) const {
         }
     }
     
-
+    for (const auto& home : residentHomes) {
+        int homeX = home.first;
+        int homeY = home.second;
+        
+        // プレイヤー（1x1）と住人の家（2x2）の衝突チェック
+        if (GameUtils::isColliding(x, y, 1, 1, homeX, homeY, BUILDING_SIZE, BUILDING_SIZE)) {
+            return true;
+        }
+    }
     
     return false;
 }
@@ -799,7 +900,8 @@ void TownState::enterRoom() {
 
 // フィールドへの入り口関連
 void TownState::checkFieldEntrance() {
-    if (GameUtils::isNearPositionEuclidean(playerX, playerY, 14, 15, 1.5f)) { // 街の中央から下に向かう
+    // プレイヤーが出口の上にいる場合のみ遷移
+    if (playerX == 14 && playerY == 15) {
         enterField();
     }
 }
@@ -824,8 +926,11 @@ void TownState::startNightTimer() {
     // s_nightTimerActive = true;
     // s_nightTimer = NIGHT_TIMER_DURATION;
     
-    // 目標レベルを設定（現在のレベル + 19）
-    s_targetLevel = 25;
+    // 夜の回数を増加
+    s_nightCount++;
+    
+    // 目標レベルを動的に設定（25, 50, 75, 100...）
+    s_targetLevel = 25 * s_nightCount;
     s_levelGoalAchieved = false;
     
     // 最初の説明テキストを自動で表示
@@ -837,23 +942,24 @@ void TownState::startNightTimer() {
 
 // 建物への入場関連
 void TownState::checkBuildingEntrance() {
-    // 建物の近くにいるかチェック
+    // 建物の上にいるかチェック
     for (size_t i = 0; i < buildings.size(); ++i) {
-        if (GameUtils::isNearPositionEuclidean(playerX, playerY, buildings[i].first, buildings[i].second, 1.5f)) {
+        if (playerX == buildings[i].first && playerY == buildings[i].second) {
             if (buildingTypes[i] == "shop") {
                 enterShop();
                 return;
-            } else if (buildingTypes[i] == "inn") {
-                enterInn();
+            } else if (buildingTypes[i] == "weapon_shop") {
+                enterShop(); // 武器屋も道具屋として扱う
                 return;
-            } else if (buildingTypes[i] == "church") {
-                enterChurch();
+            } else if (buildingTypes[i] == "house") {
+                enterRoom();
+                return;
+            } else if (buildingTypes[i] == "castle") {
+                checkCastleEntrance();
                 return;
             }
         }
     }
-    
-    std::cout << "ここには建物の入り口がありません。" << std::endl;
 }
 
 void TownState::enterShop() {
@@ -868,6 +974,8 @@ void TownState::enterInn() {
     showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。スペースで休むとHPが全回復します。ESCで外に出ます。");
 }
 
+
+
 void TownState::enterChurch() {
     currentLocation = TownLocation::CHURCH;
     setupUI(); // UIを更新
@@ -881,14 +989,12 @@ void TownState::exitBuilding() {
 } 
 
 void TownState::checkCastleEntrance() {
-    // 城の近くにいるかチェック（城の位置: 12,1）
-    if (GameUtils::isNearPositionEuclidean(playerX, playerY, castleX, castleY, 3.0f)) {
+    // 城の上にいるかチェック
+    if (playerX == castleX && playerY == castleY) {
         std::cout << "城に入ります..." << std::endl;
         if (stateManager) {
             stateManager->changeState(std::make_unique<CastleState>(player));
         }
-    } else {
-        std::cout << "ここには城の入り口がありません。" << std::endl;
     }
 } 
 

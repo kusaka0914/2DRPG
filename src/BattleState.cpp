@@ -28,10 +28,9 @@ void BattleState::enter() {
     setupUI();
     loadBattleImages();
     
-    // 敵出現メッセージを画面中央に表示
+    // 敵出現メッセージをバトルログにのみ表示（画面中央には表示しない）
     std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
     addBattleLog(enemyAppearMessage);
-    showMessage(enemyAppearMessage);
     
     // INTROフェーズから開始
     currentPhase = BattlePhase::INTRO;
@@ -96,11 +95,30 @@ void BattleState::update(float deltaTime) {
     
     switch (currentPhase) {
         case BattlePhase::INTRO:
-            if (phaseTimer > 2.0f) { // 1.5秒から2.0秒に変更
+            if (phaseTimer > 1.0f) { // 1秒後に選択肢を表示
                 currentPhase = BattlePhase::PLAYER_TURN;
-                hideMessage();
                 isShowingOptions = false; // 選択肢表示をリセット
                 phaseTimer = 0;
+            }
+            break;
+            
+        case BattlePhase::PLAYER_TURN:
+            // プレイヤーのターンで選択肢が表示されていない場合は表示
+            if (!isShowingOptions) {
+                showPlayerOptions();
+            }
+            break;
+            
+        case BattlePhase::PLAYER_ATTACK_DISPLAY:
+            if (phaseTimer > 1.0f) { // 1秒待機後、敵のターンへ
+                if (enemy->getIsAlive()) {
+                    currentPhase = BattlePhase::ENEMY_TURN;
+                    executeEnemyTurn();
+                    currentPhase = BattlePhase::ENEMY_TURN_DISPLAY;
+                    phaseTimer = 0;
+                } else {
+                    checkBattleEnd();
+                }
             }
             break;
             
@@ -116,10 +134,41 @@ void BattleState::update(float deltaTime) {
             }
             break;
             
+        case BattlePhase::VICTORY_DISPLAY:
+            if (phaseTimer > 2.0f) {
+                // 勝利メッセージ表示後、レベルアップチェック
+                if (player->getLevel() > oldLevel) {
+                    hasLeveledUp = true;
+                    currentPhase = BattlePhase::LEVEL_UP_DISPLAY;
+                    
+                    int hpGain = player->getMaxHp() - oldMaxHp;
+                    int mpGain = player->getMaxMp() - oldMaxMp;
+                    int attackGain = player->getAttack() - oldAttack;
+                    int defenseGain = player->getDefense() - oldDefense;
+                    
+                    std::string levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
+                    levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
+                    levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+                    
+                    // 複数レベルアップした場合の表示
+                    int levelGained = player->getLevel() - oldLevel;
+                    if (levelGained > 1) {
+                        levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel + 1) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
+                        levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
+                        levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+                    }
+                    
+                    addBattleLog(levelUpMessage);
+                } else {
+                    currentPhase = BattlePhase::RESULT;
+                }
+                phaseTimer = 0;
+            }
+            break;
+            
         case BattlePhase::LEVEL_UP_DISPLAY:
             if (phaseTimer > 3.0f) {
                 currentPhase = BattlePhase::RESULT;
-                hideMessage();
                 phaseTimer = 0;
             }
             break;
@@ -141,7 +190,7 @@ void BattleState::render(Graphics& graphics) {
     SDL_Texture* enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
     if (enemyTexture) {
         // 画像が存在する場合は画像を描画
-        graphics.drawTexture(enemyTexture, 350, 150, 100, 100);
+        graphics.drawTexture(enemyTexture, 500, 150, 100, 100);
     } else {
         // 画像が存在しない場合は四角形で描画（フォールバック）
         graphics.setDrawColor(255, 0, 0, 255);
@@ -153,13 +202,13 @@ void BattleState::render(Graphics& graphics) {
     // 敵の体力表示（敵の真上）
     graphics.setDrawColor(255, 255, 255, 255);
     std::string enemyHpText = "HP: " + std::to_string(enemy->getHp()) + "/" + std::to_string(enemy->getMaxHp());
-    graphics.drawText(enemyHpText, 350, 120, "default");
+    graphics.drawText(enemyHpText, 500, 120, "default");
     
     // プレイヤーキャラクター描画
     SDL_Texture* playerTexture = graphics.getTexture("player");
     if (playerTexture) {
         // 画像が存在する場合は画像を描画
-        graphics.drawTexture(playerTexture, 150, 300, 60, 60);
+        graphics.drawTexture(playerTexture, 500, 300, 60, 60);
     } else {
         // 画像が存在しない場合は四角形で描画（フォールバック）
         graphics.setDrawColor(0, 0, 255, 255);
@@ -172,8 +221,8 @@ void BattleState::render(Graphics& graphics) {
     graphics.setDrawColor(255, 255, 255, 255);
     std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
     std::string playerMpText = "MP: " + std::to_string(player->getMp()) + "/" + std::to_string(player->getMaxMp());
-    graphics.drawText(playerHpText, 150, 270, "default");
-    graphics.drawText(playerMpText, 150, 290, "default");
+    graphics.drawText(playerHpText, 500, 260, "default");
+    graphics.drawText(playerMpText, 500, 280, "default");
     
     // UI描画
     ui.render(graphics);
@@ -224,18 +273,18 @@ void BattleState::render(Graphics& graphics) {
     if (nightTimerActive) {
         // パラメータ背景
         graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.drawRect(800, 10, 300, 80, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 120, 300, 80, false);
+        graphics.drawRect(800, 10, 300, 80, false);
         
         // パラメータテキスト
         std::string mentalText = "メンタル: " + std::to_string(player->getMental());
         std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
         std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
         
-        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
     }
     
     graphics.present();
@@ -264,7 +313,7 @@ void BattleState::setupUI() {
     ui.clear();
     
     // 戦闘ログ
-    auto battleLogLabelPtr = std::make_unique<Label>(50, 400, "", "default");
+    auto battleLogLabelPtr = std::make_unique<Label>(150, 400, "", "default");
     battleLogLabel = battleLogLabelPtr.get();
     ui.addElement(std::move(battleLogLabelPtr));
     
@@ -340,7 +389,6 @@ void BattleState::loadBattleImages() {
 }
 
 void BattleState::showSpellMenu() {
-    hideMessage();
     std::string spellMenu = "呪文を選択:\n";
     
     if (player->canCastSpell(SpellType::HEAL)) {
@@ -357,7 +405,7 @@ void BattleState::showSpellMenu() {
     }
     spellMenu += "5. やめる";
     
-    showMessage(spellMenu);
+    addBattleLog(spellMenu);
 }
 
 void BattleState::handleSpellSelection(int spellChoice) {
@@ -398,41 +446,36 @@ void BattleState::handleSpellSelection(int spellChoice) {
             case SpellType::HEAL:
                 {
                     std::string healMessage = player->getName() + "はホイミを唱えた！\nHP" + std::to_string(result) + "回復！";
-                    addBattleLog(healMessage);
-                    showMessage(healMessage);
+                                addBattleLog(healMessage);
                 }
                 break;
             case SpellType::FIREBALL:
                 {
                     std::string damageMessage = player->getName() + "はメラを唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！";
                     addBattleLog(damageMessage);
-                    showMessage(damageMessage);
                 }
                 break;
             case SpellType::LIGHTNING:
                 {
                     std::string damageMessage = player->getName() + "はいなずまを唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージを受けた！";
                     addBattleLog(damageMessage);
-                    showMessage(damageMessage);
                 }
                 break;
             case SpellType::POISON_DART:
                 {
                     std::string damageMessage = player->getName() + "は毒の針を唱えた！\n" + enemy->getTypeName() + "は" + std::to_string(result) + "のダメージ＋毒状態！";
                     addBattleLog(damageMessage);
-                    showMessage(damageMessage);
                 }
                 break;
         }
         
-        // 呪文実行後は敵のターンへ
+        // 呪文実行後、敵が倒れたかチェック
         updateStatus();
         if (enemy->getIsAlive()) {
-            currentPhase = BattlePhase::ENEMY_TURN;
-            executeEnemyTurn();
-            currentPhase = BattlePhase::ENEMY_TURN_DISPLAY;
+            currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
             phaseTimer = 0;
         } else {
+            // 敵が倒れた場合は即座に結果をチェック
             checkBattleEnd();
         }
     } else {
@@ -452,7 +495,7 @@ void BattleState::showItemMenu() {
     }
     itemMenu += "ESC. やめる";
     
-    showMessage(itemMenu);
+    addBattleLog(itemMenu);
 }
 
 void BattleState::handleItemSelection(int itemChoice) {
@@ -464,12 +507,10 @@ void BattleState::handleItemSelection(int itemChoice) {
             int healAmount = player->getHp() - oldHp;
             addBattleLog(player->getName() + "はやくそうを使った！HP" + std::to_string(healAmount) + "回復！");
             
-            // アイテム使用後は敵のターンへ
+            // アイテム使用後、1秒待ってから敵のターンへ
             updateStatus();
             if (enemy->getIsAlive()) {
-                currentPhase = BattlePhase::ENEMY_TURN;
-                executeEnemyTurn();
-                currentPhase = BattlePhase::ENEMY_TURN_DISPLAY;
+                currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
                 phaseTimer = 0;
             } else {
                 checkBattleEnd();
@@ -491,6 +532,10 @@ void BattleState::returnToPlayerTurn() {
 void BattleState::handlePlayerAction(int action) {
     if (currentPhase != BattlePhase::PLAYER_TURN) return;
     
+    // 選択肢表示をリセット
+    isShowingOptions = false;
+    hideMessage();
+    
     switch (action) {
         case 1: // 攻撃
             {
@@ -508,14 +553,16 @@ void BattleState::handlePlayerAction(int action) {
                     isCritical = true;
                     std::string damageMessage = player->getName() + "の攻撃！【会心の一撃！】\n" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！";
                     addBattleLog(damageMessage);
-                    showMessage(damageMessage);
                 } else {
                     std::string damageMessage = player->getName() + "の攻撃！\n" + enemy->getTypeName() + "は" + std::to_string(damage) + "のダメージを受けた！";
                     addBattleLog(damageMessage);
-                    showMessage(damageMessage);
                 }
                 
                 enemy->takeDamage(damage);
+                
+                // プレイヤーの攻撃後、1秒待ってから敵のターンへ
+                currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
+                phaseTimer = 0;
             }
             break;
             
@@ -532,6 +579,10 @@ void BattleState::handlePlayerAction(int action) {
                     player->useItem(itemSlot + 1);
                     int healAmount = player->getHp() - oldHp;
                     addBattleLog(player->getName() + "はやくそうを使った！HP" + std::to_string(healAmount) + "回復！");
+                    
+                    // アイテム使用後、1秒待ってから敵のターンへ
+                    currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
+                    phaseTimer = 0;
                 } else {
                     addBattleLog("アイテムが見つかりません！");
                     return;
@@ -545,6 +596,10 @@ void BattleState::handlePlayerAction(int action) {
         case 4: // 防御
             playerDefending = true;
             addBattleLog(player->getName() + "は身を守っている...");
+            
+            // 防御後、1秒待ってから敵のターンへ
+            currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
+            phaseTimer = 0;
             break;
             
         case 5: // 逃げる
@@ -556,21 +611,15 @@ void BattleState::handlePlayerAction(int action) {
                 return;
             } else {
                 addBattleLog(player->getName() + "は逃げ出そうとしたが、失敗した！");
+                
+                // 逃げ失敗後、1秒待ってから敵のターンへ
+                currentPhase = BattlePhase::PLAYER_ATTACK_DISPLAY;
+                phaseTimer = 0;
             }
             break;
     }
     
     updateStatus();
-    
-    // 敵が生きていればすぐに敵のターンを実行
-    if (enemy->getIsAlive()) {
-        currentPhase = BattlePhase::ENEMY_TURN;
-        executeEnemyTurn();
-        currentPhase = BattlePhase::ENEMY_TURN_DISPLAY;
-        phaseTimer = 0;
-    } else {
-        checkBattleEnd();
-    }
 }
 
 void BattleState::executeEnemyTurn() {
@@ -582,10 +631,12 @@ void BattleState::executeEnemyTurn() {
     // 防御中はダメージを半減
     if (playerDefending) {
         actualDamage = std::max(1, baseDamage / 2); // 最低1ダメージ
-        addBattleLog(enemy->getTypeName() + "の攻撃！" + player->getName() + "は身を守った！" + std::to_string(actualDamage) + "のダメージ！");
+        std::string attackMessage = enemy->getTypeName() + "の攻撃！" + player->getName() + "は身を守った！" + std::to_string(actualDamage) + "のダメージ！";
+        addBattleLog(attackMessage);
         playerDefending = false; // 防御状態をリセット
     } else {
-        addBattleLog(enemy->getTypeName() + "の攻撃！" + player->getName() + "は" + std::to_string(actualDamage) + "のダメージを受けた！");
+        std::string attackMessage = enemy->getTypeName() + "の攻撃！" + player->getName() + "は" + std::to_string(actualDamage) + "のダメージを受けた！";
+        addBattleLog(attackMessage);
     }
     
     // 実際のダメージを適用
@@ -599,7 +650,7 @@ void BattleState::checkBattleEnd() {
         lastResult = BattleResult::PLAYER_DEFEAT;
         currentPhase = BattlePhase::RESULT;
         addBattleLog("敗北...");
-        showMessage("DEFEAT...");
+        addBattleLog("DEFEAT...");
     } else if (!enemy->getIsAlive()) {
         lastResult = BattleResult::PLAYER_VICTORY;
         
@@ -612,38 +663,15 @@ void BattleState::checkBattleEnd() {
         // 王様からの信頼度を3上昇
         player->changeKingTrust(3);
         
-        addBattleLog(enemy->getTypeName() + "は倒れた...");
-        showMessage("VICTORY!\n" + std::to_string(expGained) + "の経験値を得た！\n" + std::to_string(goldGained) + "ゴールドを手に入れた！\n王様からの信頼度が3上昇した！");
+        std::string victoryMessage = enemy->getTypeName() + "は倒れた..." + std::to_string(expGained) + "の経験値を得た！\n" + std::to_string(goldGained) + "ゴールドを手に入れた！\n王様からの信頼度が3上昇した！";
+        addBattleLog(victoryMessage);
         
-        // レベルアップチェック
-        if (player->getLevel() > oldLevel) {
-            hasLeveledUp = true;
-            currentPhase = BattlePhase::LEVEL_UP_DISPLAY;
-            
-            int hpGain = player->getMaxHp() - oldMaxHp;
-            int mpGain = player->getMaxMp() - oldMaxMp;
-            int attackGain = player->getAttack() - oldAttack;
-            int defenseGain = player->getDefense() - oldDefense;
-            
-            std::string levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
-            levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
-            levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
-            
-            // 複数レベルアップした場合の表示
-            int levelGained = player->getLevel() - oldLevel;
-            if (levelGained > 1) {
-                levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel + 1) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
-                levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
-                levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
-            }
-            
-            showMessage(levelUpMessage);
-        } else {
-            currentPhase = BattlePhase::RESULT;
-        }
+        // 勝利メッセージを先に表示
+        currentPhase = BattlePhase::VICTORY_DISPLAY;
+        phaseTimer = 0;
     } else if (currentPhase == BattlePhase::ENEMY_TURN_DISPLAY) {
         currentPhase = BattlePhase::PLAYER_TURN;
-        hideMessage();
+        isShowingOptions = false; // 選択肢表示をリセット
     }
     
     phaseTimer = 0;
@@ -795,12 +823,9 @@ void BattleState::updateOptionDisplay() {
             displayText += "   " + currentOptions[i] + " ";
         }
     }
-    showMessage(displayText);
     
-    // 選択肢の色を白色に設定
-    if (messageLabel) {
-        messageLabel->setColor({255, 255, 255, 255}); // 白色
-    }
+    // 選択肢をバトルログに表示
+    addBattleLog(displayText);
 }
 
 void BattleState::executeSelectedOption() {

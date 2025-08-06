@@ -122,18 +122,18 @@ void CastleState::render(Graphics& graphics) {
     if (nightTimerActive) {
         // パラメータ背景
         graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.drawRect(800, 10, 300, 80, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 120, 300, 80, false);
+        graphics.drawRect(800, 10, 300, 80, false);
         
         // パラメータテキスト
         std::string mentalText = "メンタル: " + std::to_string(player->getMental());
         std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
         std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
         
-        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
     }
     
     graphics.present();
@@ -172,14 +172,6 @@ void CastleState::handleInput(const InputManager& input) {
 
 void CastleState::setupUI() {
     ui.clear();
-    
-    // プレイヤー情報表示
-    auto playerInfoLabel = std::make_unique<Label>(10, 10, "", "default");
-    playerInfoLabel->setColor({255, 255, 255, 255});
-    playerInfoLabel->setText(player->getName() + " Lv:" + std::to_string(player->getLevel()) + 
-                           " HP:" + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) +
-                           " ゴールド:" + std::to_string(player->getGold()));
-    ui.addElement(std::move(playerInfoLabel));
     
     // メッセージボード（画面中央下部）
     auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
