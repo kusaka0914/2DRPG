@@ -3,12 +3,13 @@
 #include <random>
 
 Player::Player(const std::string& name)
-    : Character(name, 20, 20, 5, 3, 1), gold(0), inventory(20), equipmentManager(),
+    : Character(name, 30, 20, 8, 3, 1), gold(0), inventory(20), equipmentManager(),
       hasLevelUpStoryToShow(false), levelUpStoryLevel(0),
-      trustLevel(50), isEvil(true), evilActions(0), goodActions(0), isNightTime(false) {
+      trustLevel(50), isEvil(true), evilActions(0), goodActions(0), isNightTime(false),
+      mental(100), demonTrust(50), kingTrust(50) {
     // 初期呪文を覚える
-    learnSpell(SpellType::HEAL, 3);
-    learnSpell(SpellType::FIREBALL, 5);
+    learnSpell(SpellType::HEAL, 8); // レベル1 × 8 = 8MP
+    learnSpell(SpellType::FIREBALL, 8); // レベル1 × 8 = 8MP
     
     // 初期アイテムを追加
     addStartingItems();
@@ -16,10 +17,10 @@ Player::Player(const std::string& name)
 
 void Player::levelUp() {
     level++;
-    int hpIncrease = 8 + (level * 2);
-    int mpIncrease = 3 + level;
-    int attackIncrease = 3 + (level / 2);
-    int defenseIncrease = 2 + (level / 3);
+    int hpIncrease = 5;
+    int mpIncrease = 1;
+    int attackIncrease = 2;
+    int defenseIncrease = 2;
     
     setMaxHp(getMaxHp() + hpIncrease);
     setMaxMp(getMaxMp() + mpIncrease);
@@ -30,19 +31,12 @@ void Player::levelUp() {
     hp = maxHp;
     mp = maxMp;
     
-    std::cout << "\n★レベルアップ！★" << std::endl;
-    std::cout << name << "はレベル" << level << "になった！" << std::endl;
-    std::cout << "HP+" << hpIncrease << " MP+" << mpIncrease 
-              << " 攻撃力+" << attackIncrease << " 防御力+" << defenseIncrease << std::endl;
-    
     // 新しい呪文を覚える
     if (level == 3) {
-        learnSpell(SpellType::LIGHTNING, 8);
-        std::cout << "新しい呪文「いなずま」を覚えた！" << std::endl;
+        learnSpell(SpellType::LIGHTNING, 24); // レベル3 × 8 = 24MP
     }
     if (level == 4) {
-        learnSpell(SpellType::POISON_DART, 6);
-        std::cout << "新しい呪文「毒の針」を覚えた！" << std::endl;
+        learnSpell(SpellType::POISON_DART, 32); // レベル4 × 8 = 32MP
     }
     
     // レベルアップストーリーフラグを設定
@@ -52,7 +46,6 @@ void Player::levelUp() {
 
 void Player::displayInfo() const {
     displayStatus();
-    std::cout << "ゴールド: " << gold << std::endl;
     
     // 装備ボーナス込みの表示
     int totalAttack = getTotalAttack();
@@ -60,32 +53,20 @@ void Player::displayInfo() const {
     int equipAttackBonus = equipmentManager.getTotalAttackBonus();
     int equipDefenseBonus = equipmentManager.getTotalDefenseBonus();
     
-    if (equipAttackBonus > 0) {
-        std::cout << "攻撃力: " << getAttack() << "+" << equipAttackBonus << "=" << totalAttack;
-    } else {
-        std::cout << "攻撃力: " << totalAttack;
-    }
-    
-    if (equipDefenseBonus > 0) {
-        std::cout << " 防御力: " << getDefense() << "+" << equipDefenseBonus << "=" << totalDefense << std::endl;
-    } else {
-        std::cout << " 防御力: " << totalDefense << std::endl;
-    }
-    
-    std::cout << "習得呪文: ";
     for (const auto& spell : spells) {
+        int mpCost = 0;
         switch (spell.first) {
             case SpellType::HEAL:
-                std::cout << "ホイミ(" << spell.second << "MP) ";
+                mpCost = 3; // ホイミ: レベル×2
                 break;
             case SpellType::FIREBALL:
-                std::cout << "メラ(" << spell.second << "MP) ";
+                mpCost = 6; // メラ: レベル×4
                 break;
             case SpellType::LIGHTNING:
-                std::cout << "いなずま(" << spell.second << "MP) ";
+                mpCost = 10; // いなずま: レベル×6
                 break;
             case SpellType::POISON_DART:
-                std::cout << "毒の針(" << spell.second << "MP) ";
+                mpCost = 4; // 毒の針: レベル×4
                 break;
         }
     }
@@ -94,37 +75,67 @@ void Player::displayInfo() const {
 
 void Player::gainExp(int expGained) {
     exp += expGained;
-    std::cout << expGained << "の経験値を得た！" << std::endl;
     
-    // レベルアップ判定（必要経験値 = レベル * 10）
-    int requiredExp = level * 10;
-    if (exp >= requiredExp) {
-        exp -= requiredExp;
+    // レベルアップ判定（必要経験値 = 10固定、最大レベル100）
+    while (exp >= 10 && level < 100) {
+        exp -= 10;
         levelUp();
+    }
+    
+    if (level >= 100) {
+        
     }
 }
 
 void Player::gainGold(int goldGained) {
     gold += goldGained;
-    if (goldGained > 0) {
-        std::cout << goldGained << "ゴールドを手に入れた！" << std::endl;
-    } else {
-        std::cout << (-goldGained) << "ゴールドを支払った。" << std::endl;
-    }
 }
 
 bool Player::canCastSpell(SpellType spell) const {
     auto it = spells.find(spell);
-    return it != spells.end() && mp >= it->second && isAlive;
+    if (it == spells.end()) return false;
+    
+    // 呪文ごとに異なるMP消費を計算
+    int requiredMp = 0;
+    switch (spell) {
+        case SpellType::HEAL:
+            requiredMp = 2; // ホイミ: レベル×2
+            break;
+        case SpellType::FIREBALL:
+            requiredMp = 6; // メラ: レベル×4
+            break;
+        case SpellType::LIGHTNING:
+            requiredMp = 10; // いなずま: レベル×6
+            break;
+        case SpellType::POISON_DART:
+            requiredMp = 4; // 毒の針: レベル×4
+            break;
+    }
+    return mp >= requiredMp;
 }
 
 int Player::castSpell(SpellType spell, Character* target) {
     if (!canCastSpell(spell)) {
-        std::cout << "MPが足りない、または呪文を覚えていない！" << std::endl;
         return 0;
     }
     
-    mp -= spells.at(spell);
+    // 呪文ごとに異なるMP消費を計算
+    int mpCost = 0;
+    switch (spell) {
+        case SpellType::HEAL:
+            mpCost = 2; // ホイミ: レベル×2
+            break;
+        case SpellType::FIREBALL:
+            mpCost = 6; // メラ: レベル×4
+            break;
+        case SpellType::LIGHTNING:
+            mpCost = 10; // いなずま: レベル×6
+            break;
+        case SpellType::POISON_DART:
+            mpCost = 4; // 毒の針: レベル×4
+            break;
+    }
+    mp -= mpCost;
     
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -134,34 +145,32 @@ int Player::castSpell(SpellType spell, Character* target) {
             {
                 int healAmount = 15 + (level * 2);
                 heal(healAmount);
-                std::cout << name << "はホイミを唱えた！" << std::endl;
                 return healAmount;
             }
             break;
         case SpellType::FIREBALL:
             if (target) {
-                int damage = 12 + (level * 3);
-                std::cout << name << "はメラを唱えた！" << std::endl;
-                target->takeDamage(damage);
-                return damage;
+                int baseDamage = getAttack() * 1.25;
+                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
+                target->takeDamage(finalDamage);
+                return finalDamage;
             }
             break;
         case SpellType::LIGHTNING:
             if (target) {
-                int damage = 20 + (level * 4);
-                std::cout << name << "はいなずまを唱えた！" << std::endl;
-                target->takeDamage(damage);
-                return damage;
+                int baseDamage = getAttack() * 1.5;
+                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
+                target->takeDamage(finalDamage);
+                return finalDamage;
             }
             break;
         case SpellType::POISON_DART:
             if (target) {
-                int damage = 8 + (level * 2);
-                std::cout << name << "は毒の針を唱えた！" << std::endl;
-                target->takeDamage(damage);
+                int baseDamage = getAttack() * 2;
+                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
+                target->takeDamage(finalDamage);
                 target->applyStatusEffect(StatusEffect::POISON, 3); // 3ターン毒
-                std::cout << target->getName() << "は毒におかされた！" << std::endl;
-                return damage;
+                return finalDamage;
             }
             break;
     }
@@ -253,9 +262,8 @@ int Player::attack(Character& target) {
     if (criticalDis(gen) <= 8) {
         damage = baseDamage * 2;
         isCritical = true;
-        std::cout << name << "の攻撃！【会心の一撃！】" << std::endl;
     } else {
-        std::cout << name << "の攻撃！" << std::endl;
+
     }
     
     target.takeDamage(damage);
@@ -263,7 +271,7 @@ int Player::attack(Character& target) {
 }
 
 void Player::defend() {
-    std::cout << name << "は身を守っている..." << std::endl;
+    
     // 次のターンのダメージを半減（実装は戦闘システムで）
 }
 
@@ -273,11 +281,6 @@ bool Player::tryToEscape() {
     std::uniform_int_distribution<> dis(1, 100);
     
     bool escaped = dis(gen) <= 70; // 70%の確率で逃走成功
-    if (escaped) {
-        std::cout << name << "は逃げ出した！" << std::endl;
-    } else {
-        std::cout << name << "は逃げ出そうとしたが、失敗した！" << std::endl;
-    }
     return escaped;
 }
 
@@ -364,5 +367,17 @@ void Player::setNightTime(bool night) {
 
 void Player::toggleNightTime() {
     isNightTime = !isNightTime;
-    std::cout << (isNightTime ? "夜になりました" : "朝になりました") << std::endl;
+}
+
+// 新しいパラメータ変更メソッド
+void Player::changeMental(int amount) {
+    mental = std::max(0, std::min(100, mental + amount));
+}
+
+void Player::changeDemonTrust(int amount) {
+    demonTrust = std::max(0, std::min(100, demonTrust + amount));
+}
+
+void Player::changeKingTrust(int amount) {
+    kingTrust = std::max(0, std::min(100, kingTrust + amount));
 } 

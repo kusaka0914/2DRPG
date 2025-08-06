@@ -22,7 +22,7 @@ private:
     bool hasLevelUpStoryToShow;
     int levelUpStoryLevel;
 
-    // 信頼度システム（新しいストーリー用）
+    // 信頼度システム
     int trustLevel; // 王様からの信頼度 (0-100)
     bool isEvil; // 魔王の手下かどうか
     int evilActions; // 悪行の回数
@@ -30,6 +30,11 @@ private:
     
     // 夜間システム
     bool isNightTime; // 夜間かどうか
+
+    // 新しいパラメータ
+    int mental;           // メンタル（0-100）
+    int demonTrust;       // 魔王からの信頼（0-100）
+    int kingTrust;        // 王様からの信頼（0-100）
 
 public:
     Player(const std::string& name);
@@ -95,4 +100,19 @@ public:
     bool isNightTimeMode() const { return isNightTime; }
     void setNightTime(bool night);
     void toggleNightTime();
+    
+    // 新しいパラメータのgetter/setter
+    int getMental() const { return mental; }
+    void setMental(int value) { mental = std::max(0, std::min(100, value)); }
+    
+    int getDemonTrust() const { return demonTrust; }
+    void setDemonTrust(int value) { demonTrust = std::max(0, std::min(100, value)); }
+    
+    int getKingTrust() const { return kingTrust; }
+    void setKingTrust(int value) { kingTrust = std::max(0, std::min(100, value)); }
+    
+    // パラメータ変更メソッド
+    void changeMental(int amount);
+    void changeDemonTrust(int amount);
+    void changeKingTrust(int amount);
 }; 

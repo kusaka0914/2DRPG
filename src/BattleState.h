@@ -34,7 +34,15 @@ private:
     Label* enemyStatusLabel;
     Label* messageLabel;  // 重要なメッセージ表示用
     
+    // 戦闘ログ
     std::string battleLog;
+    int logScrollOffset;
+    
+    // 夜のタイマー機能（TownStateと共有）
+    bool nightTimerActive;
+    float nightTimer;
+    const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
+    
     BattleResult lastResult;
     
     // レベルアップ情報
@@ -48,6 +56,7 @@ private:
     std::vector<std::string> currentOptions;
     int selectedOption;
     bool isShowingOptions;
+    bool isShowingMessage;
 
 public:
     BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy);

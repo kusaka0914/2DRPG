@@ -1,30 +1,46 @@
 #include "CastleState.h"
-#include "TownState.h"
 #include "DemonCastleState.h"
+#include "TownState.h"
 #include "Graphics.h"
 #include "InputManager.h"
+#include "NightState.h"
 #include <iostream>
 
+// 静的変数（ファイル内で共有）
+static bool s_castleFirstTime = true;
+
 CastleState::CastleState(std::shared_ptr<Player> player)
-    : player(player), playerX(12), playerY(15), moveTimer(0),
+    : player(player), playerX(6), playerY(4), 
       messageBoard(nullptr), isShowingMessage(false),
-      isTalkingToKing(false), dialogueStep(0), hasReceivedQuest(false), shouldGoToDemonCastle(false) {
+      moveTimer(0), dialogueStep(0), isTalkingToKing(false),
+      nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
     
     // 王様の会話を初期化
-    kingDialogues = {
-        "勇者よ、ようこそ我が城へ。",
-        "魔王が世界を脅かしている。",
-        "お前の力で魔王を倒してほしい。",
-        "頼んだぞ、勇者！"
-    };
+    if (s_castleFirstTime) {
+        kingDialogues = {
+        "よく来てくれた勇者よ",
+        "実はな、最近街の住民が夜間に失踪する事件が多発しているんだ。",
+        "この件、わしは魔王の仕業なのではないかと睨んでおる。",
+        "どうか魔王を倒し、この街を守ってくれないか。",
+        "勇者よ、よろしく頼む。"
+        };
+        playerX = 4;
+        playerY = 4;
+    }else {
+        kingDialogues = {};
+        playerX = 4;
+        playerY = 9;
+    }
     
     setupCastle();
     setupUI();
 }
 
 void CastleState::enter() {
-    std::cout << "城に入りました" << std::endl;
-    showMessage("王様の城に到着しました。王様と会話できます。");
+    // 自動で王様との会話を開始（初回のみ）
+    if (s_castleFirstTime) {
+        startDialogue();
+    }
 }
 
 void CastleState::exit() {
@@ -35,18 +51,39 @@ void CastleState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
     
-    // 魔王の城への移行チェック
-    if (shouldGoToDemonCastle) {
-        shouldGoToDemonCastle = false;
-        if (stateManager) {
-            stateManager->changeState(std::make_unique<DemonCastleState>(player));
+    // 夜のタイマーを更新
+    if (nightTimerActive) {
+        nightTimer -= deltaTime;
+        // 静的変数に状態を保存
+        TownState::s_nightTimerActive = true;
+        TownState::s_nightTimer = nightTimer;
+        
+        if (nightTimer <= 0.0f) {
+            // 5分経過したら夜の街に移動
+            nightTimerActive = false;
+            TownState::s_nightTimerActive = false;
+            TownState::s_nightTimer = 0.0f;
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<NightState>(player));
+            }
         }
+    } else {
+        // タイマーが非アクティブな場合、静的変数もクリア
+        TownState::s_nightTimerActive = false;
+        TownState::s_nightTimer = 0.0f;
     }
+    
+    // 移動処理
 }
 
 void CastleState::render(Graphics& graphics) {
-    // 背景色を設定（城風）
-    graphics.setDrawColor(139, 69, 19, 255);
+    // 初回のみテクスチャを読み込み
+    if (!playerTexture) {
+        loadTextures(graphics);
+    }
+    
+    // 背景色を設定（明るい城）
+    graphics.setDrawColor(240, 240, 220, 255);
     graphics.clear();
     
     drawCastle(graphics);
@@ -56,13 +93,48 @@ void CastleState::render(Graphics& graphics) {
     // メッセージがある時のみメッセージボードの黒背景を描画
     if (messageBoard && !messageBoard->getText().empty()) {
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(40, 440, 720, 100, true); // メッセージボード背景
+        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(40, 440, 720, 100); // メッセージボード枠
+        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
     }
     
     // UI描画
     ui.render(graphics);
+    
+    // 夜のタイマーを表示
+    if (nightTimerActive) {
+        int remainingMinutes = static_cast<int>(nightTimer) / 60;
+        int remainingSeconds = static_cast<int>(nightTimer) % 60;
+        
+        // タイマー背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 10, 200, 40, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 10, 200, 40, false);
+        
+        // タイマーテキスト
+        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
+                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
+        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
+    }
+    
+    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
+    if (nightTimerActive) {
+        // パラメータ背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 120, 300, 80, false);
+        
+        // パラメータテキスト
+        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
+        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
+        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
+        
+        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+    }
     
     graphics.present();
 }
@@ -73,7 +145,7 @@ void CastleState::handleInput(const InputManager& input) {
     // メッセージ表示中の場合はスペースキーでクリア
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
-            clearMessage();
+            nextDialogue(); // メッセージクリアではなく次の会話に進む
         }
         return; // メッセージ表示中は他の操作を無効化
     }
@@ -86,20 +158,16 @@ void CastleState::handleInput(const InputManager& input) {
         return;
     }
     
-    // プレイヤー移動
-    if (moveTimer <= 0) {
-        handleMovement(input);
-    }
-    
-    // スペースキーで相互作用またはドアから出る
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
-        if (isNearDoor()) {
+    // 共通の入力処理テンプレートを使用
+    GameState::handleInputTemplate(input, ui, isShowingMessage, moveTimer,
+        [this, &input]() { handleMovement(input); },
+        [this]() { checkInteraction(); },
+        [this]() { 
             std::cout << "城を出て街に向かいます..." << std::endl;
             exitToTown();
-        } else {
-            checkInteraction();
-        }
-    }
+        },
+        [this]() { return isNearObject(doorX, doorY); },
+        [this]() { clearMessage(); });
 }
 
 void CastleState::setupUI() {
@@ -113,68 +181,40 @@ void CastleState::setupUI() {
                            " ゴールド:" + std::to_string(player->getGold()));
     ui.addElement(std::move(playerInfoLabel));
     
-    // 操作説明
-    auto controlsLabel = std::make_unique<Label>(10, 30, "", "default");
-    controlsLabel->setColor({255, 255, 255, 255});
-    controlsLabel->setText("移動: 矢印キー/WASD/ゲームパッド | 調べる: スペース/Aボタン | ドアから出る");
-    ui.addElement(std::move(controlsLabel));
-    
-    // メッセージボード（黒背景）
-    auto messageBoardLabel = std::make_unique<Label>(50, 450, "", "default");
+    // メッセージボード（画面中央下部）
+    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
     messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
-    messageBoardLabel->setText("城を探索してみましょう");
+    messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
 }
 
 void CastleState::setupCastle() {
-    // 城のオブジェクト配置
-    throneX = 12; throneY = 5;    // 王座（中央上部）
-    guardX = 8; guardY = 8;       // 衛兵（左側）
-    doorX = 12; doorY = 18;       // ドア（下部中央）
+    // 城のオブジェクト配置（13x11の部屋、画面中央に配置）
+    throneX = 4; throneY = 2;        // 王座（中央上部）
+    guardLeftX = 2; guardLeftY = 6;   // 左衛兵
+    guardRightX = 6; guardRightY = 6; // 右衛兵
+    doorX = 4; doorY = 10;            // ドア（下部中央）
+}
+
+void CastleState::loadTextures(Graphics& graphics) {
+    // 画像を読み込み
+    playerTexture = GameState::loadPlayerTexture(graphics);
+    kingTexture = GameState::loadKingTexture(graphics);
+    guardTexture = GameState::loadGuardTexture(graphics);
+    castleTileTexture = graphics.loadTexture("assets/tiles/castletile.png", "castle_tile");
+    
+    // 読み込みエラーの場合はnullptrのまま
+    if (!playerTexture) std::cout << "プレイヤー画像の読み込みに失敗しました" << std::endl;
+    if (!kingTexture) std::cout << "王様画像の読み込みに失敗しました" << std::endl;
+    if (!guardTexture) std::cout << "衛兵画像の読み込みに失敗しました" << std::endl;
+    if (!castleTileTexture) std::cout << "城タイル画像の読み込みに失敗しました" << std::endl;
 }
 
 void CastleState::handleMovement(const InputManager& input) {
-    int newX = playerX;
-    int newY = playerY;
-    
-    // キーボード入力
-    if (input.isKeyPressed(InputKey::UP) || input.isKeyPressed(InputKey::W)) {
-        newY--;
-    } else if (input.isKeyPressed(InputKey::DOWN) || input.isKeyPressed(InputKey::S)) {
-        newY++;
-    } else if (input.isKeyPressed(InputKey::LEFT) || input.isKeyPressed(InputKey::A)) {
-        newX--;
-    } else if (input.isKeyPressed(InputKey::RIGHT) || input.isKeyPressed(InputKey::D)) {
-        newX++;
-    }
-    
-    // ゲームパッドのアナログスティック入力
-    const float DEADZONE = 0.3f;
-    float stickX = input.getLeftStickX();
-    float stickY = input.getLeftStickY();
-    
-    if (abs(stickX) > DEADZONE || abs(stickY) > DEADZONE) {
-        if (abs(stickX) > abs(stickY)) {
-            if (stickX < -DEADZONE) {
-                newX--;
-            } else if (stickX > DEADZONE) {
-                newX++;
-            }
-        } else {
-            if (stickY < -DEADZONE) {
-                newY--;
-            } else if (stickY > DEADZONE) {
-                newY++;
-            }
-        }
-    }
-    
-    if (isValidPosition(newX, newY)) {
-        playerX = newX;
-        playerY = newY;
-        moveTimer = MOVE_DELAY;
-    }
+    GameState::handleMovement(input, playerX, playerY, moveTimer, MOVE_DELAY,
+        [this](int x, int y) { return isValidPosition(x, y); },
+        [this](int x, int y) { /* 移動後の処理（必要に応じて） */ });
 }
 
 void CastleState::checkInteraction() {
@@ -182,14 +222,18 @@ void CastleState::checkInteraction() {
     if (isNearObject(throneX, throneY)) {
         interactWithThrone();
     }
-    // 衛兵との相互作用
-    else if (isNearObject(guardX, guardY)) {
+    // 左衛兵との相互作用
+    else if (isNearObject(guardLeftX, guardLeftY)) {
+        interactWithGuard();
+    }
+    // 右衛兵との相互作用
+    else if (isNearObject(guardRightX, guardRightY)) {
         interactWithGuard();
     }
 }
 
 void CastleState::interactWithThrone() {
-    if (!hasReceivedQuest) {
+    if (s_castleFirstTime) {
         startDialogue();
     } else {
         showMessage("王様: 勇者よ、魔王討伐を頼んだぞ！頑張れ！");
@@ -220,105 +264,189 @@ void CastleState::nextDialogue() {
         hasReceivedQuest = true;
         shouldGoToDemonCastle = true;
         std::cout << "王様との会話が終了しました。魔王の城に向かいます。" << std::endl;
+        
+        // メッセージをクリア
+        clearMessage();
+
+        
+        // 自動で魔王の城に移動
+        if (stateManager && s_castleFirstTime) {
+            stateManager->changeState(std::make_unique<DemonCastleState>(player));
+            s_castleFirstTime = false; // 静的変数を更新
+        }
     } else {
         showCurrentDialogue();
     }
 }
 
 void CastleState::showCurrentDialogue() {
-    if (dialogueStep < kingDialogues.size()) {
+    if (dialogueStep < kingDialogues.size() && s_castleFirstTime) {
         std::cout << "王様: " << kingDialogues[dialogueStep] << std::endl;
         showMessage("王様: " + kingDialogues[dialogueStep]);
     }
 }
 
 void CastleState::showMessage(const std::string& message) {
-    if (messageBoard) {
-        messageBoard->setText(message);
-        isShowingMessage = true;
-        std::cout << "メッセージを表示: " << message << std::endl;
-    }
+    GameState::showMessage(message, messageBoard, isShowingMessage);
 }
 
 void CastleState::clearMessage() {
-    if (messageBoard) {
-        messageBoard->setText("");
-        isShowingMessage = false;
-        std::cout << "メッセージをクリアしました" << std::endl;
-    }
+    GameState::clearMessage(messageBoard, isShowingMessage);
 }
 
 void CastleState::drawCastle(Graphics& graphics) {
-    // 床を描画（大理石風）
-    graphics.setDrawColor(220, 220, 220, 255); // ライトグレー
-    for (int y = 1; y < ROOM_HEIGHT - 1; y++) {
-        for (int x = 1; x < ROOM_WIDTH - 1; x++) {
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        }
-    }
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
     
-    // 壁を描画（石造り）
-    graphics.setDrawColor(105, 105, 105, 255); // ディムグレー
-    // 上下の壁
-    for (int x = 0; x < ROOM_WIDTH; x++) {
-        graphics.drawRect(x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, true);
-        graphics.drawRect(x * TILE_SIZE, (ROOM_HEIGHT - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-    }
-    // 左右の壁
-    for (int y = 0; y < ROOM_HEIGHT; y++) {
-        graphics.drawRect(0, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        graphics.drawRect((ROOM_WIDTH - 1) * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 13 * 38 = 494
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
+    
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 494) / 2 = 303
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
+    
+    // 背景を黒で塗りつぶし
+    graphics.setDrawColor(0, 0, 0, 255); // 黒色
+    graphics.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true);
+    
+    // 城の画像を描画
+    SDL_Texture* castleTexture = graphics.getTexture("castle_tile");
+    if (castleTexture) {
+        // 画像がある場合は画像を描画
+        graphics.drawTexture(castleTexture, ROOM_OFFSET_X, ROOM_OFFSET_Y, ROOM_PIXEL_WIDTH, ROOM_PIXEL_HEIGHT);
+    } else {
+        // 画像がない場合は色で描画（フォールバック）
+        // 部屋の床を描画（大理石風）
+        graphics.setDrawColor(220, 220, 220, 255); // ライトグレー
+        graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y, ROOM_PIXEL_WIDTH, ROOM_PIXEL_HEIGHT, true);
+        
+        // 部屋の壁を描画（石造り）
+        graphics.setDrawColor(105, 105, 105, 255); // ディムグレー
+        // 上下の壁
+        for (int x = 0; x < ROOM_WIDTH; x++) {
+            graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y, TILE_SIZE, TILE_SIZE, true);
+            graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y + (ROOM_HEIGHT - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        }
+        // 左右の壁
+        for (int y = 0; y < ROOM_HEIGHT; y++) {
+            graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+            graphics.drawRect(ROOM_OFFSET_X + (ROOM_WIDTH - 1) * TILE_SIZE, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        }
     }
 }
 
 void CastleState::drawCastleObjects(Graphics& graphics) {
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
+    
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 13 * 38 = 494
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
+    
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 494) / 2 = 303
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
+    
     // 王座を描画（金色）
     graphics.setDrawColor(255, 215, 0, 255);
-    graphics.drawRect(throneX * TILE_SIZE, throneY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2, true);
+    graphics.drawRect(ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(throneX * TILE_SIZE, throneY * TILE_SIZE, TILE_SIZE * 3, TILE_SIZE * 2);
+    graphics.drawRect(ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     
     // 王座の装飾
     graphics.setDrawColor(139, 69, 19, 255);
-    graphics.drawRect((throneX + 1) * TILE_SIZE, (throneY + 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    graphics.drawRect((ROOM_OFFSET_X + throneX + 0.25) * TILE_SIZE, (ROOM_OFFSET_Y + throneY + 0.25) * TILE_SIZE, TILE_SIZE * 0.5, TILE_SIZE * 0.5, true);
     
-    // 衛兵を描画（銀色の鎧）
-    graphics.setDrawColor(192, 192, 192, 255);
-    graphics.drawRect(guardX * TILE_SIZE, guardY * TILE_SIZE, TILE_SIZE, TILE_SIZE * 2, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(guardX * TILE_SIZE, guardY * TILE_SIZE, TILE_SIZE, TILE_SIZE * 2);
+    // 王様を描画（画像または金色の四角）
+    if (kingTexture) {
+        graphics.drawTexture(kingTexture, ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    // 左衛兵を描画（画像または銀色の四角）
+    if (guardTexture) {
+        graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        graphics.setDrawColor(192, 192, 192, 255);
+        graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    // 右衛兵を描画（画像または銀色の四角）
+    if (guardTexture) {
+        graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        graphics.setDrawColor(192, 192, 192, 255);
+        graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
     
     // ドアを描画（茶色）
     graphics.setDrawColor(139, 69, 19, 255);
-    graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE, true);
+    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE);
+    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 }
 
 void CastleState::drawPlayer(Graphics& graphics) {
-    int drawX = playerX * TILE_SIZE + 4;
-    int drawY = playerY * TILE_SIZE + 4;
-    int size = TILE_SIZE - 8;
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
     
-    // プレイヤーを描画（青色）
-    graphics.setDrawColor(0, 0, 255, 255);
-    graphics.drawRect(drawX, drawY, size, size, true);
-    graphics.setDrawColor(255, 255, 255, 255);
-    graphics.drawRect(drawX, drawY, size, size, false);
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 13 * 38 = 494
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
+    
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 494) / 2 = 303
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
+    
+    // プレイヤーを描画（画像または青色の四角）
+    if (playerTexture) {
+        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        // フォールバック：青色の四角で描画
+        graphics.setDrawColor(0, 0, 255, 255);
+        graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
 }
 
 bool CastleState::isValidPosition(int x, int y) const {
-    return x >= 1 && x < ROOM_WIDTH - 1 && y >= 1 && y < ROOM_HEIGHT - 1;
+    // 基本的な境界チェック
+    if (x < 1 || x >= ROOM_WIDTH - 1 || y < 1 || y >= ROOM_HEIGHT - 1) {
+        return false;
+    }
+    
+    // GameUtilsを使用したオブジェクトとの衝突チェック
+    // プレイヤー（1x1）と王座（1x1）の衝突
+    if (GameUtils::isColliding(x, y, 1, 1, throneX, throneY, 1, 1)) {
+        return false;
+    }
+    
+    // プレイヤー（1x1）と左衛兵（1x1）の衝突
+    if (GameUtils::isColliding(x, y, 1, 1, guardLeftX, guardLeftY, 1, 1)) {
+        return false;
+    }
+    
+    // プレイヤー（1x1）と右衛兵（1x1）の衝突
+    if (GameUtils::isColliding(x, y, 1, 1, guardRightX, guardRightY, 1, 1)) {
+        return false;
+    }
+    
+    // プレイヤー（1x1）とドア（2x1）の衝突
+    if (GameUtils::isColliding(x, y, 1, 1, doorX, doorY, 2, 1)) {
+        return false;
+    }
+    
+    return true;
 }
 
 bool CastleState::isNearObject(int x, int y) const {
-    int dx = abs(playerX - x);
-    int dy = abs(playerY - y);
-    return (dx <= 1 && dy <= 1);
-}
-
-bool CastleState::isNearDoor() const {
-    int dx = abs(playerX - doorX);
-    int dy = abs(playerY - doorY);
-    return (dx <= 1 && dy <= 1);
+    return GameState::isNearObject(playerX, playerY, x, y);
 } 

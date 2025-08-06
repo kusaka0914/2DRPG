@@ -82,54 +82,56 @@ void Button::setColors(SDL_Color normal, SDL_Color hover, SDL_Color pressed) {
 
 // Label
 Label::Label(int x, int y, const std::string& text, const std::string& fontName)
-    : UIElement(x, y, 0, 0), text(text), fontName(fontName), textTexture(nullptr), graphics(nullptr) {
+    : UIElement(x, y, 0, 0), text(text), fontName(fontName) {
     
     textColor = {255, 255, 255, 255};
+    splitTextIntoLines();
 }
 
 Label::~Label() {
-    if (textTexture) {
-        SDL_DestroyTexture(textTexture);
-    }
+    // テクスチャは使用しないので何もしない
 }
 
 void Label::render(Graphics& graphics) {
     if (!visible || text.empty()) return;
     
-    if (!textTexture || this->graphics != &graphics) {
-        updateTexture(graphics);
-    }
+    // 改行文字でテキストを分割して各ラインを個別に描画
+    splitTextIntoLines();
     
-    if (textTexture) {
-        graphics.drawTexture(textTexture, x, y);
+    int currentY = y;
+    for (const auto& line : lines) {
+        if (!line.empty()) {
+            graphics.drawText(line, x, currentY, fontName, textColor);
+            // 次のラインの位置を計算（フォントサイズに応じて調整）
+            currentY += 20; // 仮の行間
+        }
     }
 }
 
 void Label::setText(const std::string& newText) {
     if (text != newText) {
         text = newText;
-        if (textTexture) {
-            SDL_DestroyTexture(textTexture);
-            textTexture = nullptr;
-        }
+        splitTextIntoLines();
     }
 }
 
-void Label::updateTexture(Graphics& graphics) {
-    if (textTexture) {
-        SDL_DestroyTexture(textTexture);
-        textTexture = nullptr;
-    }
-    
-    if (!text.empty()) {
-        textTexture = graphics.createTextTexture(text, fontName, textColor);
-        if (textTexture) {
-            SDL_QueryTexture(textTexture, nullptr, nullptr, &width, &height);
+void Label::splitTextIntoLines() {
+    lines.clear();
+    std::string currentLine;
+    for (char c : text) {
+        if (c == '\n') {
+            lines.push_back(currentLine);
+            currentLine.clear();
+        } else {
+            currentLine += c;
         }
     }
-    
-    this->graphics = &graphics;
+    if (!currentLine.empty()) {
+        lines.push_back(currentLine);
+    }
 }
+
+
 
 // UIManager
 void UIManager::addElement(std::unique_ptr<UIElement> element) {

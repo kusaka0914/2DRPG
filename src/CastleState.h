@@ -2,6 +2,7 @@
 #include "GameState.h"
 #include "UI.h"
 #include "Player.h"
+#include "GameUtils.h"
 #include <memory>
 
 class CastleState : public GameState {
@@ -11,13 +12,14 @@ private:
     
     // プレイヤーの位置
     int playerX, playerY;
-    const int TILE_SIZE = 32;
-    const int ROOM_WIDTH = 25;
-    const int ROOM_HEIGHT = 20;
+    const int TILE_SIZE = 38;
+    const int ROOM_WIDTH = 9;  // 28 → 13に変更
+    const int ROOM_HEIGHT = 11; // 16 → 11に変更
     
-    // 城のオブジェクト位置
-    int throneX, throneY;    // 王座
-    int guardX, guardY;      // 衛兵
+    // 城のオブジェクト位置（1タイルサイズ）
+    int throneX, throneY;    // 王座（中央）
+    int guardLeftX, guardLeftY;  // 左衛兵
+    int guardRightX, guardRightY; // 右衛兵
     int doorX, doorY;        // 出口ドア
     
     // 移動タイマー
@@ -37,6 +39,17 @@ private:
     // 魔王の城への移行フラグ
     bool shouldGoToDemonCastle;
     
+    // 画像テクスチャ
+    SDL_Texture* playerTexture;
+    SDL_Texture* kingTexture;
+    SDL_Texture* guardTexture;
+    SDL_Texture* castleTileTexture;
+    
+    // 夜のタイマー機能（TownStateと共有）
+    bool nightTimerActive;
+    float nightTimer;
+    const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
+    
 public:
     CastleState(std::shared_ptr<Player> player);
     
@@ -51,6 +64,7 @@ public:
 private:
     void setupUI();
     void setupCastle();
+    void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);
     void checkInteraction();
     void startDialogue();
@@ -63,7 +77,6 @@ private:
     void drawPlayer(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
     bool isNearObject(int x, int y) const;
-    bool isNearDoor() const;
     void interactWithThrone();
     void interactWithGuard();
     void exitToTown();

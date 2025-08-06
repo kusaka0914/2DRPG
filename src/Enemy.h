@@ -10,7 +10,24 @@ enum class EnemyType {
     // === ボス敵追加 ===
     GOBLIN_KING,    // レベル3のボス
     ORC_LORD,       // レベル5のボス
-    DRAGON_LORD     // レベル8のボス（魔王）
+    DRAGON_LORD,    // レベル8のボス（魔王）
+    // === 新しいモンスター追加 ===
+    SKELETON,       // レベル10以降
+    GHOST,          // レベル15以降
+    VAMPIRE,        // レベル20以降
+    DEMON_SOLDIER,  // レベル25以降
+    WEREWOLF,       // レベル30以降
+    MINOTAUR,       // レベル35以降
+    CYCLOPS,        // レベル40以降
+    GARGOYLE,       // レベル45以降
+    PHANTOM,        // レベル50以降
+    DARK_KNIGHT,    // レベル60以降
+    ICE_GIANT,      // レベル70以降
+    FIRE_DEMON,     // レベル80以降
+    SHADOW_LORD,    // レベル90以降
+    ANCIENT_DRAGON, // レベル100以降
+    CHAOS_BEAST,    // レベル150以降
+    ELDER_GOD       // レベル200以降
 };
 
 class Enemy : public Character {

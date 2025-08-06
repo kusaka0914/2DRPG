@@ -16,7 +16,7 @@ TARGET = rpg_game_2d
 SOURCES = src/main_sdl.cpp src/Character.cpp src/Player.cpp src/Enemy.cpp src/Battle.cpp \
           src/Graphics.cpp src/InputManager.cpp src/GameState.cpp src/UI.cpp \
           src/MainMenuState.cpp src/FieldState.cpp src/BattleState.cpp src/TownState.cpp \
-          src/CastleState.cpp src/RoomState.cpp src/NightState.cpp src/DemonCastleState.cpp src/SDL2Game.cpp \
+          src/CastleState.cpp src/RoomState.cpp src/NightState.cpp src/DemonCastleState.cpp src/GameOverState.cpp src/SDL2Game.cpp \
           src/Item.cpp src/Inventory.cpp src/Equipment.cpp src/MapTerrain.cpp
 
 # Object files (generated from source files) 
@@ -24,7 +24,7 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 # Header files (for dependency tracking, from src/ directory)
 HEADERS = src/Character.h src/Player.h src/Enemy.h src/Battle.h src/Graphics.h src/InputManager.h \
-          src/GameState.h src/UI.h src/MainMenuState.h src/FieldState.h src/BattleState.h src/TownState.h src/CastleState.h src/RoomState.h src/SDL2Game.h \
+          src/GameState.h src/UI.h src/MainMenuState.h src/FieldState.h src/BattleState.h src/TownState.h src/CastleState.h src/RoomState.h src/GameOverState.h src/SDL2Game.h \
           src/Item.h src/Inventory.h src/Equipment.h src/MapTerrain.h
 
 # Default target

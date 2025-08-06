@@ -1,4 +1,6 @@
 #include "Character.h"
+#include "Player.h"
+#include <iostream>
 #include <algorithm>
 
 Character::Character(const std::string& name, int hp, int mp, int attack, int defense, int level)
@@ -8,7 +10,8 @@ Character::Character(const std::string& name, int hp, int mp, int attack, int de
 void Character::takeDamage(int damage) {
     if (!isAlive) return;
     
-    int actualDamage = std::max(1, damage - getEffectiveDefense());
+    // ダメージは既にcalculateDamageで計算済みなので、そのまま適用
+    int actualDamage = std::max(1, damage);
     hp -= actualDamage;
     
     std::cout << name << "は" << actualDamage << "のダメージを受けた！" << std::endl;
@@ -44,7 +47,17 @@ void Character::displayStatus() const {
 
 int Character::calculateDamage(const Character& target) const {
     // 基本ダメージ計算（攻撃力 - 相手の防御力）
-    return std::max(1, getEffectiveAttack() - target.getEffectiveDefense());
+    int baseDamage = getEffectiveAttack() - target.getEffectiveDefense();
+    
+    // プレイヤーの攻撃のみダメージを調整（敵の攻撃は調整しない）
+    if (dynamic_cast<const Player*>(this) != nullptr) {
+        // プレイヤーの攻撃は0.8倍に調整
+        int adjustedDamage = std::max(1, static_cast<int>(baseDamage));
+        return adjustedDamage;
+    } else {
+        // 敵の攻撃は調整なし
+        return std::max(1, baseDamage);
+    }
 }
 
 int Character::getEffectiveAttack() const {

@@ -1,6 +1,8 @@
 #include "BattleState.h"
-#include "FieldState.h"
+#include "NightState.h"
 #include "MainMenuState.h"
+#include "TownState.h"
+#include "FieldState.h"
 #include <sstream>
 #include <random>
 #include <cmath> // abs関数のために追加
@@ -8,7 +10,9 @@
 
 BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy)
     : player(player), enemy(std::move(enemy)), currentPhase(BattlePhase::INTRO),
-      battleLog(""), playerDefending(false), currentOptions(), selectedOption(0), isShowingOptions(false) {
+      selectedOption(0), messageLabel(nullptr), isShowingMessage(false),
+      phaseTimer(0), oldLevel(0), oldMaxHp(0), oldMaxMp(0), oldAttack(0), oldDefense(0),
+      nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -40,8 +44,49 @@ void BattleState::exit() {
 }
 
 void BattleState::update(float deltaTime) {
-    phaseTimer += deltaTime;
     ui.update(deltaTime);
+    
+    // 夜のタイマーを更新
+    if (nightTimerActive) {
+        nightTimer -= deltaTime;
+        // 静的変数に状態を保存
+        TownState::s_nightTimerActive = true;
+        TownState::s_nightTimer = nightTimer;
+        
+        // 目標レベルチェック
+        if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
+            TownState::s_levelGoalAchieved = true;
+            // メッセージ表示はTownStateで行うため、ここではコンソール出力のみ
+            std::cout << "目標レベル" << TownState::s_targetLevel << "を達成しました！" << std::endl;
+        }
+        
+        if (nightTimer <= 0.0f) {
+            // 5分経過したら夜の街に移動
+            nightTimerActive = false;
+            TownState::s_nightTimerActive = false;
+            TownState::s_nightTimer = 0.0f;
+            
+            // 目標達成していない場合はゲームオーバー
+            if (!TownState::s_levelGoalAchieved) {
+                // ゲームオーバー処理（メイン画面に戻る）
+                if (stateManager) {
+                    auto newPlayer = std::make_shared<Player>("勇者");
+                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                }
+            } else {
+                if (stateManager) {
+                    stateManager->changeState(std::make_unique<NightState>(player));
+                }
+            }
+        }
+    } else {
+        // タイマーが非アクティブな場合、静的変数もクリア
+        TownState::s_nightTimerActive = false;
+        TownState::s_nightTimer = 0.0f;
+    }
+    
+    // 戦闘の更新処理
+    phaseTimer += deltaTime;
     
     // スティックタイマーを更新
     static float stickTimer = 0.0f;
@@ -130,7 +175,69 @@ void BattleState::render(Graphics& graphics) {
     graphics.drawText(playerHpText, 150, 270, "default");
     graphics.drawText(playerMpText, 150, 290, "default");
     
+    // UI描画
     ui.render(graphics);
+    
+    // 夜のタイマーを表示
+    if (nightTimerActive) {
+        int remainingMinutes = static_cast<int>(nightTimer) / 60;
+        int remainingSeconds = static_cast<int>(nightTimer) % 60;
+        
+        // タイマー背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 10, 200, 40, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 10, 200, 40, false);
+        
+        // タイマーテキスト
+        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
+                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
+        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
+        
+        // 目標レベル情報を表示
+        int currentLevel = player->getLevel();
+        int remainingLevels = TownState::s_targetLevel - currentLevel;
+        
+        // 目標レベル背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 60, 250, 50, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 60, 250, 50, false);
+        
+        if (TownState::s_targetLevel > 0) { // 目標レベルが設定されている場合のみ表示
+            if (TownState::s_levelGoalAchieved) {
+                // 目標達成済み
+                std::string goalText = "目標レベル" + std::to_string(TownState::s_targetLevel) + "達成！";
+                graphics.drawText(goalText, 20, 70, "default", {0, 255, 0, 255}); // 緑色
+                graphics.drawText("夜の街に進出可能", 20, 90, "default", {0, 255, 0, 255});
+            } else {
+                // 目標未達成
+                std::string goalText = "目標レベル: " + std::to_string(TownState::s_targetLevel);
+                graphics.drawText(goalText, 20, 70, "default", {255, 255, 255, 255});
+                std::string remainingText = "残りレベル: " + std::to_string(remainingLevels);
+                graphics.drawText(remainingText, 20, 90, "default", {255, 255, 0, 255}); // 黄色
+            }
+        }
+    }
+    
+    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
+    if (nightTimerActive) {
+        // パラメータ背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 120, 300, 80, false);
+        
+        // パラメータテキスト
+        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
+        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
+        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
+        
+        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+    }
+    
     graphics.present();
 }
 
@@ -497,13 +604,16 @@ void BattleState::checkBattleEnd() {
         lastResult = BattleResult::PLAYER_VICTORY;
         
         // 戦闘勝利報酬
-        int expGained = enemy->getExpReward();
+        int expGained = enemy->getExpReward(); // 経験値を2倍に
         int goldGained = enemy->getGoldReward();
         player->gainExp(expGained);
         player->gainGold(goldGained);
         
+        // 王様からの信頼度を3上昇
+        player->changeKingTrust(3);
+        
         addBattleLog(enemy->getTypeName() + "は倒れた...");
-        showMessage("VICTORY!\n" + std::to_string(expGained) + "の経験値を得た！\n" + std::to_string(goldGained) + "ゴールドを手に入れた！");
+        showMessage("VICTORY!\n" + std::to_string(expGained) + "の経験値を得た！\n" + std::to_string(goldGained) + "ゴールドを手に入れた！\n王様からの信頼度が3上昇した！");
         
         // レベルアップチェック
         if (player->getLevel() > oldLevel) {
@@ -518,6 +628,14 @@ void BattleState::checkBattleEnd() {
             std::string levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
             levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
             levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+            
+            // 複数レベルアップした場合の表示
+            int levelGained = player->getLevel() - oldLevel;
+            if (levelGained > 1) {
+                levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel + 1) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
+                levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + "\n";
+                levelUpMessage += "攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+            }
             
             showMessage(levelUpMessage);
         } else {

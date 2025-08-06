@@ -61,8 +61,7 @@ private:
     std::string text;
     std::string fontName;
     SDL_Color textColor;
-    SDL_Texture* textTexture;
-    Graphics* graphics;
+    std::vector<std::string> lines; // 改行で分割された行
 
 public:
     Label(int x, int y, const std::string& text, const std::string& fontName = "default");
@@ -74,7 +73,7 @@ public:
     const std::string& getText() const { return text; }
     
 private:
-    void updateTexture(Graphics& graphics);
+    void splitTextIntoLines();
 };
 
 // ストーリーメッセージボックスクラス（黒背景・白文字）

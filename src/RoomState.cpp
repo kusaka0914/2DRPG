@@ -3,22 +3,38 @@
 #include "InputManager.h"
 #include "TownState.h"
 #include "CastleState.h"
+#include "NightState.h"
 #include <iostream>
 
+// 静的変数（ファイル内で共有）
+static bool s_roomFirstTime = true;
+
 RoomState::RoomState(std::shared_ptr<Player> player)
-    : player(player), playerX(7), playerY(9), moveTimer(0), 
+    : player(player), playerX(3), playerY(2), 
       messageBoard(nullptr), isShowingMessage(false),
-      bedX(5), bedY(5), deskX(12), deskY(5), chestX(5), chestY(12), doorX(10), doorY(15) {
+      hasOpenedChest(false), bedTexture(nullptr), houseTileTexture(nullptr),
+      moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
+    if (s_roomFirstTime) {
+        playerX = 3;
+        playerY = 2;
+    } else {
+        playerX = 3;
+        playerY = 3;
+    }
     setupRoom();
+    setupUI();
 }
 
 void RoomState::enter() {
     setupUI();
-    if (isFirstTime) {
+    
+    // テクスチャを読み込み
+    // 注意：Graphicsオブジェクトが必要なので、render時に読み込む
+    
+    if (s_roomFirstTime) {
         showWelcomeMessage();
-        isFirstTime = false;
     } else {
-        showMessage("自分の部屋にいます。");
+        showMessage("自室に戻りました。");
     }
 }
 
@@ -29,9 +45,38 @@ void RoomState::exit() {
 void RoomState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
+    
+    // 夜のタイマーを更新
+    if (nightTimerActive) {
+        nightTimer -= deltaTime;
+        // 静的変数に状態を保存
+        TownState::s_nightTimerActive = true;
+        TownState::s_nightTimer = nightTimer;
+        
+        if (nightTimer <= 0.0f) {
+            // 5分経過したら夜の街に移動
+            nightTimerActive = false;
+            TownState::s_nightTimerActive = false;
+            TownState::s_nightTimer = 0.0f;
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<NightState>(player));
+            }
+        }
+    } else {
+        // タイマーが非アクティブな場合、静的変数もクリア
+        TownState::s_nightTimerActive = false;
+        TownState::s_nightTimer = 0.0f;
+    }
+    
+    // 移動処理
 }
 
 void RoomState::render(Graphics& graphics) {
+    // 初回のみテクスチャを読み込み
+    if (!playerTexture) {
+        loadTextures(graphics);
+    }
+    
     // 背景色を設定（温かい部屋の色）
     graphics.setDrawColor(139, 69, 19, 255); // 茶色
     graphics.clear();
@@ -43,46 +88,68 @@ void RoomState::render(Graphics& graphics) {
     // メッセージがある時のみメッセージボードの黒背景を描画
     if (messageBoard && !messageBoard->getText().empty()) {
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(40, 440, 720, 100, true); // メッセージボード背景 (filled)
+        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(40, 440, 720, 100); // メッセージボード枠
+        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
     }
     
     // UI描画
     ui.render(graphics);
     
+    // 夜のタイマーを表示
+    if (nightTimerActive) {
+        int remainingMinutes = static_cast<int>(nightTimer) / 60;
+        int remainingSeconds = static_cast<int>(nightTimer) % 60;
+        
+        // タイマー背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 10, 200, 40, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 10, 200, 40, false);
+        
+        // タイマーテキスト
+        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
+                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
+        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
+    }
+    
+    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
+    if (nightTimerActive) {
+        // パラメータ背景
+        graphics.setDrawColor(0, 0, 0, 200);
+        graphics.drawRect(10, 120, 300, 80, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(10, 120, 300, 80, false);
+        
+        // パラメータテキスト
+        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
+        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
+        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
+        
+        graphics.drawText(mentalText, 20, 130, "default", {255, 255, 255, 255});
+        graphics.drawText(demonTrustText, 20, 150, "default", {255, 100, 100, 255}); // 赤色
+        graphics.drawText(kingTrustText, 20, 170, "default", {100, 100, 255, 255}); // 青色
+    }
+    
     graphics.present();
 }
 
 void RoomState::handleInput(const InputManager& input) {
-    ui.handleInput(input);
-    
-    // メッセージ表示中の場合はスペースキーでクリア
-    if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
-            std::cout << "RoomState: メッセージクリア処理実行" << std::endl;
-            clearMessage();
-        }
-        return; // メッセージ表示中は他の操作を無効化
-    }
-    
-    if (moveTimer <= 0) {
-        handleMovement(input);
-    }
-    
-    // スペースキーで相互作用またはドアから出る
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
-        std::cout << "プレイヤー位置: (" << playerX << ", " << playerY << "), ドア位置: (" << doorX << ", " << doorY << ")" << std::endl;
-        if (isNearDoor()) {
+    GameState::handleInputTemplate(input, ui, isShowingMessage, moveTimer,
+        [this, &input]() { handleMovement(input); },
+        [this]() { checkInteraction(); },
+        [this]() { 
             std::cout << "自室を出て城に向かいます..." << std::endl;
-            if (stateManager) {
+            if (s_roomFirstTime) {
                 stateManager->changeState(std::make_unique<CastleState>(player));
+                s_roomFirstTime = false;
             }
-        } else {
-            std::cout << "ドアの近くにいません" << std::endl;
-            checkInteraction();
-        }
-    }
+            else {
+                stateManager->changeState(std::make_unique<TownState>(player));
+            }
+        },
+        [this]() { return isNearObject(doorX, doorY); },
+        [this]() { clearMessage(); });
 }
 
 void RoomState::setupUI() {
@@ -96,69 +163,43 @@ void RoomState::setupUI() {
                            " ゴールド:" + std::to_string(player->getGold()));
     ui.addElement(std::move(playerInfoLabel));
     
-    // 操作説明
-    auto controlsLabel = std::make_unique<Label>(10, 30, "", "default");
-    controlsLabel->setColor({255, 255, 255, 255});
-    controlsLabel->setText("移動: 矢印キー/WASD/ゲームパッド | 調べる: スペース/Aボタン | ドアから出る");
-    ui.addElement(std::move(controlsLabel));
-    
-    // メッセージボード（黒背景）
-    auto messageBoardLabel = std::make_unique<Label>(50, 450, "", "default");
+    // メッセージボード（画面中央下部）
+    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
     messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
-    messageBoardLabel->setText("部屋を探索してみましょう");
+    messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
 }
 
 void RoomState::setupRoom() {
-    // 部屋のオブジェクト配置
-    bedX = 2; bedY = 2;          // ベッド（左上）
-    deskX = 12; deskY = 2;       // 机（右上）
-    chestX = 12; chestY = 9;     // 宝箱（右下）
-    doorX = 7; doorY = 11;       // ドア（下中央）
+    // 部屋のオブジェクト配置（7x5の部屋、画面中央に配置）
+    bedX = 1; bedY = 1;      // ベッド（左上）
+    deskX = 5; deskY = 1;    // 机（右上）
+    chestX = 5; chestY = 2;  // 宝箱（机の下）
+    doorX = 3; doorY = 4;    // ドア（下部中央）
+}
+
+void RoomState::loadTextures(Graphics& graphics) {
+    // 画像を読み込み
+    playerTexture = graphics.loadTexture("assets/characters/player.png", "player");
+    deskTexture = graphics.loadTexture("assets/objects/desk.png", "desk");
+    chestClosedTexture = graphics.loadTexture("assets/objects/closed_box.png", "chest_closed");
+    chestOpenTexture = graphics.loadTexture("assets/objects/open_box.png", "chest_open");
+    bedTexture = graphics.loadTexture("assets/objects/bed.png", "bed");
+    houseTileTexture = graphics.loadTexture("assets/tiles/housetile.png", "house_tile");
+    
+    // 読み込みエラーの場合はnullptrのまま
+    if (!playerTexture) std::cout << "プレイヤー画像の読み込みに失敗しました" << std::endl;
+    if (!deskTexture) std::cout << "机画像の読み込みに失敗しました" << std::endl;
+    if (!chestClosedTexture) std::cout << "宝箱画像の読み込みに失敗しました" << std::endl;
+    if (!chestOpenTexture) std::cout << "開いた宝箱画像の読み込みに失敗しました" << std::endl;
+    if (!houseTileTexture) std::cout << "自室タイル画像の読み込みに失敗しました" << std::endl;
 }
 
 void RoomState::handleMovement(const InputManager& input) {
-    int newX = playerX;
-    int newY = playerY;
-    
-    // キーボード入力
-    if (input.isKeyPressed(InputKey::UP) || input.isKeyPressed(InputKey::W)) {
-        newY--;
-    } else if (input.isKeyPressed(InputKey::DOWN) || input.isKeyPressed(InputKey::S)) {
-        newY++;
-    } else if (input.isKeyPressed(InputKey::LEFT) || input.isKeyPressed(InputKey::A)) {
-        newX--;
-    } else if (input.isKeyPressed(InputKey::RIGHT) || input.isKeyPressed(InputKey::D)) {
-        newX++;
-    }
-    
-    // ゲームパッドのアナログスティック入力
-    const float DEADZONE = 0.3f;
-    float stickX = input.getLeftStickX();
-    float stickY = input.getLeftStickY();
-    
-    if (abs(stickX) > DEADZONE || abs(stickY) > DEADZONE) {
-        if (abs(stickX) > abs(stickY)) {
-            if (stickX < -DEADZONE) {
-                newX--;
-            } else if (stickX > DEADZONE) {
-                newX++;
-            }
-        } else {
-            if (stickY < -DEADZONE) {
-                newY--;
-            } else if (stickY > DEADZONE) {
-                newY++;
-            }
-        }
-    }
-    
-    if (isValidPosition(newX, newY)) {
-        playerX = newX;
-        playerY = newY;
-        moveTimer = MOVE_DELAY;
-    }
+    GameState::handleMovement(input, playerX, playerY, moveTimer, MOVE_DELAY,
+        [this](int x, int y) { return isValidPosition(x, y); },
+        [this](int x, int y) { /* 移動後の処理（必要に応じて） */ });
 }
 
 void RoomState::checkInteraction() {
@@ -181,74 +222,149 @@ void RoomState::checkInteraction() {
 }
 
 void RoomState::drawRoom(Graphics& graphics) {
-    // 床を描画
-    graphics.setDrawColor(160, 82, 45, 255); // ライトブラウン
-    for (int y = 1; y < ROOM_HEIGHT - 1; y++) {
-        for (int x = 1; x < ROOM_WIDTH - 1; x++) {
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
+    
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 7 * 38 = 266
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 5 * 38 = 190
+    
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 266) / 2 = 417
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 190) / 2 = 230
+    
+    // 背景を黒で塗りつぶし
+    graphics.setDrawColor(0, 0, 0, 255); // 黒色
+    graphics.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true);
+    
+    // 自室の建物タイル画像を描画（床のみ）
+    SDL_Texture* houseTileTexture = graphics.getTexture("house_tile");
+    if (houseTileTexture) {
+        // 建物タイル画像を部屋の床に敷き詰める（壁は除く）
+        for (int y = 1; y < ROOM_HEIGHT - 1; y++) {
+            for (int x = 1; x < ROOM_WIDTH - 1; x++) {
+                graphics.drawTexture(houseTileTexture, ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
         }
+    } else {
+        // 画像がない場合は色で描画（フォールバック）
+        graphics.setDrawColor(160, 82, 45, 255); // ライトブラウン
+        graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y, ROOM_PIXEL_WIDTH, ROOM_PIXEL_HEIGHT, true);
     }
     
-    // 壁を描画
+    // 部屋の壁を描画（色で）
     graphics.setDrawColor(101, 67, 33, 255); // ダークブラウン
     // 上下の壁
     for (int x = 0; x < ROOM_WIDTH; x++) {
-        graphics.drawRect(x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, true);
-        graphics.drawRect(x * TILE_SIZE, (ROOM_HEIGHT - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y, TILE_SIZE, TILE_SIZE, true);
+        graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y + (ROOM_HEIGHT - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     }
     // 左右の壁
     for (int y = 0; y < ROOM_HEIGHT; y++) {
-        graphics.drawRect(0, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        graphics.drawRect((ROOM_WIDTH - 1) * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.drawRect(ROOM_OFFSET_X + (ROOM_WIDTH - 1) * TILE_SIZE, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     }
 }
 
 void RoomState::drawRoomObjects(Graphics& graphics) {
-    // ベッドを描画（青色）
-    graphics.setDrawColor(100, 149, 237, 255);
-    graphics.drawRect(bedX * TILE_SIZE, bedY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(bedX * TILE_SIZE, bedY * TILE_SIZE, TILE_SIZE * 2, TILE_SIZE);
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
     
-    // 机を描画（茶色）
-    graphics.setDrawColor(139, 69, 19, 255);
-    graphics.drawRect(deskX * TILE_SIZE, deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(deskX * TILE_SIZE, deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 7 * 38 = 266
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 5 * 38 = 190
     
-    // 宝箱を描画（ゴールド色または開いた色）
-    if (hasOpenedChest) {
-        graphics.setDrawColor(160, 160, 160, 255); // グレー（開いた状態）
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 266) / 2 = 417
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 190) / 2 = 230
+    
+    // ベッドを描画
+    SDL_Texture* bedTexture = graphics.getTexture("bed");
+    if (bedTexture) {
+        graphics.drawTexture(bedTexture, ROOM_OFFSET_X + bedX * TILE_SIZE, ROOM_OFFSET_Y + bedY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     } else {
-        graphics.setDrawColor(255, 215, 0, 255); // ゴールド色
+        graphics.setDrawColor(100, 149, 237, 255); // コーンフラワーブルー
+        graphics.drawRect(ROOM_OFFSET_X + bedX * TILE_SIZE, ROOM_OFFSET_Y + bedY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + bedX * TILE_SIZE, ROOM_OFFSET_Y + bedY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
-    graphics.drawRect(chestX * TILE_SIZE, chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(chestX * TILE_SIZE, chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    
+    // 机を描画
+    SDL_Texture* deskTexture = graphics.getTexture("desk");
+    if (deskTexture) {
+        graphics.drawTexture(deskTexture, ROOM_OFFSET_X + deskX * TILE_SIZE, ROOM_OFFSET_Y + deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        graphics.setDrawColor(139, 69, 19, 255);
+        graphics.drawRect(ROOM_OFFSET_X + deskX * TILE_SIZE, ROOM_OFFSET_Y + deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + deskX * TILE_SIZE, ROOM_OFFSET_Y + deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    // 宝箱を描画
+    if (hasOpenedChest) {
+        SDL_Texture* openBoxTexture = graphics.getTexture("open_box");
+        if (openBoxTexture) {
+            graphics.drawTexture(openBoxTexture, ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        } else {
+            graphics.setDrawColor(160, 160, 160, 255); // グレー（開いた状態）
+            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    } else {
+        SDL_Texture* closedBoxTexture = graphics.getTexture("closed_box");
+        if (closedBoxTexture) {
+            graphics.drawTexture(closedBoxTexture, ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        } else {
+            graphics.setDrawColor(255, 215, 0, 255); // ゴールド色
+            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    }
     
     // ドアを描画（茶色、少し明るめ）
     graphics.setDrawColor(160, 82, 45, 255);
-    graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(doorX * TILE_SIZE, doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 }
 
 void RoomState::drawPlayer(Graphics& graphics) {
-    // プレイヤーを描画（緑色）
-    graphics.setDrawColor(0, 255, 0, 255);
-    graphics.drawRect(playerX * TILE_SIZE + 4, playerY * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(playerX * TILE_SIZE + 4, playerY * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+    // 画面サイズを取得（1100x650）
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
+    
+    // 部屋のサイズを計算
+    const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 7 * 38 = 266
+    const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 5 * 38 = 190
+    
+    // 部屋を画面中央に配置するためのオフセットを計算
+    const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 266) / 2 = 417
+    const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 190) / 2 = 230
+    
+    // プレイヤーを描画（画像または緑色の四角）
+    if (playerTexture) {
+        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        // フォールバック：緑色の四角で描画
+        graphics.setDrawColor(0, 255, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+        graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
 }
 
 bool RoomState::isValidPosition(int x, int y) const {
-    // 部屋の境界チェック
-    if (x < 1 || x >= ROOM_WIDTH - 1 || y < 1 || y >= ROOM_HEIGHT - 1) {
+    // 7x5の部屋の境界チェック
+    if (!GameState::isValidPosition(x, y, 1, 1, ROOM_WIDTH - 1, ROOM_HEIGHT - 1)) {
         return false;
     }
     
     // オブジェクトとの衝突チェック
-    if ((x >= bedX && x < bedX + 2 && y == bedY) ||  // ベッド（2マス分）
+    if ((x >= bedX && x < bedX + 1 && y == bedY) ||  // ベッド（1マス分）
         (x == deskX && y == deskY) ||                // 机
         (x == chestX && y == chestY)) {              // 宝箱
         return false;
@@ -258,19 +374,11 @@ bool RoomState::isValidPosition(int x, int y) const {
 }
 
 bool RoomState::isNearObject(int objX, int objY) const {
-    int dx = abs(playerX - objX);
-    int dy = abs(playerY - objY);
-    return (dx <= 1 && dy <= 1);
-}
-
-bool RoomState::isNearDoor() const {
-    int dx = abs(playerX - doorX);
-    int dy = abs(playerY - doorY);
-    return (dx <= 1 && dy <= 1); // 距離1以内ならドアの近く
+    return GameState::isNearObject(playerX, playerY, objX, objY);
 }
 
 void RoomState::showWelcomeMessage() {
-    showMessage("=== 冒険の始まり ===\n目が覚めると、あなたは自分の部屋にいました。\n今日から冒険者として旅立つ日です！");
+    showMessage("王様からの手紙\n勇者よ、お主に頼みがある。一度我が城に来てくれないか。\nそこで詳しい話をしよう。では、待っておるぞ。");
 }
 
 void RoomState::interactWithBed() {
@@ -293,8 +401,14 @@ void RoomState::interactWithChest() {
 }
 
 void RoomState::exitToTown() {
-    showMessage("町に向かいます...");
-    stateManager->changeState(std::make_unique<TownState>(player));
+    if (s_roomFirstTime) {
+        showMessage("城に向かいます...");
+        stateManager->changeState(std::make_unique<CastleState>(player));
+        s_roomFirstTime = false;
+    } else {
+        showMessage("町に向かいます...");
+        stateManager->changeState(std::make_unique<TownState>(player));
+    }
 }
 
 StateType RoomState::getType() const {
@@ -302,17 +416,9 @@ StateType RoomState::getType() const {
 } 
 
 void RoomState::showMessage(const std::string& message) {
-    if (messageBoard) {
-        messageBoard->setText(message);
-        isShowingMessage = true;
-        std::cout << "RoomState: メッセージを表示: " << message << std::endl;
-    }
+    GameState::showMessage(message, messageBoard, isShowingMessage);
 }
 
 void RoomState::clearMessage() {
-    if (messageBoard) {
-        messageBoard->setText("");
-        isShowingMessage = false;
-        std::cout << "RoomState: メッセージをクリアしました" << std::endl;
-    }
+    GameState::clearMessage(messageBoard, isShowingMessage);
 } 

@@ -2,6 +2,7 @@
 #include "GameState.h"
 #include "UI.h"
 #include "Player.h"
+#include "GameUtils.h"
 #include <memory>
 
 class DemonCastleState : public GameState {
@@ -11,9 +12,9 @@ private:
     
     // プレイヤーの位置
     int playerX, playerY;
-    const int TILE_SIZE = 32;
-    const int ROOM_WIDTH = 25;
-    const int ROOM_HEIGHT = 20;
+    const int TILE_SIZE = 38;
+    const int ROOM_WIDTH = 9;   // 28 → 9に変更
+    const int ROOM_HEIGHT = 11; // 16 → 11に変更
     
     // 魔王の位置
     int demonX, demonY;
@@ -33,6 +34,11 @@ private:
     std::vector<std::string> demonDialogues;
     bool hasReceivedEvilQuest;
     
+    // 画像テクスチャ
+    SDL_Texture* playerTexture;
+    SDL_Texture* demonTexture;
+    SDL_Texture* demonCastleTileTexture;
+    
 public:
     DemonCastleState(std::shared_ptr<Player> player);
     
@@ -47,6 +53,7 @@ public:
 private:
     void setupUI();
     void setupDemonCastle();
+    void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);
     void checkInteraction();
     void startDialogue();
@@ -59,7 +66,6 @@ private:
     void drawPlayer(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
     bool isNearObject(int x, int y) const;
-    bool isNearDoor() const;
     void interactWithDemon();
     void exitToTown();
 }; 

@@ -1,5 +1,6 @@
 #include "MainMenuState.h"
 #include "FieldState.h"
+#include "RoomState.h"
 #include <sstream>
 #include <cstdlib>
 
@@ -55,7 +56,7 @@ void MainMenuState::setupUI() {
     adventureBtn->setColors({0, 100, 0, 255}, {0, 150, 0, 255}, {0, 50, 0, 255});
     adventureBtn->setOnClick([this]() {
         if (stateManager) {
-            stateManager->changeState(std::make_unique<FieldState>(player));
+            stateManager->changeState(std::make_unique<RoomState>(player));
         }
     });
     ui.addElement(std::move(adventureBtn));

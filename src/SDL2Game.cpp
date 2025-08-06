@@ -134,12 +134,50 @@ void SDL2Game::loadGameImages() {
     // キャラクター画像
     graphics.loadTexture("assets/characters/player.png", "player");
     graphics.loadTexture("assets/characters/player_field.png", "player_field");
+    graphics.loadTexture("assets/characters/king.png", "king");
+    graphics.loadTexture("assets/characters/guard.png", "guard");
+    graphics.loadTexture("assets/characters/demon.png", "demon");
     
     // 敵画像
-    graphics.loadTexture("assets/enemies/スライム.png", "enemy_スライム");
-    graphics.loadTexture("assets/enemies/ゴブリン.png", "enemy_ゴブリン");
-    graphics.loadTexture("assets/enemies/オーク.png", "enemy_オーク");
-    graphics.loadTexture("assets/enemies/ドラゴン.png", "enemy_ドラゴン");
+    graphics.loadTexture("assets/enemies/slime.png", "enemy_スライム");
+    graphics.loadTexture("assets/enemies/goblin.png", "enemy_ゴブリン");
+    graphics.loadTexture("assets/enemies/orc.png", "enemy_オーク");
+    graphics.loadTexture("assets/enemies/dragon.png", "enemy_ドラゴン");
+    
+    // フィールド用タイル画像
+    graphics.loadTexture("assets/tiles/grass.png", "grass");
+    graphics.loadTexture("assets/tiles/forest.png", "forest");
+    graphics.loadTexture("assets/tiles/river.png", "river");
+    graphics.loadTexture("assets/tiles/bridge.png", "bridge");
+    graphics.loadTexture("assets/tiles/rock.png", "rock");
+    graphics.loadTexture("assets/tiles/town_entrance.png", "town_entrance");
+    
+    // 建物画像
+    graphics.loadTexture("assets/buildings/house.png", "house");
+    graphics.loadTexture("assets/buildings/castle.png", "castle");
+    
+    // 建物用タイル画像（フィールド用）
+    if (graphics.loadTexture("assets/tiles/housetile.png", "house_tile")) {
+        std::cout << "自室タイル画像読み込み成功" << std::endl;
+    } else {
+        std::cout << "自室タイル画像読み込み失敗" << std::endl;
+    }
+    if (graphics.loadTexture("assets/tiles/castletile.png", "castle_tile")) {
+        std::cout << "城タイル画像読み込み成功" << std::endl;
+    } else {
+        std::cout << "城タイル画像読み込み失敗" << std::endl;
+    }
+    if (graphics.loadTexture("assets/tiles/demoncastletile.png", "demon_castle_tile")) {
+        std::cout << "魔王の城タイル画像読み込み成功" << std::endl;
+    } else {
+        std::cout << "魔王の城タイル画像読み込み失敗" << std::endl;
+    }
+    
+    // オブジェクト画像
+    graphics.loadTexture("assets/objects/bed.png", "bed");
+    graphics.loadTexture("assets/objects/desk.png", "desk");
+    graphics.loadTexture("assets/objects/closed_box.png", "closed_box");
+    graphics.loadTexture("assets/objects/open_box.png", "open_box");
     
     std::cout << "画像リソースの読み込みを試行しました（画像ファイルが存在する場合は読み込み成功）。" << std::endl;
 } 

@@ -3,6 +3,7 @@
 #include "UI.h"
 #include "Player.h"
 #include "Equipment.h"
+#include "GameUtils.h"
 #include <memory>
 #include <vector>
 
@@ -42,9 +43,10 @@ private:
     
     // プレイヤーの位置
     int playerX, playerY;
-    const int TILE_SIZE = 32;
-    const int MAP_WIDTH = 25;
-    const int MAP_HEIGHT = 18;
+    const int TILE_SIZE = 38;
+    const int MAP_WIDTH = 28;  // 20 → 28に拡大（画面幅1100px ÷ 38px = 約29タイル、UI部分を考慮して28）
+    const int MAP_HEIGHT = 16; // 15 → 16に拡大（画面高さ650px ÷ 38px = 約17タイル、UI部分を考慮して16）
+    const int BUILDING_SIZE = 2; // 建物は2タイルサイズ
     
     // 移動タイマー
     float moveTimer;
@@ -59,19 +61,32 @@ private:
     // 自室の入り口位置
     int roomEntranceX, roomEntranceY;
     
-    // 建物の位置
+    // 建物の位置（2タイルサイズ）
     std::vector<std::pair<int, int>> buildings;
     std::vector<std::string> buildingTypes;
     
-    // 城の位置
+    // 城の位置（画面中央）
     int castleX, castleY;
     bool hasVisitedCastle;
     
     // ゲームパッド接続状態
     bool gameControllerConnected;
     
+    // 夜の街へのタイマー機能
+    bool nightTimerActive;
+    float nightTimer;
+    const float NIGHT_TIMER_DURATION = 300.0f; // 5分 = 300秒
+    
     // ショップ関連
     std::vector<std::unique_ptr<Item>> shopItems;
+    
+    // 画像テクスチャ
+    SDL_Texture* playerTexture;
+    SDL_Texture* shopTexture;
+    SDL_Texture* weaponShopTexture;
+    SDL_Texture* houseTexture;
+    SDL_Texture* castleTexture;
+    SDL_Texture* stoneTileTexture;
 
 public:
     TownState(std::shared_ptr<Player> player);
@@ -84,10 +99,32 @@ public:
     
     StateType getType() const override { return StateType::TOWN; }
     
+    // 夜のタイマー関連
+    void startNightTimer();
+    void setupGameExplanation();
+    
+    // 夜のタイマーの静的状態管理（他の状態からアクセス可能）
+    static bool s_nightTimerActive;
+    static float s_nightTimer;
+    
+    // 目標レベル機能
+    static int s_targetLevel;
+    static bool s_levelGoalAchieved;
+    const int DEFAULT_TARGET_LEVEL = 10; // デフォルト目標レベル
+    
+    // DemonCastleStateから来たことを示すフラグ
+    static bool s_fromDemonCastle;
+    
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
+    
 private:
     void setupUI();
     void setupNPCs();
     void setupShopItems();
+    void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);
     void checkNPCInteraction();
     void handleNPCDialogue(const NPC& npc);
@@ -111,6 +148,10 @@ private:
     void checkRoomEntrance();
     void enterRoom();
     
+    // フィールドへの入り口関連
+    void checkFieldEntrance();
+    void enterField();
+    
     // 建物への入場関連
     void checkBuildingEntrance();
     void checkCastleEntrance();
@@ -121,5 +162,8 @@ private:
     
     bool isValidPosition(int x, int y) const;
     bool isNearNPC(int x, int y) const;
+    bool isCollidingWithBuilding(int x, int y) const;
+    bool isCollidingWithNPC(int x, int y) const;
     NPC* getNearbyNPC(int x, int y);
+    void checkTrustLevels();
 }; 

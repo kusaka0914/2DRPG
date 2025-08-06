@@ -2,6 +2,7 @@
 #include "GameState.h"
 #include "UI.h"
 #include "Player.h"
+#include "GameUtils.h"
 #include <memory>
 
 class RoomState : public GameState {
@@ -14,9 +15,9 @@ private:
     
     // プレイヤーの位置
     int playerX, playerY;
-    const int TILE_SIZE = 32;
-    const int ROOM_WIDTH = 15;   // 小さな部屋
-    const int ROOM_HEIGHT = 12;
+    const int TILE_SIZE = 38;
+    const int ROOM_WIDTH = 7;   // 5 → 7に変更
+    const int ROOM_HEIGHT = 5;  // 3 → 5に変更
     
     // 移動タイマー
     float moveTimer;
@@ -32,6 +33,19 @@ private:
     bool hasOpenedChest; // 宝箱を開けたか
     bool isFirstTime;    // 初回プレイか
     bool isShowingMessage; // メッセージ表示中か
+    
+    // 画像テクスチャ
+    SDL_Texture* playerTexture;
+    SDL_Texture* deskTexture;
+    SDL_Texture* chestClosedTexture;
+    SDL_Texture* chestOpenTexture;
+    SDL_Texture* bedTexture;
+    SDL_Texture* houseTileTexture;
+    
+    // 夜のタイマー機能（TownStateと共有）
+    bool nightTimerActive;
+    float nightTimer;
+    const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
 
 public:
     RoomState(std::shared_ptr<Player> player);
@@ -46,6 +60,7 @@ public:
 private:
     void setupUI();
     void setupRoom();
+    void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);
     void checkInteraction();
     void drawRoom(Graphics& graphics);
@@ -53,7 +68,6 @@ private:
     void drawRoomObjects(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
     bool isNearObject(int x, int y) const;
-    bool isNearDoor() const;
     void showWelcomeMessage();
     void interactWithBed();
     void interactWithDesk();

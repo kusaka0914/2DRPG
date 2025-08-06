@@ -16,8 +16,8 @@ private:
     bool isRunning;
     std::chrono::high_resolution_clock::time_point lastTime;
     
-    const int SCREEN_WIDTH = 800;
-    const int SCREEN_HEIGHT = 600;
+    const int SCREEN_WIDTH = 1100;
+    const int SCREEN_HEIGHT = 650;
 
 public:
     SDL2Game();
