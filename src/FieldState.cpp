@@ -7,6 +7,7 @@
 #include "DemonCastleState.h"
 #include "MapTerrain.h"
 #include "NightState.h"
+#include "CommonUI.h"
 #include <iostream>
 #include <random>
 
@@ -238,67 +239,10 @@ void FieldState::render(Graphics& graphics) {
     // UI描画
     ui.render(graphics);
     
-    // 夜のタイマーを表示
-    if (nightTimerActive) {
-        int remainingMinutes = static_cast<int>(nightTimer) / 60;
-        int remainingSeconds = static_cast<int>(nightTimer) % 60;
-        
-        // タイマー背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 10, 200, 40, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 10, 200, 40, false);
-        
-        // タイマーテキスト
-        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
-                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
-        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
-        
-        // 目標レベル情報を表示
-        int currentLevel = player->getLevel();
-        int remainingLevels = TownState::s_targetLevel - currentLevel;
-        
-        // 目標レベル背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 60, 250, 80, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 60, 250, 80, false);
-        
-        if (TownState::s_targetLevel > 0) { // 目標レベルが設定されている場合のみ表示
-            if (TownState::s_levelGoalAchieved) {
-                // 目標達成済み
-                std::string goalText = "目標レベル" + std::to_string(TownState::s_targetLevel) + "達成！";
-                graphics.drawText(goalText, 20, 70, "default", {0, 255, 0, 255}); // 緑色
-                graphics.drawText("夜の街に進出可能", 20, 90, "default", {0, 255, 0, 255});
-            } else {
-                // 目標未達成
-                std::string currentLevel = "現在レベル: " + std::to_string(player->getLevel());
-                graphics.drawText(currentLevel, 20, 70, "default", {255, 255, 255, 255});
-                std::string goalText = "目標レベル: " + std::to_string(TownState::s_targetLevel);
-                graphics.drawText(goalText, 20, 90, "default", {255, 255, 255, 255});
-                std::string remainingText = "残りレベル: " + std::to_string(remainingLevels);
-                graphics.drawText(remainingText, 20, 110, "default", {255, 255, 0, 255}); // 黄色
-            }
-        }
-    }
-    
-    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
-    if (nightTimerActive) {
-        // パラメータ背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(800, 10, 300, 80, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(800, 10, 300, 80, false);
-        
-        // パラメータテキスト
-        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
-        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
-        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
-        
-        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
-    }
+    // 共通UIを描画
+    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+    CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
+    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
     
     graphics.present();
 }

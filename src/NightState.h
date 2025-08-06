@@ -3,6 +3,7 @@
 #include "UI.h"
 #include "Player.h"
 #include "GameUtils.h"
+#include "TownLayout.h"
 #include <memory>
 
 class NightState : public GameState {
@@ -34,15 +35,37 @@ private:
     
     // 画像テクスチャ
     SDL_Texture* playerTexture;
-    SDL_Texture* residentTexture;
+    SDL_Texture* residentTextures[6]; // 住民画像（6人分）
     SDL_Texture* guardTexture;
+    SDL_Texture* shopTexture;
+    SDL_Texture* weaponShopTexture;
+    SDL_Texture* houseTexture;
+    SDL_Texture* castleTexture;
+    SDL_Texture* stoneTileTexture;
+    SDL_Texture* residentHomeTexture;
+    SDL_Texture* toriiTexture;
     
     // メッセージ表示
     Label* messageLabel;
     bool isShowingMessage;
     
+    // 建物の位置（街と同じ）
+    std::vector<std::pair<int, int>> buildings;
+    std::vector<std::string> buildingTypes;
+    std::vector<std::pair<int, int>> residentHomes;
+    
+    // 城の位置
+    int castleX, castleY;
+    
+    // 衛兵の移動管理
+    float guardMoveTimer;
+    std::vector<int> guardTargetHomeIndices;
+    std::vector<float> guardStayTimers;
+    bool guardsInitialized;
+    
 public:
     NightState(std::shared_ptr<Player> player);
+    ~NightState();
     
     void enter() override;
     void exit() override;
@@ -63,7 +86,11 @@ private:
     void drawNightTown(Graphics& graphics);
     void drawPlayer(Graphics& graphics);
     void loadTextures(Graphics& graphics);
+    void drawMap(Graphics& graphics);
+    void drawBuildings(Graphics& graphics);
+    void drawGate(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
+    bool isCollidingWithBuilding(int x, int y) const;
     void updateUI();
     void checkTrustLevels();
     void updateGuards(float deltaTime);

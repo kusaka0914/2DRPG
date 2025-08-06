@@ -5,6 +5,7 @@
 #include "NightState.h"
 #include "CastleState.h"
 #include "GameOverState.h"
+#include "CommonUI.h"
 #include <iostream>
 
 // 静的変数の初期化
@@ -19,20 +20,15 @@ std::vector<std::pair<int, int>> residentHomes = {
 };
 
 TownState::TownState(std::shared_ptr<Player> player)
-    : player(player), playerX(14), playerY(14), 
+    : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
       messageBoard(nullptr), isShowingMessage(false), 
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       showGameExplanation(false), explanationStep(0) {
     
-    // 建物の位置を初期化（2タイルサイズ、画面中央に城を配置）
-    buildings = {
-        {8, 10},   // 道具屋（2x2）
-        {18, 10},  // 武器屋（2x2）
-        {24, 10},  // 自室（2x2）
-        {13, 2}    // 城（画面中央上部、2x2）
-    };
-    
-    buildingTypes = {"shop", "weapon_shop", "house", "castle"};
+    // 共通配置データを使用
+    buildings = TownLayout::BUILDINGS;
+    buildingTypes = TownLayout::BUILDING_TYPES;
+    residentHomes = TownLayout::RESIDENT_HOMES;
     
     setupUI();
 }
@@ -156,73 +152,11 @@ void TownState::render(Graphics& graphics) {
     // UI描画
     ui.render(graphics);
     
-    // 夜のタイマーを表示
-    if (nightTimerActive && !showGameExplanation) {
-        int remainingMinutes = static_cast<int>(nightTimer) / 60;
-        int remainingSeconds = static_cast<int>(nightTimer) % 60;
-        
-        // タイマー背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 10, 200, 40, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 10, 200, 40, false);
-        
-        // タイマーテキスト
-        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
-                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
-        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
-        
-        // 目標レベル情報を表示
-        int currentLevel = player->getLevel();
-        int remainingLevels = s_targetLevel - currentLevel;
-        
-        // 目標レベル背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 60, 250, 50, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 60, 250, 50, false);
-        
-        if (s_targetLevel > 0) { // 目標レベルが設定されている場合のみ表示
-            if (s_levelGoalAchieved) {
-                // 目標達成済み
-                std::string goalText = "目標レベル" + std::to_string(s_targetLevel) + "達成！";
-                graphics.drawText(goalText, 20, 70, "default", {0, 255, 0, 255}); // 緑色
-                graphics.drawText("夜の街に進出可能", 20, 90, "default", {0, 255, 0, 255});
-            } else {
-                // 目標未達成
-                std::string goalText = "目標レベル: " + std::to_string(s_targetLevel);
-                graphics.drawText(goalText, 20, 70, "default", {255, 255, 255, 255});
-                std::string remainingText = "残りレベル: " + std::to_string(remainingLevels);
-                graphics.drawText(remainingText, 20, 90, "default", {255, 255, 0, 255}); // 黄色
-            }
-        }
-    }
-    
-    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
-    if (nightTimerActive && !showGameExplanation) {
-        // パラメータ背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(800, 10, 300, 80, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(800, 10, 300, 80, false);
-        
-        // パラメータテキスト
-        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
-        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
-        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
-        
-        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
-    }
-    
-    // ゲームパッド接続状態を表示（画面右上）
-    if (gameControllerConnected) {
-        graphics.setDrawColor(0, 255, 0, 255); // 緑色
-        graphics.drawRect(700, 10, 80, 20, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(700, 10, 80, 20, false);
-    }
+    // 共通UIを描画
+    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, showGameExplanation);
+    CommonUI::drawTargetLevel(graphics, s_targetLevel, s_levelGoalAchieved, player->getLevel());
+    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, showGameExplanation);
+    CommonUI::drawGameControllerStatus(graphics, gameControllerConnected);
     
     graphics.present();
 }
@@ -376,30 +310,45 @@ void TownState::setupUI() {
 void TownState::setupNPCs() {
     npcs.clear();
     
-    // {
-    //     {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
-    // };
+    // 住民の位置をTownLayoutから取得
+    std::vector<std::string> residentNames = {
+        "町の住人1", "町の住人2", "町の住人3", "町の住人4", "町の住人5", "町の住人6"
+    };
     
-    // 町の人たち（住民画像を使用）
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人1", 
-                      "最近魔物が増えて困っているんだ...", 3, 7);
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人2", 
-                      "今日は良い天気だね。", 7, 6);
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人3", 
-                      "王様の城は立派だね。", 11, 8);
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人4", 
-                      "冒険者さん、頑張ってね！", 5, 10);
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人5", 
-                      "街は平和でいいね。", 19, 8);
-    npcs.emplace_back(NPCType::TOWNSPERSON, "町の住人6", 
-                        "今日も気持ちがいい天気！", 21, 13);
+    std::vector<std::string> residentDialogues = {
+        "最近魔物が増えて困っているんだ...",
+        "今日は良い天気だね。",
+        "王様の城は立派だね。",
+        "冒険者さん、頑張ってね！",
+        "街は平和でいいね。",
+        "今日も気持ちがいい天気！"
+    };
     
-    npcs.emplace_back(NPCType::GUARD, "衛兵1", 
-                      "町の平和を守るのが私の仕事だ！", 23, 6);
-    npcs.emplace_back(NPCType::GUARD, "衛兵2", 
-                      "何か困ったことがあれば声をかけてくれ。", 24, 7);
-    npcs.emplace_back(NPCType::GUARD, "衛兵3", 
-                      "街の見回りは大切な仕事だ。", 6, 13);
+    // 住民をTownLayoutの位置に配置
+    for (size_t i = 0; i < TownLayout::RESIDENTS.size() && i < residentNames.size(); ++i) {
+        const auto& pos = TownLayout::RESIDENTS[i];
+        npcs.emplace_back(NPCType::TOWNSPERSON, residentNames[i], 
+                          residentDialogues[i], pos.first, pos.second);
+    }
+    
+    // 衛兵の位置をTownLayoutから取得
+    std::vector<std::string> guardNames = {
+        "衛兵1", "衛兵2", "衛兵3", "衛兵4"
+    };
+    
+    std::vector<std::string> guardDialogues = {
+        "町の平和を守るのが私の仕事だ！",
+        "何か困ったことがあれば声をかけてくれ。",
+        "街の見回りは大切な仕事だ。",
+        "町の平和を守るのが私の仕事だ！"
+    };
+    
+    // 衛兵をTownLayoutの位置に配置
+    for (size_t i = 0; i < TownLayout::GUARDS.size() && i < guardNames.size(); ++i) {
+        const auto& pos = TownLayout::GUARDS[i];
+        npcs.emplace_back(NPCType::GUARD, guardNames[i], 
+                          guardDialogues[i], pos.first, pos.second);
+    }
 }
 
 void TownState::setupShopItems() {
@@ -622,9 +571,9 @@ void TownState::drawBuildings(Graphics& graphics) {
 }
 
 void TownState::drawGate(Graphics& graphics) {
-    // ゲートの位置（出口: 14, 15）
-    int gateX = 14;
-    int gateY = 15;
+    // ゲートの位置（出口）
+    int gateX = TownLayout::GATE_X;
+    int gateY = TownLayout::GATE_Y;
     
     // 石のタイルを描画（背景）
     if (stoneTileTexture) {
@@ -930,7 +879,7 @@ void TownState::startNightTimer() {
     s_nightCount++;
     
     // 目標レベルを動的に設定（25, 50, 75, 100...）
-    s_targetLevel = 25 * s_nightCount;
+    s_targetLevel = 1 * s_nightCount;
     s_levelGoalAchieved = false;
     
     // 最初の説明テキストを自動で表示

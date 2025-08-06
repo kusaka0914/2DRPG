@@ -202,6 +202,11 @@ void SDL2Game::loadGameImages() {
     } else {
         std::cout << "魔王の城タイル画像読み込み失敗" << std::endl;
     }
+    if (graphics.loadTexture("assets/tiles/nightstonetile.png", "night_stone_tile")) {
+        std::cout << "夜の石タイル画像読み込み成功" << std::endl;
+    } else {
+        std::cout << "夜の石タイル画像読み込み失敗" << std::endl;
+    }
     
     // オブジェクト画像
     graphics.loadTexture("assets/objects/bed.png", "bed");
