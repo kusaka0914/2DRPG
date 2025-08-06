@@ -18,7 +18,7 @@ NightState::NightState(std::shared_ptr<Player> player)
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
       messageLabel(nullptr), isShowingMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
-      guardMoveTimer(0), guardTargetHomeIndices(4, 0), guardStayTimers(4, 0.0f), guardsInitialized(false) {
+      guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false) {
     
     // 住民画像配列を明示的にnullptrで初期化
     for (int i = 0; i < 6; ++i) {
@@ -34,22 +34,6 @@ NightState::NightState(std::shared_ptr<Player> player)
         {19, 8},  // 町の住人5
         {21, 13}  // 町の住人6
     };
-    
-    // 衛兵配置データを初期化
-    guards = {
-        {12, 2},  // 衛兵1
-        {12, 3},  // 衛兵2
-        {15, 2},   // 衛兵3
-        {15, 3}   // 衛兵4
-    };
-    
-    // 衛兵の初期位置を住人の家の前に設定
-    if (residentHomes.size() >= 4) {
-        guards[0] = {residentHomes[0].first - 1, residentHomes[0].second}; // 1番目の家の左
-        guards[1] = {residentHomes[1].first, residentHomes[1].second - 1}; // 2番目の家の上
-        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second}; // 3番目の家の右
-        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1}; // 4番目の家の下
-    }
     
     // 建物配置データを初期化
     buildings = {
@@ -67,6 +51,22 @@ NightState::NightState(std::shared_ptr<Player> player)
         {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6}, {4, 12}, {22, 12}
     };
     
+    // 衛兵配置データを初期化（residentHomesの初期化後に実行）
+    guards = {
+        {12, 2},  // 衛兵1
+        {12, 3},  // 衛兵2
+        {15, 2},   // 衛兵3
+        {15, 3}   // 衛兵4
+    };
+    
+    // 衛兵の初期位置を住人の家の前に設定
+    if (residentHomes.size() >= 4) {
+        guards[0] = {residentHomes[0].first - 1, residentHomes[0].second}; // 1番目の家の左
+        guards[1] = {residentHomes[1].first, residentHomes[1].second - 1}; // 2番目の家の上
+        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second}; // 3番目の家の右
+        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1}; // 4番目の家の下
+    }
+    
     // 衛兵の移動方向を初期化（4人分）
     guardDirections = {
         {1, 1},   // 右下方向
@@ -75,11 +75,18 @@ NightState::NightState(std::shared_ptr<Player> player)
         {-1, -1}  // 左上方向
     };
     
+    // 衛兵の移動管理用ベクターを適切に初期化
+    guardTargetHomeIndices.resize(4, 0);
+    guardStayTimers.resize(4, 0.0f);
+    
     // UIの初期化
     setupUI();
 }
 
 NightState::~NightState() {
+    // UIのクリーンアップ
+    ui.clear();
+    
     // テクスチャのクリーンアップ（SDL_TextureはGraphicsクラスで管理されるため、
     // ここではポインタをnullptrに設定するのみ）
     playerTexture = nullptr;
@@ -97,13 +104,33 @@ NightState::~NightState() {
     }
     
     messageLabel = nullptr;
+    
+    // ベクターのクリーンアップ
+    residents.clear();
+    guards.clear();
+    guardDirections.clear();
+    buildings.clear();
+    buildingTypes.clear();
+    residentHomes.clear();
+    guardTargetHomeIndices.clear();
+    guardStayTimers.clear();
 }
 
 void NightState::enter() {
     try {
         std::cout << "夜間モードに入りました" << std::endl;
-        player->setNightTime(true);
+        
+        // プレイヤーの状態を設定
+        if (player) {
+            player->setNightTime(true);
+        }
+        
+        // UIの再初期化
+        setupUI();
+        
+        // メッセージ表示
         showMessage("夜の街に潜入しました。住民を襲撃して街を壊滅させましょう。");
+        
         std::cout << "NightState: 初期化が完了しました" << std::endl;
     } catch (const std::exception& e) {
         std::cout << "NightState: 初期化エラー: " << e.what() << std::endl;
@@ -236,9 +263,11 @@ void NightState::setupUI() {
         
         // メッセージ表示用
         auto messageLabelPtr = std::make_unique<Label>(50, 450, "", "default");
-        messageLabelPtr->setColor({255, 255, 255, 255});
-        messageLabel = messageLabelPtr.get();
-        ui.addElement(std::move(messageLabelPtr));
+        if (messageLabelPtr) {
+            messageLabelPtr->setColor({255, 255, 255, 255});
+            messageLabel = messageLabelPtr.get();
+            ui.addElement(std::move(messageLabelPtr));
+        }
         
         std::cout << "NightState: UIの初期化が完了しました" << std::endl;
     } catch (const std::exception& e) {

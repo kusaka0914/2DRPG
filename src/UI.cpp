@@ -253,7 +253,11 @@ void StoryMessageBox::updateTextures(Graphics& graphics) {
     for (const std::string& line : lines) {
         if (!line.empty()) {
             SDL_Texture* texture = graphics.createTextTexture(line, fontName, textColor);
-            lineTextures.push_back(texture);
+            if (texture) {
+                lineTextures.push_back(texture);
+            } else {
+                lineTextures.push_back(nullptr); // テクスチャ作成失敗時
+            }
         } else {
             lineTextures.push_back(nullptr); // 空行用
         }

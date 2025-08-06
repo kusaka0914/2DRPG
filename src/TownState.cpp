@@ -46,8 +46,43 @@ void TownState::enter() {
 }
 
 void TownState::exit() {
-    ui.clear();
-    shopItems.clear();
+    try {
+        // UIのクリーンアップ
+        ui.clear();
+        
+        // ショップアイテムのクリーンアップ
+        shopItems.clear();
+        
+        // NPCのクリーンアップ
+        npcs.clear();
+        
+        // 建物データのクリーンアップ
+        buildings.clear();
+        buildingTypes.clear();
+        residentHomes.clear();
+        
+        // テクスチャポインタのクリーンアップ
+        playerTexture = nullptr;
+        shopTexture = nullptr;
+        weaponShopTexture = nullptr;
+        houseTexture = nullptr;
+        castleTexture = nullptr;
+        stoneTileTexture = nullptr;
+        guardTexture = nullptr;
+        toriiTexture = nullptr;
+        residentHomeTexture = nullptr;
+        
+        for (int i = 0; i < 6; ++i) {
+            residentTextures[i] = nullptr;
+        }
+        
+        // メッセージボードのクリーンアップ
+        messageBoard = nullptr;
+        
+        std::cout << "TownState: クリーンアップが完了しました" << std::endl;
+    } catch (const std::exception& e) {
+        std::cout << "TownState: クリーンアップエラー: " << e.what() << std::endl;
+    }
 }
 
 void TownState::update(float deltaTime) {
@@ -86,6 +121,8 @@ void TownState::update(float deltaTime) {
                 }
             } else {
                 if (stateManager) {
+                    // 現在の状態をクリーンアップしてから新しい状態に移行
+                    exit();
                     stateManager->changeState(std::make_unique<NightState>(player));
                 }
             }
@@ -260,6 +297,8 @@ void TownState::handleInput(const InputManager& input) {
     // Nキーで夜間モードに入る
     if (input.isKeyJustPressed(InputKey::N)) {
         if (stateManager) {
+            // 現在の状態をクリーンアップしてから新しい状態に移行
+            exit();
             stateManager->changeState(std::make_unique<NightState>(player));
         }
         return;

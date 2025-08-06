@@ -106,8 +106,11 @@ void MainMenuState::updatePlayerInfo() {
     info << "ゴールド: " << player->getGold() << "\n";
     info << "経験値: " << player->getExp();
     
-    // playerInfoLabelはUIManagerに移されているので、直接アクセスできない
-    // 代わりに新しいラベルを作成するか、UIManagerから取得する
-    auto infoLabel = std::make_unique<Label>(50, 120, info.str(), "default");
-    // 既存のラベルを更新する方法を実装する必要がある
+    // UIマネージャーからプレイヤー情報ラベルを取得して更新
+    if (ui.getElements().size() > 1) {
+        Label* playerInfoLabel = dynamic_cast<Label*>(ui.getElements()[1].get());
+        if (playerInfoLabel) {
+            playerInfoLabel->setText(info.str());
+        }
+    }
 } 
