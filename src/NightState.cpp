@@ -379,8 +379,12 @@ void NightState::attackResident(int x, int y) {
     
     // 衛兵の近くで襲撃した場合のチェック（衛兵攻撃可能な場合はスキップ）
     if (!canAttackGuards && isNearGuard(x, y)) {
-        showMessage("衛兵に見つかりました！王様からの信頼度が0になりました。");
         player->setKingTrust(0); // 王様からの信頼度を0に設定
+        
+        // オートセーブ
+        player->autoSave();
+        
+        // GameOverStateに移行
         if (stateManager) {
             stateManager->changeState(std::make_unique<GameOverState>(player, "衛兵に見つかりました。王様からの信頼度が0になりました。"));
         }

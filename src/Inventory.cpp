@@ -2,6 +2,7 @@
 #include "Player.h"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 
 Inventory::Inventory(int maxSlots) : maxSlots(maxSlots) {
     slots.resize(maxSlots);
@@ -202,4 +203,79 @@ bool Inventory::canStackWith(const Item* item1, const Item* item2) const {
     if (!item1 || !item2) return false;
     return item1->getName() == item2->getName() && 
            item1->getType() == item2->getType();
+}
+
+// セーブ/ロード機能の実装
+void Inventory::saveToFile(std::ofstream& file) {
+    // スロット数を保存
+    file.write(reinterpret_cast<const char*>(&maxSlots), sizeof(maxSlots));
+    
+    // 各スロットの情報を保存
+    for (int i = 0; i < maxSlots; ++i) {
+        bool hasItem = (slots[i].item != nullptr);
+        file.write(reinterpret_cast<const char*>(&hasItem), sizeof(hasItem));
+        
+        if (hasItem) {
+            // アイテムの種類を保存
+            ItemType itemType = slots[i].item->getType();
+            file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
+            
+            // アイテム名の長さと名前を保存
+            std::string itemName = slots[i].item->getName();
+            int nameLength = itemName.length();
+            file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
+            file.write(itemName.c_str(), nameLength);
+            
+            // 数量を保存
+            file.write(reinterpret_cast<const char*>(&slots[i].quantity), sizeof(slots[i].quantity));
+        }
+    }
+}
+
+void Inventory::loadFromFile(std::ifstream& file) {
+    // スロット数を読み込み
+    file.read(reinterpret_cast<char*>(&maxSlots), sizeof(maxSlots));
+    slots.resize(maxSlots);
+    
+    // 各スロットの情報を読み込み
+    for (int i = 0; i < maxSlots; ++i) {
+        bool hasItem;
+        file.read(reinterpret_cast<char*>(&hasItem), sizeof(hasItem));
+        
+        if (hasItem) {
+            // アイテムの種類を読み込み
+            ItemType itemType;
+            file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
+            
+            // アイテム名の長さと名前を読み込み
+            int nameLength;
+            file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
+            char* nameBuffer = new char[nameLength + 1];
+            file.read(nameBuffer, nameLength);
+            nameBuffer[nameLength] = '\0';
+            std::string itemName(nameBuffer);
+            delete[] nameBuffer;
+            
+            // 数量を読み込み
+            file.read(reinterpret_cast<char*>(&slots[i].quantity), sizeof(slots[i].quantity));
+            
+            // アイテムを再作成（簡易版）
+            switch (itemType) {
+                case ItemType::CONSUMABLE:
+                    slots[i].item = std::make_unique<ConsumableItem>(ConsumableType::YAKUSOU);
+                    break;
+                case ItemType::WEAPON:
+                    slots[i].item = std::make_unique<Weapon>(WeaponType::COPPER_SWORD);
+                    break;
+                case ItemType::ARMOR:
+                    slots[i].item = std::make_unique<Armor>(ArmorType::LEATHER_ARMOR);
+                    break;
+                default:
+                    slots[i].item = nullptr;
+                    break;
+            }
+        } else {
+            slots[i] = InventorySlot();
+        }
+    }
 } 

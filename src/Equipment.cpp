@@ -1,6 +1,7 @@
 #include "Equipment.h"
 #include "Player.h"
 #include <iostream>
+#include <fstream>
 
 Equipment::Equipment(const std::string& name, const std::string& description, int price, 
                      EquipmentSlot slot, int attackBonus, int defenseBonus, 
@@ -331,4 +332,65 @@ void EquipmentManager::displayEquipment() const {
         std::cout << std::endl;
     }
     std::cout << std::endl;
+}
+
+// セーブ/ロード機能の実装
+void EquipmentManager::saveToFile(std::ofstream& file) {
+    // 各スロットの装備情報を保存
+    for (int slot = 0; slot < 4; ++slot) {
+        EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
+        const Equipment* equipped = getEquippedItem(equipmentSlot);
+        
+        bool hasEquipment = (equipped != nullptr);
+        file.write(reinterpret_cast<const char*>(&hasEquipment), sizeof(hasEquipment));
+        
+        if (hasEquipment) {
+            // 装備の種類を保存
+            ItemType itemType = equipped->getType();
+            file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
+            
+            // 装備名の長さと名前を保存
+            std::string equipmentName = equipped->getName();
+            int nameLength = equipmentName.length();
+            file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
+            file.write(equipmentName.c_str(), nameLength);
+        }
+    }
+}
+
+void EquipmentManager::loadFromFile(std::ifstream& file) {
+    // 各スロットの装備情報を読み込み
+    for (int slot = 0; slot < 4; ++slot) {
+        EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
+        
+        bool hasEquipment;
+        file.read(reinterpret_cast<char*>(&hasEquipment), sizeof(hasEquipment));
+        
+        if (hasEquipment) {
+            // 装備の種類を読み込み
+            ItemType itemType;
+            file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
+            
+            // 装備名の長さと名前を読み込み
+            int nameLength;
+            file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
+            char* nameBuffer = new char[nameLength + 1];
+            file.read(nameBuffer, nameLength);
+            nameBuffer[nameLength] = '\0';
+            std::string equipmentName(nameBuffer);
+            delete[] nameBuffer;
+            
+            // 装備を再作成（簡易版）
+            std::unique_ptr<Equipment> equipment = nullptr;
+            if (itemType == ItemType::WEAPON) {
+                equipment = std::make_unique<Weapon>(WeaponType::COPPER_SWORD);
+            } else if (itemType == ItemType::ARMOR) {
+                equipment = std::make_unique<Armor>(ArmorType::LEATHER_ARMOR);
+            }
+            
+            if (equipment) {
+                equipItem(std::move(equipment));
+            }
+        }
+    }
 } 

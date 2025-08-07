@@ -1,6 +1,7 @@
 #include "Player.h"
 #include <iostream>
 #include <random>
+#include <fstream>
 
 Player::Player(const std::string& name)
     : Character(name, 30, 20, 8, 3, 1), gold(0), inventory(20), equipmentManager(),
@@ -375,4 +376,102 @@ void Player::changeDemonTrust(int amount) {
 
 void Player::changeKingTrust(int amount) {
     kingTrust = std::max(0, std::min(100, kingTrust + amount));
+}
+
+// セーブ/ロード機能の実装
+void Player::saveGame(const std::string& filename) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cout << "セーブファイルを開けませんでした: " << filename << std::endl;
+        return;
+    }
+    
+    // 基本ステータス
+    file.write(reinterpret_cast<const char*>(&level), sizeof(level));
+    file.write(reinterpret_cast<const char*>(&exp), sizeof(exp));
+    file.write(reinterpret_cast<const char*>(&hp), sizeof(hp));
+    file.write(reinterpret_cast<const char*>(&mp), sizeof(mp));
+    file.write(reinterpret_cast<const char*>(&maxHp), sizeof(maxHp));
+    file.write(reinterpret_cast<const char*>(&maxMp), sizeof(maxMp));
+    int attackValue = getAttack();
+    file.write(reinterpret_cast<const char*>(&attackValue), sizeof(attackValue));
+    int defenseValue = getDefense();
+    file.write(reinterpret_cast<const char*>(&defenseValue), sizeof(defenseValue));
+    
+    // プレイヤー専用ステータス
+    file.write(reinterpret_cast<const char*>(&gold), sizeof(gold));
+    file.write(reinterpret_cast<const char*>(&mental), sizeof(mental));
+    file.write(reinterpret_cast<const char*>(&demonTrust), sizeof(demonTrust));
+    file.write(reinterpret_cast<const char*>(&kingTrust), sizeof(kingTrust));
+    file.write(reinterpret_cast<const char*>(&trustLevel), sizeof(trustLevel));
+    file.write(reinterpret_cast<const char*>(&evilActions), sizeof(evilActions));
+    file.write(reinterpret_cast<const char*>(&goodActions), sizeof(goodActions));
+    
+    // 名前の長さと名前
+    int nameLength = name.length();
+    file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
+    file.write(name.c_str(), nameLength);
+    
+    // インベントリと装備の保存
+    inventory.saveToFile(file);
+    equipmentManager.saveToFile(file);
+    
+    file.close();
+    std::cout << "ゲームをセーブしました: " << filename << std::endl;
+}
+
+bool Player::loadGame(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cout << "セーブファイルを開けませんでした: " << filename << std::endl;
+        return false;
+    }
+    
+    // 基本ステータス
+    file.read(reinterpret_cast<char*>(&level), sizeof(level));
+    file.read(reinterpret_cast<char*>(&exp), sizeof(exp));
+    file.read(reinterpret_cast<char*>(&hp), sizeof(hp));
+    file.read(reinterpret_cast<char*>(&mp), sizeof(mp));
+    file.read(reinterpret_cast<char*>(&maxHp), sizeof(maxHp));
+    file.read(reinterpret_cast<char*>(&maxMp), sizeof(maxMp));
+    int attackValue;
+    file.read(reinterpret_cast<char*>(&attackValue), sizeof(attackValue));
+    setAttack(attackValue);
+    int defenseValue;
+    file.read(reinterpret_cast<char*>(&defenseValue), sizeof(defenseValue));
+    setDefense(defenseValue);
+    
+    // プレイヤー専用ステータス
+    file.read(reinterpret_cast<char*>(&gold), sizeof(gold));
+    file.read(reinterpret_cast<char*>(&mental), sizeof(mental));
+    file.read(reinterpret_cast<char*>(&demonTrust), sizeof(demonTrust));
+    file.read(reinterpret_cast<char*>(&kingTrust), sizeof(kingTrust));
+    file.read(reinterpret_cast<char*>(&trustLevel), sizeof(trustLevel));
+    file.read(reinterpret_cast<char*>(&evilActions), sizeof(evilActions));
+    file.read(reinterpret_cast<char*>(&goodActions), sizeof(goodActions));
+    
+    // 名前の長さと名前
+    int nameLength;
+    file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
+    char* nameBuffer = new char[nameLength + 1];
+    file.read(nameBuffer, nameLength);
+    nameBuffer[nameLength] = '\0';
+    name = std::string(nameBuffer);
+    delete[] nameBuffer;
+    
+    // インベントリと装備の読み込み
+    inventory.loadFromFile(file);
+    equipmentManager.loadFromFile(file);
+    
+    file.close();
+    std::cout << "ゲームをロードしました: " << filename << std::endl;
+    return true;
+}
+
+void Player::autoSave() {
+    saveGame("autosave.dat");
+}
+
+bool Player::autoLoad() {
+    return loadGame("autosave.dat");
 } 

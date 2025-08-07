@@ -13,7 +13,7 @@ private:
     // UI要素
     Label* titleLabel;
     Label* reasonLabel;
-    Label* instructionLabel;
+    Label* instruction;
     
 public:
     GameOverState(std::shared_ptr<Player> player, const std::string& reason);

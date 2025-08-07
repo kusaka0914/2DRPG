@@ -115,4 +115,10 @@ public:
     void changeMental(int amount);
     void changeDemonTrust(int amount);
     void changeKingTrust(int amount);
+    
+    // セーブ/ロード機能
+    void saveGame(const std::string& filename = "savegame.dat");
+    bool loadGame(const std::string& filename = "savegame.dat");
+    void autoSave();
+    bool autoLoad();
 }; 

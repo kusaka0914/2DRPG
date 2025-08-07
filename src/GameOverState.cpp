@@ -1,11 +1,12 @@
 #include "GameOverState.h"
 #include "MainMenuState.h"
+#include "NightState.h"
 #include "Graphics.h"
 #include "InputManager.h"
 #include <iostream>
 
 GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason)
-    : player(player), gameOverReason(reason), titleLabel(nullptr), reasonLabel(nullptr), instructionLabel(nullptr) {
+    : player(player), gameOverReason(reason), titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
 }
 
 void GameOverState::enter() {
@@ -35,11 +36,18 @@ void GameOverState::render(Graphics& graphics) {
 void GameOverState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // スペースキーまたはAボタンでメインメニューに戻る
+    // スペースキーまたはAボタンでNightStateに再スタート
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (stateManager) {
-            auto newPlayer = std::make_shared<Player>("勇者");
-            stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+            // オートセーブデータをロード
+            if (player->autoLoad()) {
+                // ロード成功した場合はNightStateに戻る
+                stateManager->changeState(std::make_unique<NightState>(player));
+            } else {
+                // ロード失敗した場合はメインメニューに戻る
+                auto newPlayer = std::make_shared<Player>("勇者");
+                stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+            }
         }
     }
 }
@@ -60,8 +68,8 @@ void GameOverState::setupUI() {
     ui.addElement(std::move(reasonLabelPtr));
     
     // 操作説明
-    auto instructionLabelPtr = std::make_unique<Label>(550, 400, "スペースキーまたはAボタンでメインメニューに戻る", "default");
+    auto instructionLabelPtr = std::make_unique<Label>(550, 400, "スペースキーまたはAボタンで夜の街に再スタート", "default");
     instructionLabelPtr->setColor({200, 200, 200, 255});
-    instructionLabel = instructionLabelPtr.get();
+    instruction = instructionLabelPtr.get();
     ui.addElement(std::move(instructionLabelPtr));
 } 

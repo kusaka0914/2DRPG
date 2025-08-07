@@ -42,6 +42,10 @@ public:
     void sortInventory();
     void compactInventory();
     
+    // セーブ/ロード機能
+    void saveToFile(std::ofstream& file);
+    void loadFromFile(std::ifstream& file);
+    
 private:
     int findEmptySlot() const;
     int findStackableSlot(const Item* item) const;
