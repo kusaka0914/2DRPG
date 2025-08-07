@@ -5,6 +5,7 @@
 #include "Equipment.h"
 #include "GameUtils.h"
 #include "TownLayout.h"
+#include "NightState.h"
 #include <memory>
 #include <vector>
 

@@ -369,11 +369,25 @@ void TownState::setupNPCs() {
         "今日も気持ちがいい天気！"
     };
     
-    // 住民をTownLayoutの位置に配置
+    // 住民をTownLayoutの位置に配置（倒された住民は除外）
     for (size_t i = 0; i < TownLayout::RESIDENTS.size() && i < residentNames.size(); ++i) {
         const auto& pos = TownLayout::RESIDENTS[i];
-        npcs.emplace_back(NPCType::TOWNSPERSON, residentNames[i], 
-                          residentDialogues[i], pos.first, pos.second);
+        
+        // 倒された住民の位置かチェック
+        bool isKilled = false;
+        const auto& killedPositions = NightState::getKilledResidentPositions();
+        for (const auto& killedPos : killedPositions) {
+            if (killedPos.first == pos.first && killedPos.second == pos.second) {
+                isKilled = true;
+                break;
+            }
+        }
+        
+        // 倒されていない住民のみ配置
+        if (!isKilled) {
+            npcs.emplace_back(NPCType::TOWNSPERSON, residentNames[i], 
+                              residentDialogues[i], pos.first, pos.second);
+        }
     }
     
     // 衛兵の位置をTownLayoutから取得

@@ -10,6 +10,7 @@
 
 // 静的変数の初期化
 int NightState::totalResidentsKilled = 0;
+std::vector<std::pair<int, int>> NightState::killedResidentPositions = {};
 
 NightState::NightState(std::shared_ptr<Player> player)
     : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
@@ -25,8 +26,8 @@ NightState::NightState(std::shared_ptr<Player> player)
         residentTextures[i] = nullptr;
     }
     
-    // 住民配置データを初期化
-    residents = {
+    // 住民配置データを初期化（倒した住民を除外）
+    std::vector<std::pair<int, int>> allResidentPositions = {
         {3, 7},   // 町の住人1
         {7, 6},   // 町の住人2
         {11, 8},  // 町の住人3
@@ -40,6 +41,20 @@ NightState::NightState(std::shared_ptr<Player> player)
         {19, 14},  // 町の住人11,
         {20, 4}  // 町の住人12
     };
+    
+    // 倒した住民の位置を除外して配置
+    for (const auto& pos : allResidentPositions) {
+        bool isKilled = false;
+        for (const auto& killedPos : killedResidentPositions) {
+            if (pos.first == killedPos.first && pos.second == killedPos.second) {
+                isKilled = true;
+                break;
+            }
+        }
+        if (!isKilled) {
+            residents.push_back(pos);
+        }
+    }
     
     // 建物配置データを初期化
     buildings = {
@@ -175,10 +190,13 @@ void NightState::render(Graphics& graphics) {
         drawMap(graphics);
         drawBuildings(graphics);
         
-        // 住民を描画
+        // 住民を描画（位置ベースで画像を割り当て）
         for (size_t i = 0; i < residents.size(); ++i) {
             const auto& resident = residents[i];
-            SDL_Texture* texture = (i < 6) ? residentTextures[i] : nullptr;
+            
+            // 位置に基づいて画像インデックスを決定（TownLayoutの順序に合わせる）
+            int textureIndex = getResidentTextureIndex(resident.first, resident.second);
+            SDL_Texture* texture = residentTextures[textureIndex];
             
             if (texture) {
                 graphics.drawTexture(texture, resident.first * TILE_SIZE, resident.second * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -296,8 +314,6 @@ void NightState::checkResidentInteraction() {
             return;
         }
     }
-    
-    showMessage("近くに住民がいません。");
 }
 
 void NightState::attackResident(int x, int y) {
@@ -350,6 +366,9 @@ void NightState::attackResident(int x, int y) {
         } else {
             player->changeMental(-20); // メンタルを20減少
         }
+        
+        // 倒した住民の位置を記録
+        killedResidentPositions.push_back({x, y});
         
         // 住民を削除
         residents.erase(std::remove_if(residents.begin(), residents.end(),
@@ -435,6 +454,16 @@ bool NightState::isValidPosition(int x, int y) const {
         return false;
     }
     
+    // 住民との衝突チェック
+    if (isCollidingWithResident(x, y)) {
+        return false;
+    }
+    
+    // 衛兵との衝突チェック
+    if (isCollidingWithGuard(x, y)) {
+        return false;
+    }
+    
     return true;
 }
 
@@ -461,6 +490,52 @@ bool NightState::isCollidingWithBuilding(int x, int y) const {
     }
     
     return false;
+}
+
+bool NightState::isCollidingWithResident(int x, int y) const {
+    // 住民との衝突チェック
+    for (const auto& resident : residents) {
+        if (x == resident.first && y == resident.second) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool NightState::isCollidingWithGuard(int x, int y) const {
+    // 衛兵との衝突チェック
+    for (const auto& guard : guards) {
+        if (x == guard.first && y == guard.second) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int NightState::getResidentTextureIndex(int x, int y) const {
+    // TownLayoutの住民位置順序に基づいて画像インデックスを決定
+    std::vector<std::pair<int, int>> allPositions = {
+        {3, 7},   // 町の住人1 -> resident_1
+        {7, 6},   // 町の住人2 -> resident_2
+        {11, 8},  // 町の住人3 -> resident_3
+        {5, 10},  // 町の住人4 -> resident_4
+        {19, 8},  // 町の住人5 -> resident_5
+        {23, 6},  // 町の住人6 -> resident_6
+        {27, 7},  // 町の住人7 -> resident_1（循環）
+        {6, 13},  // 町の住人8 -> resident_2
+        {24, 13}, // 町の住人9 -> resident_3
+        {3, 14},  // 町の住人10 -> resident_4
+        {19, 14}, // 町の住人11 -> resident_5
+        {20, 4}   // 町の住人12 -> resident_6
+    };
+    
+    for (size_t i = 0; i < allPositions.size(); ++i) {
+        if (allPositions[i].first == x && allPositions[i].second == y) {
+            return i % 6; // 6つの画像を循環使用
+        }
+    }
+    
+    return 0; // デフォルト
 } 
 
 void NightState::loadTextures(Graphics& graphics) {

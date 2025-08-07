@@ -29,6 +29,9 @@ private:
     // 合計倒した人数（メンタル計算用）
     static int totalResidentsKilled;
     
+    // 倒した住民の位置を記録（次の夜に配置しないため）
+    static std::vector<std::pair<int, int>> killedResidentPositions;
+    
     // 移動タイマー
     float moveTimer;
     const float MOVE_DELAY = 0.2f;
@@ -75,6 +78,9 @@ public:
     
     StateType getType() const override { return StateType::NIGHT; }
     
+    // 倒した住民の位置を取得するpublic関数
+    static const std::vector<std::pair<int, int>>& getKilledResidentPositions() { return killedResidentPositions; }
+    
 private:
     void setupUI();
     void handleMovement(const InputManager& input);
@@ -91,6 +97,9 @@ private:
     void drawGate(Graphics& graphics);
     bool isValidPosition(int x, int y) const;
     bool isCollidingWithBuilding(int x, int y) const;
+    bool isCollidingWithResident(int x, int y) const;
+    bool isCollidingWithGuard(int x, int y) const;
+    int getResidentTextureIndex(int x, int y) const;
     void updateUI();
     void checkTrustLevels();
     void updateGuards(float deltaTime);
