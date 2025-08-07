@@ -1,6 +1,7 @@
 #include "GameOverState.h"
 #include "MainMenuState.h"
 #include "NightState.h"
+#include "FieldState.h"
 #include "Graphics.h"
 #include "InputManager.h"
 #include <iostream>
@@ -36,16 +37,24 @@ void GameOverState::render(Graphics& graphics) {
 void GameOverState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // スペースキーまたはAボタンでNightStateに再スタート
+    // スペースキーまたはAボタンでリスタート
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (stateManager) {
             // オートセーブデータをロード
             if (player->autoLoad()) {
-                // ロード成功した場合はNightStateに戻る
-                stateManager->changeState(std::make_unique<NightState>(player));
+                // ゲームオーバー理由に応じて適切な場所に戻る
+                if (gameOverReason.find("戦闘に敗北") != std::string::npos) {
+                    // 戦闘敗北の場合はフィールドに戻る
+                    stateManager->changeState(std::make_unique<FieldState>(player));
+                } else {
+                    // 夜の街での敗北の場合は夜の街に戻る
+                    stateManager->changeState(std::make_unique<NightState>(player));
+                }
             } else {
                 // ロード失敗した場合はメインメニューに戻る
                 auto newPlayer = std::make_shared<Player>("勇者");
+                // リスタート時に王様からの信頼度を50にリセット
+                newPlayer->setKingTrust(50);
                 stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
             }
         }

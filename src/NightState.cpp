@@ -22,11 +22,11 @@ NightState::NightState(std::shared_ptr<Player> player)
       moveTimer(0), playerTexture(nullptr), guardTexture(nullptr),
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
-      messageBoard(nullptr), isShowingMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      messageBoard(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
+      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
-      guardHp(), hasEnteredCastle(false), hasDefeatedKing(false), hasDefeatedDemon(false),
-      hasShownDemonFirstMessage(false), hasShownDemonSecondMessage(false) {
+      guardHp() {
     
     // 住民画像配列を明示的にnullptrで初期化
     for (int i = 0; i < 6; ++i) {
@@ -156,6 +156,9 @@ void NightState::enter() {
             player->setNightTime(true);
         }
         
+        // 夜の街に入った時にオートセーブ
+        player->autoSave();
+        
         // UIの再初期化
         setupUI();
         
@@ -248,6 +251,8 @@ void NightState::render(Graphics& graphics) {
             graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
         }
         
+        
+        
         // UI描画
         ui.render(graphics);
         
@@ -260,44 +265,54 @@ void NightState::render(Graphics& graphics) {
 void NightState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
+    // 住民襲撃時の選択肢表示中の場合
+    if (isShowingResidentChoice && !isShowingMessage) {
+        // 上下キーで選択肢を変更
+        if (input.isKeyJustPressed(InputKey::UP) || input.isKeyJustPressed(InputKey::W)) {
+            selectedChoice = (selectedChoice - 1 + choiceOptions.size()) % choiceOptions.size();
+            // 選択肢の表示を更新
+            updateChoiceDisplay();
+        } else if (input.isKeyJustPressed(InputKey::DOWN) || input.isKeyJustPressed(InputKey::S)) {
+            selectedChoice = (selectedChoice + 1) % choiceOptions.size();
+            // 選択肢の表示を更新
+            updateChoiceDisplay();
+        }
+        
+        // スペースキーまたはAボタンで選択
+        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            handleResidentChoice();
+        }
+        return; // 選択肢表示中は他の操作を無効化
+    }
+    
     // メッセージ表示中の場合はスペースキーでクリア
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
             
-            // 王様のメッセージをクリアした後の処理
-            if (hasEnteredCastle && !hasDefeatedKing) {
-                hasDefeatedKing = true;
-                showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+            // 住民襲撃時の命乞いメッセージをクリアした後の処理
+            if (isShowingResidentChoice) {
+                // 選択肢のみを表示（メッセージ表示フラグをfalseにして選択肢を表示）
+                isShowingMessage = false;
+                updateChoiceDisplay();
             }
-            // 魔王への報告メッセージをクリアした後の処理
-            else if (hasDefeatedKing && !hasShownDemonFirstMessage) {
-                hasShownDemonFirstMessage = true;
-                // 魔王の城に移動
+            // 3人倒した時のメッセージをクリアした後の処理
+            else if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+                // 街に戻る
                 if (stateManager) {
-                    stateManager->changeState(std::make_unique<DemonCastleState>(player, false));
+                    // 夜の回数を増加
+                    TownState::s_nightCount++;
+                    // タイマーを再起動して街に戻る
+                    TownState::s_nightTimerActive = true;
+                    TownState::s_nightTimer = 5.0f; // 5分 = 300秒
+                    stateManager->changeState(std::make_unique<TownState>(player));
                 }
             }
-            // 魔王の最初のメッセージをクリアした後の処理
-            else if (hasShownDemonFirstMessage && !hasShownDemonSecondMessage) {
-                hasShownDemonSecondMessage = true;
-                showMessage("魔王: どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？");
-            }
-            // 魔王の2番目のメッセージをクリアした後の処理
-            else if (hasShownDemonSecondMessage && !hasDefeatedDemon) {
-                hasDefeatedDemon = true;
-                showMessage("勇者: 誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！");
-            }
-            // 勇者のメッセージをクリアした後の処理
-            else if (hasDefeatedDemon) {
-                // 魔王とのバトルを開始
-                if (stateManager) {
-                    // 魔王とのバトル用のEnemyを作成
-                    auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
-                    
-                    // BattleStateに移動
-                    stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
-                }
+            // 恨みメッセージをクリアした後の処理
+            else if (showResidentKilledMessage) {
+                showResidentKilledMessage = false;
+                showMessage("住民を倒しました。\n魔王からの信頼度+10\nメンタル" + 
+                           std::string(totalResidentsKilled >= 6 ? "+20" : "-20"));
             }
             // その他のメッセージ（初期メッセージなど）は何もしない
         }
@@ -377,12 +392,14 @@ void NightState::checkResidentInteraction() {
 void NightState::attackResident(int x, int y) {
     // 住民を倒す制限を削除（全住民を倒せるように）
     
+    // 既に選択肢表示中の場合は何もしない
+    if (isShowingResidentChoice) {
+        return;
+    }
+    
     // 衛兵の近くで襲撃した場合のチェック（衛兵攻撃可能な場合はスキップ）
     if (!canAttackGuards && isNearGuard(x, y)) {
         player->setKingTrust(0); // 王様からの信頼度を0に設定
-        
-        // オートセーブ
-        player->autoSave();
         
         // GameOverStateに移行
         if (stateManager) {
@@ -391,66 +408,125 @@ void NightState::attackResident(int x, int y) {
         return;
     }
     
-    // メンタルに応じた成功率を計算
-    int mental = player->getMental();
-    int successRate = 80; // 基本成功率50%
+    // 襲撃対象の位置を保存
+    currentTargetX = x;
+    currentTargetY = y;
     
-    // メンタルが低いほど成功率が下がる
-    if (mental < 30) {
-        successRate = 40;
-    } else if (mental < 50) {
-        successRate = 60;
-    } else if (mental > 80) {
-        successRate = 70; // メンタルが高いと成功率が上がる
-    }
+    // 選択肢を設定
+    choiceOptions.clear();
+    choiceOptions.push_back("倒す");
+    choiceOptions.push_back("倒さない");
     
-    // ランダム判定
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(1, 100);
-    
-    if (dis(gen) <= successRate) {
-        // 成功：住民を倒した
-        residentsKilled++;
-        
-        // 信頼度の変更
-        // player->changeKingTrust(-10); // 王様からの信頼度を10減少
-        player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
-        
-        // メンタルの変更
-        totalResidentsKilled++; // 合計倒した人数を増加
-        if (totalResidentsKilled >= 6) { // 合計6人以上倒した場合
-            player->changeMental(20); // メンタルを20上昇
-        } else {
-            player->changeMental(-20); // メンタルを20減少
-        }
-        
-        // 倒した住民の位置を記録
-        killedResidentPositions.push_back({x, y});
-        
-        // 住民を削除
-        residents.erase(std::remove_if(residents.begin(), residents.end(),
-            [x, y](const std::pair<int, int>& pos) {
-                return pos.first == x && pos.second == y;
-            }), residents.end());
-        
-        showMessage("住民を倒しました。\n王様からの信頼度-10\n魔王からの信頼度+10\nメンタル" + 
-                   std::string(totalResidentsKilled >= 6 ? "+20" : "-20"));
-        
-        // 3人倒した場合の処理
-        if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
-            showMessage("今夜はもう十分です。これ以上は危険です。\n街に戻ります。");
-        }
-    } else {
-        // 失敗
-        player->changeDemonTrust(-10); // 魔王からの信頼度を10減少
-        showMessage("住民を倒すのに失敗しました。\n魔王からの信頼度-10");
-    }
+    // 命乞いメッセージを表示（選択肢は表示しない）
+    showMessage("住民：「お願いします！助けてください！\n家族が待っています...」");
+    isShowingResidentChoice = true;
+    selectedChoice = 0;
 }
 
 void NightState::hideEvidence() {
     player->performEvilAction();
     showMessage("証拠を隠滅しました。");
+}
+
+void NightState::handleResidentChoice() {
+    if (isShowingResidentChoice && selectedChoice >= 0 && selectedChoice < static_cast<int>(choiceOptions.size())) {
+        // 選択肢の処理
+        executeResidentChoice(selectedChoice);
+    }
+}
+
+void NightState::updateChoiceDisplay() {
+    // 選択肢に応じてメッセージを更新（メッセージ表示フラグは設定しない）
+    std::string message = "選択してください：\n";
+    if (selectedChoice == 0) {
+        message += "> 1. 倒す\n";
+        message += "  2. 倒さない";
+    } else {
+        message += "  1. 倒す\n";
+        message += "> 2. 倒さない";
+    }
+    
+    // メッセージボードに直接テキストを設定（メッセージ表示フラグは変更しない）
+    if (messageBoard) {
+        messageBoard->setText(message);
+    }
+}
+
+void NightState::executeResidentChoice(int choice) {
+    if (choice == 0) {
+        // 「倒す」を選択した場合
+        isShowingResidentChoice = false;
+        
+        // メンタルに応じた成功率を計算
+        int mental = player->getMental();
+        int successRate = 80; // 基本成功率80%
+        
+        // メンタルが低いほど成功率が下がる
+        if (mental < 30) {
+            successRate = 40;
+        } else if (mental < 50) {
+            successRate = 60;
+        } else if (mental > 80) {
+            successRate = 90; // メンタルが高いと成功率が上がる
+        }
+        
+        // ランダム判定
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(1, 100);
+        
+        if (dis(gen) <= successRate) {
+            // 成功：住民を倒した
+            residentsKilled++;
+            
+            // 信頼度の変更
+            player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
+            
+            // メンタルの変更
+            totalResidentsKilled++; // 合計倒した人数を増加
+            if (totalResidentsKilled >= 6) { // 合計6人以上倒した場合
+                player->changeMental(20); // メンタルを20上昇
+            } else {
+                player->changeMental(-20); // メンタルを20減少
+            }
+            
+            // 倒した住民の位置を記録
+            killedResidentPositions.push_back({currentTargetX, currentTargetY});
+            
+            // 住民を削除
+            residents.erase(std::remove_if(residents.begin(), residents.end(),
+                [this](const std::pair<int, int>& pos) {
+                    return pos.first == currentTargetX && pos.second == currentTargetY;
+                }), residents.end());
+            
+            // 恨みのメッセージを表示
+            showMessage("住民：「ああ...なぜ...\n家族が...家族が...」");
+            
+            // 恨みメッセージをクリアした後に倒したメッセージを表示するフラグを設定
+            isShowingResidentChoice = false; // 選択肢表示を終了
+            showResidentKilledMessage = true; // 倒したメッセージ表示フラグを設定
+            
+            // 3人倒した場合の処理
+            if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+                showMessage("今夜はもう十分です。これ以上は危険です。\n街に戻ります。");
+                // メッセージをクリアした後に街に戻る処理はhandleInputで行う
+            }
+        } else {
+            // 失敗
+            player->changeDemonTrust(-10); // 魔王からの信頼度を10減少
+            showMessage("住民を倒すのに失敗しました。\n魔王からの信頼度-10");
+        }
+    } else if (choice == 1) {
+        // 「倒さない」を選択した場合
+        isShowingResidentChoice = false;
+        
+        // 魔王からの信頼度を減少
+        player->changeDemonTrust(-10);
+        player->changeMental(20);
+        
+        // 住民からの感謝メッセージ
+        showMessage("住民：「ありがとうございます！\n本当にありがとうございます！」\n魔王からの信頼度-10");
+    }
 }
 
 void NightState::showMessage(const std::string& message) {
@@ -903,13 +979,12 @@ void NightState::attackGuard(int x, int y) {
 void NightState::checkCastleEntrance() {
     // 城の周辺でスペースを押した場合（全衛兵を倒した後のみ）
     int distanceToCastle = std::max(abs(playerX - castleX), abs(playerY - castleY));
-    if (distanceToCastle <= 2 && canEnterCastle && !hasEnteredCastle) {
+    if (distanceToCastle <= 2 && canEnterCastle) {
         enterCastle();
     }
 }
 
 void NightState::enterCastle() {
-    hasEnteredCastle = true;
     // 城に移動（CastleStateに移動）
     if (stateManager) {
         stateManager->changeState(std::make_unique<CastleState>(player, true));

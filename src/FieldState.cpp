@@ -15,6 +15,7 @@
 static int s_staticPlayerX = 25;  // 街の入り口の近く：25
 static int s_staticPlayerY = 8;   // 16の中央：8
 static bool s_positionInitialized = false;
+static bool s_firstEnterField = true;  // 初回フィールド入場フラグ
 
 FieldState::FieldState(std::shared_ptr<Player> player)
     : player(player), storyBox(nullptr), hasMoved(false),
@@ -109,6 +110,13 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 void FieldState::enter() {
     setupUI();
     loadFieldImages();
+    
+    // 初回フィールド入場時にセーブ
+    if (s_firstEnterField) {
+        player->autoSave();
+        s_firstEnterField = false;
+        std::cout << "初回フィールド入場時にセーブしました" << std::endl;
+    }
     
     // 戦闘終了時の処理
     if (shouldRelocateMonster) {

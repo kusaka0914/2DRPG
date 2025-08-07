@@ -52,6 +52,14 @@ private:
     Label* messageBoard;
     bool isShowingMessage;
     
+    // 住民襲撃時の選択肢表示
+    bool isShowingResidentChoice;
+    bool isShowingMercyChoice;
+    int selectedChoice;
+    std::vector<std::string> choiceOptions;
+    int currentTargetX, currentTargetY; // 現在の襲撃対象の位置
+    bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
+    
     // 建物の位置（街と同じ）
     std::vector<std::pair<int, int>> buildings;
     std::vector<std::string> buildingTypes;
@@ -75,12 +83,7 @@ private:
     // 衛兵のHP管理
     std::vector<int> guardHp;  // 各衛兵のHP（2回アタックで倒す）
     
-    // ゲーム進行フラグ
-    bool hasEnteredCastle;     // 城に入ったか
-    bool hasDefeatedKing;      // 王様を倒したか
-    bool hasDefeatedDemon;     // 魔王を倒したか
-    bool hasShownDemonFirstMessage;  // 魔王の最初のメッセージを表示したか
-    bool hasShownDemonSecondMessage; // 魔王の2番目のメッセージを表示したか
+
     
 public:
     NightState(std::shared_ptr<Player> player);
@@ -127,4 +130,9 @@ private:
     void enterCastle();
     void defeatKing();
     void defeatDemon();
+    
+    // 住民襲撃時の選択肢処理
+    void handleResidentChoice();
+    void executeResidentChoice(int choice);
+    void updateChoiceDisplay();
 }; 

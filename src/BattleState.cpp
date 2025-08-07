@@ -3,6 +3,7 @@
 #include "MainMenuState.h"
 #include "TownState.h"
 #include "FieldState.h"
+#include "GameOverState.h"
 #include <sstream>
 #include <random>
 #include <cmath> // abs関数のために追加
@@ -683,8 +684,8 @@ void BattleState::showResult() {
 void BattleState::endBattle() {
     if (stateManager) {
         if (lastResult == BattleResult::PLAYER_DEFEAT) {
-            // ゲームオーバー（簡易実装でメニューに戻る）
-            stateManager->changeState(std::make_unique<MainMenuState>(player));
+            // 敗北時はGameOverStateを経由してリスタート
+            stateManager->changeState(std::make_unique<GameOverState>(player, "戦闘に敗北しました。"));
         } else {
             // フィールドに戻る
             stateManager->changeState(std::make_unique<FieldState>(player));
