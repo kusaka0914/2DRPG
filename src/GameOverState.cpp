@@ -2,6 +2,7 @@
 #include "MainMenuState.h"
 #include "NightState.h"
 #include "FieldState.h"
+#include "TownState.h"
 #include "Graphics.h"
 #include "InputManager.h"
 #include <iostream>
@@ -50,11 +51,17 @@ void GameOverState::handleInput(const InputManager& input) {
                     // 夜の街での敗北の場合は夜の街に戻る
                     stateManager->changeState(std::make_unique<NightState>(player));
                 }
+                
+                // リスタート時にタイマーを起動
+                TownState::s_nightTimerActive = true;
+                TownState::s_nightTimer = 300.0f; // 5分 = 300秒
             } else {
                 // ロード失敗した場合はメインメニューに戻る
                 auto newPlayer = std::make_shared<Player>("勇者");
                 // リスタート時に王様からの信頼度を50にリセット
                 newPlayer->setKingTrust(50);
+                // 夜の回数を1に設定
+                newPlayer->setCurrentNight(1);
                 stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
             }
         }

@@ -75,6 +75,7 @@ void BattleState::update(float deltaTime) {
             } else {
                 if (stateManager) {
                     stateManager->changeState(std::make_unique<NightState>(player));
+                    player->setCurrentNight(player->getCurrentNight() + 1);
                 }
             }
         }
@@ -684,7 +685,9 @@ void BattleState::showResult() {
 void BattleState::endBattle() {
     if (stateManager) {
         if (lastResult == BattleResult::PLAYER_DEFEAT) {
-            // 敗北時はGameOverStateを経由してリスタート
+            // 敗北時はHPを全回復してからGameOverStateを経由してリスタート
+            player->heal(player->getMaxHp());
+            player->restoreMp(player->getMaxMp());
             stateManager->changeState(std::make_unique<GameOverState>(player, "戦闘に敗北しました。"));
         } else {
             // フィールドに戻る
@@ -811,7 +814,7 @@ void BattleState::showItemOptions() {
 }
 
 void BattleState::updateOptionDisplay() {
-    std::string displayText = "選択してください:\n";
+    std::string displayText = "";
     for (size_t i = 0; i < currentOptions.size(); ++i) {
         if (i == selectedOption) {
             displayText += "▶ " + currentOptions[i] + " ";

@@ -77,7 +77,7 @@ private:
     // 夜の街へのタイマー機能
     bool nightTimerActive;
     float nightTimer;
-    const float NIGHT_TIMER_DURATION = 5.0f; // 5分 = 300秒
+    const float NIGHT_TIMER_DURATION = 360.0f; // 6分 = 360秒
     
     // ショップ関連
     std::vector<std::unique_ptr<Item>> shopItems;
@@ -110,6 +110,8 @@ public:
     // 夜のタイマー関連
     void startNightTimer();
     void setupGameExplanation();
+
+    static bool saved;
     
     // 夜のタイマーの静的状態管理（他の状態からアクセス可能）
     static bool s_nightTimerActive;

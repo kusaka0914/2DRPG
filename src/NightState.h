@@ -60,6 +60,9 @@ private:
     int currentTargetX, currentTargetY; // 現在の襲撃対象の位置
     bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
     
+    // 夜の表示
+    Label* nightDisplayLabel; // 夜の表示用ラベル
+    
     // 建物の位置（街と同じ）
     std::vector<std::pair<int, int>> buildings;
     std::vector<std::string> buildingTypes;

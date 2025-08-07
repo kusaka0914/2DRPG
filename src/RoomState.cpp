@@ -60,6 +60,7 @@ void RoomState::update(float deltaTime) {
             TownState::s_nightTimer = 0.0f;
             if (stateManager) {
                 stateManager->changeState(std::make_unique<NightState>(player));
+                player->setCurrentNight(player->getCurrentNight() + 1);
             }
         }
     } else {

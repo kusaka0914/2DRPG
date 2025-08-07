@@ -15,6 +15,7 @@ int TownState::s_targetLevel = 0;
 bool TownState::s_levelGoalAchieved = false;
 bool TownState::s_fromDemonCastle = false;
 int TownState::s_nightCount = 0; // 夜の回数を追跡
+bool TownState::saved = false; // セーブ状態の管理
 std::vector<std::pair<int, int>> residentHomes = {
     {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
 };
@@ -31,12 +32,18 @@ TownState::TownState(std::shared_ptr<Player> player)
     residentHomes = TownLayout::RESIDENT_HOMES;
     
     setupUI();
+    s_targetLevel = 25 * (s_nightCount+1);
+    // s_targetLevel = 1;
 }
 
 void TownState::enter() {
     setupUI();
     setupNPCs();
     setupShopItems();
+    
+    // タイマーの状態を復元
+    nightTimerActive = s_nightTimerActive;
+    nightTimer = s_nightTimer;
     
     // DemonCastleStateから来た場合、夜のタイマーを起動
     if (s_fromDemonCastle) {
@@ -122,6 +129,9 @@ void TownState::update(float deltaTime) {
                     // 現在の状態をクリーンアップしてから新しい状態に移行
                     exit();
                     stateManager->changeState(std::make_unique<NightState>(player));
+                    player->setCurrentNight(player->getCurrentNight() + 1);
+                    s_nightCount++;
+                    s_levelGoalAchieved = false;
                 }
             }
         }
@@ -216,7 +226,7 @@ void TownState::handleInput(const InputManager& input) {
                 s_nightTimerActive = true;
                 s_nightTimer = NIGHT_TIMER_DURATION;
                 
-                showMessage("タイマーが開始されました。5分後に夜の街に移動します。\n目標レベル: " + std::to_string(s_targetLevel));
+                // showMessage("タイマーが開始されました。5分後に夜の街に移動します。\n目標レベル: " + std::to_string(s_targetLevel));
             } else {
                 // 次の説明テキストを表示
                 showMessage(gameExplanationTexts[explanationStep]);
@@ -921,10 +931,8 @@ void TownState::startNightTimer() {
     // s_nightTimer = NIGHT_TIMER_DURATION;
     
     // 夜の回数を増加
-    s_nightCount++;
     
     // 目標レベルを動的に設定（25, 50, 75, 100...）
-    s_targetLevel = 1 * s_nightCount;
     s_levelGoalAchieved = false;
     
     // 最初の説明テキストを自動で表示
@@ -994,19 +1002,18 @@ void TownState::checkCastleEntrance() {
 void TownState::setupGameExplanation() {
     gameExplanationTexts.clear();    
     gameExplanationTexts.push_back("これからゲーム説明を始めます。よく聞いてくださいね。");
-    gameExplanationTexts.push_back("まず現実世界で5分経過すると夜時間になります。");
-    gameExplanationTexts.push_back("夜時間では住民を襲うことができ、1夜につき最大3人まで倒せます。");
-    gameExplanationTexts.push_back("住人を倒すと勇者のメンタルが下がり、倒せる確率が減っていきます。");
-    gameExplanationTexts.push_back("（倒すのになれてしまうと逆にメンタルが上がるかもしれませんね、、？）");
-    gameExplanationTexts.push_back("住人を倒せば魔王からの信頼度が上がる一方王様からの信頼度が下がります。");
-    gameExplanationTexts.push_back("住人を倒せなければ魔王からの信頼度が下がり、王様からの信頼度が上がります。");
-    gameExplanationTexts.push_back("魔王からの信頼度の方が下がりやすいので、どんどん住人を倒さないといけません。");
-    gameExplanationTexts.push_back("もしどちらかの信頼度が基準値を下回ったてしまったら処刑されてしまいます。");
+    gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。");
+    gameExplanationTexts.push_back("夜時間では住人を倒すことができ、1夜につき最大3人まで倒せます。");
+    gameExplanationTexts.push_back("しかし住人を倒すと勇者のメンタルが下がって倒せる確率が下がります。");
+    gameExplanationTexts.push_back("（倒すのになれてしまうと逆にメンタルが上がるかもしれませんね。）");
+    gameExplanationTexts.push_back("住人を倒せば魔王からの信頼度が上がり王様からの信頼度が下がります。");
+    gameExplanationTexts.push_back("住人を倒さなければ魔王からの信頼度が下がりますがメンタルが回復します。");
+    gameExplanationTexts.push_back("もしどちらかの信頼度が0になってしまったらその時点で処刑されゲームオーバーです。");
     gameExplanationTexts.push_back("処刑されないように、昼はモンスターを倒して王様からの信頼度を上げ、");
-    gameExplanationTexts.push_back("夜は住人を倒して魔王からの信頼度を上げてバランスを保つようにしましょう。");
-    gameExplanationTexts.push_back("また、現実世界で5分以内に目標のレベルに達しないと、");
-    gameExplanationTexts.push_back("街に帰るまでにモンスターにやられてゲームオーバーになります。");
-    gameExplanationTexts.push_back("それではスタートです！");
+    gameExplanationTexts.push_back("夜は住人を倒して魔王からの信頼度を上げるようにしましょう。");
+    gameExplanationTexts.push_back("また、夜になる前に目標のレベルに達しないと、");
+    gameExplanationTexts.push_back("街に帰るまでにモンスターにやられてしまうのでゲームオーバーになります。");
+    gameExplanationTexts.push_back("以上で説明は終わりです。早速下にあるゲートからフィールドに行ってみましょう。");
 }
 
 void TownState::checkTrustLevels() {

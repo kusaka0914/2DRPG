@@ -35,6 +35,10 @@ private:
     int mental;           // メンタル（0-100）
     int demonTrust;       // 魔王からの信頼（0-100）
     int kingTrust;        // 王様からの信頼（0-100）
+    
+    // 夜の情報
+    int currentNight;     // 現在の夜の回数
+    std::vector<std::pair<int, int>> killedResidents; // 倒した住民の位置
 
 public:
     Player(const std::string& name);
@@ -115,6 +119,13 @@ public:
     void changeMental(int amount);
     void changeDemonTrust(int amount);
     void changeKingTrust(int amount);
+    
+    // 夜の情報のgetter/setter
+    int getCurrentNight() const { return currentNight; }
+    void setCurrentNight(int night) { currentNight = night; }
+    const std::vector<std::pair<int, int>>& getKilledResidents() const { return killedResidents; }
+    void addKilledResident(int x, int y) { killedResidents.push_back({x, y}); }
+    void clearKilledResidents() { killedResidents.clear(); }
     
     // セーブ/ロード機能
     void saveGame(const std::string& filename = "savegame.dat");

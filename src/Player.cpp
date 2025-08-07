@@ -7,7 +7,7 @@ Player::Player(const std::string& name)
     : Character(name, 30, 20, 8, 3, 1), gold(0), inventory(20), equipmentManager(),
       hasLevelUpStoryToShow(false), levelUpStoryLevel(0),
       trustLevel(50), isEvil(true), evilActions(0), goodActions(0), isNightTime(false),
-      mental(100), demonTrust(50), kingTrust(50) {
+      mental(100), demonTrust(50), kingTrust(50), currentNight(0) {
     // 初期呪文を覚える
     learnSpell(SpellType::HEAL, 8); // レベル1 × 8 = 8MP
     learnSpell(SpellType::FIREBALL, 8); // レベル1 × 8 = 8MP
@@ -407,6 +407,15 @@ void Player::saveGame(const std::string& filename) {
     file.write(reinterpret_cast<const char*>(&evilActions), sizeof(evilActions));
     file.write(reinterpret_cast<const char*>(&goodActions), sizeof(goodActions));
     
+    // 夜の情報
+    file.write(reinterpret_cast<const char*>(&currentNight), sizeof(currentNight));
+    int killedResidentsSize = killedResidents.size();
+    file.write(reinterpret_cast<const char*>(&killedResidentsSize), sizeof(killedResidentsSize));
+    for (const auto& pos : killedResidents) {
+        file.write(reinterpret_cast<const char*>(&pos.first), sizeof(pos.first));
+        file.write(reinterpret_cast<const char*>(&pos.second), sizeof(pos.second));
+    }
+    
     // 名前の長さと名前
     int nameLength = name.length();
     file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
@@ -449,6 +458,18 @@ bool Player::loadGame(const std::string& filename) {
     file.read(reinterpret_cast<char*>(&trustLevel), sizeof(trustLevel));
     file.read(reinterpret_cast<char*>(&evilActions), sizeof(evilActions));
     file.read(reinterpret_cast<char*>(&goodActions), sizeof(goodActions));
+    
+    // 夜の情報
+    file.read(reinterpret_cast<char*>(&currentNight), sizeof(currentNight));
+    int killedResidentsSize;
+    file.read(reinterpret_cast<char*>(&killedResidentsSize), sizeof(killedResidentsSize));
+    killedResidents.clear();
+    for (int i = 0; i < killedResidentsSize; ++i) {
+        int x, y;
+        file.read(reinterpret_cast<char*>(&x), sizeof(x));
+        file.read(reinterpret_cast<char*>(&y), sizeof(y));
+        killedResidents.push_back({x, y});
+    }
     
     // 名前の長さと名前
     int nameLength;

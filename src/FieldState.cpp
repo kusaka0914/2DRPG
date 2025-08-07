@@ -15,7 +15,8 @@
 static int s_staticPlayerX = 25;  // 街の入り口の近く：25
 static int s_staticPlayerY = 8;   // 16の中央：8
 static bool s_positionInitialized = false;
-static bool s_firstEnterField = true;  // 初回フィールド入場フラグ
+static bool firstEnter= true;
+static bool saved = TownState::saved;
 
 FieldState::FieldState(std::shared_ptr<Player> player)
     : player(player), storyBox(nullptr), hasMoved(false),
@@ -25,7 +26,7 @@ FieldState::FieldState(std::shared_ptr<Player> player)
     // 固定マップの作成（28x16）
     static std::vector<std::vector<MapTile>> staticTerrainMap;
     static bool mapGenerated = false;
-    
+
     if (!mapGenerated) {
         // 28x16の固定マップを作成
         staticTerrainMap.resize(16, std::vector<MapTile>(28));
@@ -112,9 +113,10 @@ void FieldState::enter() {
     loadFieldImages();
     
     // 初回フィールド入場時にセーブ
-    if (s_firstEnterField) {
+    if (firstEnter && !saved) {
         player->autoSave();
-        s_firstEnterField = false;
+        saved = true;
+        firstEnter = false;
         std::cout << "初回フィールド入場時にセーブしました" << std::endl;
     }
     
@@ -122,6 +124,19 @@ void FieldState::enter() {
     if (shouldRelocateMonster) {
         relocateMonsterSpawnPoint(lastBattleX, lastBattleY);
         shouldRelocateMonster = false;
+    }
+    
+    // 目標レベルチェック：目標レベルに達している場合はタイマーを0にして夜の街に移動
+    if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
+        TownState::s_levelGoalAchieved = true;
+        std::cout << "目標レベル" << TownState::s_targetLevel << "を達成しました！" << std::endl;
+    }
+    
+    // 目標レベルに達している場合はタイマーを0にして夜の街に移動
+    if (TownState::s_levelGoalAchieved && nightTimerActive) {
+        nightTimer = 0.0f;
+        TownState::s_nightTimer = 0.0f;
+        std::cout << "目標レベル達成により、夜の街に移動します。" << std::endl;
     }
     
     // オープニングストーリーは王様の城で表示されるため、フィールドでは表示しない
@@ -170,6 +185,9 @@ void FieldState::update(float deltaTime) {
             } else {
                 if (stateManager) {
                     stateManager->changeState(std::make_unique<NightState>(player));
+                    player->setCurrentNight(player->getCurrentNight() + 1);
+                    TownState::s_levelGoalAchieved = false;
+                    TownState::s_nightCount++;
                 }
             }
         }

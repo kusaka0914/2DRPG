@@ -50,7 +50,6 @@ set(SOURCES
     src/Character.cpp
     src/Player.cpp
     src/Enemy.cpp
-    src/Battle.cpp
     src/Graphics.cpp
     src/InputManager.cpp
     src/GameState.cpp
@@ -71,7 +70,6 @@ set(HEADERS
     src/Character.h
     src/Player.h
     src/Enemy.h
-    src/Battle.h
     src/Graphics.h
     src/InputManager.h
     src/GameState.h

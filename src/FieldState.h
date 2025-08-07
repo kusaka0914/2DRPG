@@ -55,7 +55,7 @@ public:
     
     // ストーリーシステム
     void showOpeningStory();
-    void showLevelUpStory(int newLevel);
+    void showLevelUpStory(int newLevel); 
     
 private:
     void setupUI();
