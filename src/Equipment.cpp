@@ -20,9 +20,6 @@ Equipment::Equipment(const std::string& name, const std::string& description, in
 
 bool Equipment::use(Player* player, Character* /*target*/) {
     if (!player) return false;
-    
-    // 装備アイテムは「使用」ではなく「装備」として処理
-    std::cout << name << "は装備アイテムです。装備コマンドを使用してください。" << std::endl;
     return false;
 }
 
@@ -190,11 +187,7 @@ bool EquipmentManager::equipItem(std::unique_ptr<Equipment> equipment) {
     }
     
     if (targetSlot) {
-        if (*targetSlot) {
-            std::cout << (*targetSlot)->getName() << "を外した。" << std::endl;
-        }
         *targetSlot = equipment.release();
-        std::cout << (*targetSlot)->getName() << "を装備した！" << std::endl;
         return true;
     }
     
@@ -222,7 +215,6 @@ std::unique_ptr<Equipment> EquipmentManager::unequipItem(EquipmentSlot slot) {
     if (targetSlot && *targetSlot) {
         std::unique_ptr<Equipment> unequipped(*targetSlot);
         *targetSlot = nullptr;
-        std::cout << unequipped->getName() << "を外した。" << std::endl;
         return unequipped;
     }
     
@@ -284,54 +276,10 @@ int EquipmentManager::getTotalMpBonus() const {
 }
 
 void EquipmentManager::displayEquipment() const {
-    std::cout << "\n=== 装備 ===" << std::endl;
-    
-    std::cout << "武器: ";
-    if (equipped.weapon) {
-        std::cout << equipped.weapon->getName() << " (攻撃力+" << equipped.weapon->getAttackBonus() << ")";
-    } else {
-        std::cout << "なし";
-    }
-    std::cout << std::endl;
-    
-    std::cout << "防具: ";
-    if (equipped.armor) {
-        std::cout << equipped.armor->getName() << " (防御力+" << equipped.armor->getDefenseBonus() << ")";
-    } else {
-        std::cout << "なし";
-    }
-    std::cout << std::endl;
-    
-    std::cout << "盾: ";
-    if (equipped.shield) {
-        std::cout << equipped.shield->getName() << " (防御力+" << equipped.shield->getDefenseBonus() << ")";
-    } else {
-        std::cout << "なし";
-    }
-    std::cout << std::endl;
-    
-    std::cout << "アクセサリー: ";
-    if (equipped.accessory) {
-        std::cout << equipped.accessory->getName();
-    } else {
-        std::cout << "なし";
-    }
-    std::cout << std::endl;
-    
     int totalAttack = getTotalAttackBonus();
     int totalDefense = getTotalDefenseBonus();
     int totalHp = getTotalHpBonus();
     int totalMp = getTotalMpBonus();
-    
-    if (totalAttack > 0 || totalDefense > 0 || totalHp > 0 || totalMp > 0) {
-        std::cout << "\n装備ボーナス合計: ";
-        if (totalAttack > 0) std::cout << "攻撃力+" << totalAttack << " ";
-        if (totalDefense > 0) std::cout << "防御力+" << totalDefense << " ";
-        if (totalHp > 0) std::cout << "HP+" << totalHp << " ";
-        if (totalMp > 0) std::cout << "MP+" << totalMp << " ";
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
 }
 
 // セーブ/ロード機能の実装

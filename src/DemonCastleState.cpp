@@ -121,7 +121,6 @@ void DemonCastleState::handleInput(const InputManager& input) {
         [this, &input]() { handleMovement(input); },
         [this]() { checkInteraction(); },
         [this]() { 
-            std::cout << "魔王の城を出て街に向かいます..." << std::endl;
             exitToTown();
         },
         [this]() { return isNearObject(doorX, doorY); },
@@ -150,11 +149,6 @@ void DemonCastleState::loadTextures(Graphics& graphics) {
     playerTexture = GameState::loadPlayerTexture(graphics);
     demonTexture = GameState::loadDemonTexture(graphics);
     demonCastleTileTexture = graphics.loadTexture("assets/tiles/demoncastletile.png", "demon_castle_tile");
-    
-    // 読み込みエラーの場合はnullptrのまま
-    if (!playerTexture) std::cout << "プレイヤー画像の読み込みに失敗しました" << std::endl;
-    if (!demonTexture) std::cout << "魔王画像の読み込みに失敗しました" << std::endl;
-    if (!demonCastleTileTexture) std::cout << "魔王城タイル画像の読み込みに失敗しました" << std::endl;
 }
 
 void DemonCastleState::handleMovement(const InputManager& input) {

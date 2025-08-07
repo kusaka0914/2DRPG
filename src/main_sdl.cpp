@@ -11,9 +11,7 @@ int main(int argc, char* argv[]) {
         if (!game.initialize()) {
             std::cerr << "ゲームの初期化に失敗しました。" << std::endl;
             return 1;
-        }
-        
-        std::cout << "2Dドラクエ風RPGゲームを開始します！" << std::endl;
+        }        
         game.run();
         
     } catch (const std::exception& e) {

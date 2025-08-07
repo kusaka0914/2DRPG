@@ -63,7 +63,6 @@ void GameState::showMessage(const std::string& message, Label* messageBoard, boo
     if (messageBoard) {
         messageBoard->setText(message);
         isShowingMessage = true;
-        std::cout << "メッセージを表示: " << message << std::endl;
     }
 }
 
@@ -71,7 +70,6 @@ void GameState::clearMessage(Label* messageBoard, bool& isShowingMessage) {
     if (messageBoard) {
         messageBoard->setText("");
         isShowingMessage = false;
-        std::cout << "メッセージをクリアしました" << std::endl;
     }
 }
 

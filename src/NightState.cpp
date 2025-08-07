@@ -149,9 +149,7 @@ NightState::~NightState() {
 }
 
 void NightState::enter() {
-    try {
-        std::cout << "夜間モードに入りました" << std::endl;
-        
+    try {        
         // プレイヤーの状態を設定
         if (player) {
             player->setNightTime(true);
@@ -204,19 +202,14 @@ void NightState::enter() {
         if (nightDisplayLabel) {
             nightDisplayLabel->setText("第" + std::to_string(currentNight) + "夜");
         }
-        std::cout << "現在の夜: " << currentNight << std::endl;
-        
         // メッセージ表示
         showMessage("夜の街に潜入しました。住民を襲撃して街を壊滅させましょう。");
-        
-        std::cout << "NightState: 初期化が完了しました" << std::endl;
     } catch (const std::exception& e) {
         std::cout << "NightState: 初期化エラー: " << e.what() << std::endl;
     }
 }
 
 void NightState::exit() {
-    std::cout << "夜間モードを終了しました" << std::endl;
     player->setNightTime(false);
     
     // 街に戻る時にタイマーを再起動
@@ -426,8 +419,6 @@ void NightState::setupUI() {
         nightDisplayLabel->setText("");
         this->nightDisplayLabel = nightDisplayLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightDisplayLabel));
-        
-        std::cout << "NightState: UIの初期化が完了しました" << std::endl;
     } catch (const std::exception& e) {
         std::cout << "NightState: UI初期化エラー: " << e.what() << std::endl;
     }
@@ -753,9 +744,6 @@ void NightState::loadTextures(Graphics& graphics) {
             if (!residentTextures[i]) {
                 std::string textureName = "resident_" + std::to_string(i + 1);
                 residentTextures[i] = graphics.getTexture(textureName);
-                if (!residentTextures[i]) {
-                    std::cout << "住民テクスチャ " << textureName << " の読み込みに失敗しました" << std::endl;
-                }
             }
         }
         
@@ -771,8 +759,6 @@ void NightState::loadTextures(Graphics& graphics) {
         stoneTileTexture = graphics.getTexture("night_stone_tile");
         residentHomeTexture = graphics.getTexture("resident_home");
         toriiTexture = graphics.getTexture("torii");
-        
-        std::cout << "NightState: テクスチャの読み込みが完了しました" << std::endl;
     } catch (const std::exception& e) {
         std::cout << "NightState: テクスチャ読み込みエラー: " << e.what() << std::endl;
     }
@@ -790,7 +776,6 @@ void NightState::updateGuards(float deltaTime) {
                 guardTargetHomeIndices[i] = dis(gen);
             }
             guardsInitialized = true;
-            std::cout << "衛兵の初期化が完了しました" << std::endl;
         }
         
         guardMoveTimer += deltaTime;
@@ -823,16 +808,11 @@ void NightState::updateGuards(float deltaTime) {
                         do {
                             newTargetIndex = dis(gen);
                         } while (newTargetIndex == targetHomeIndex);
-                        
                         guardTargetHomeIndices[i] = newTargetIndex;
-                        
-                        std::cout << "衛兵" << (i+1) << "が新しい家(" << newTargetIndex << ")に移動します" << std::endl;
                     } else {
                         // 直接家の位置に移動（一気に移動）
                         guards[i].first = targetX;
                         guards[i].second = targetY;
-                        
-                        std::cout << "衛兵" << (i+1) << "が家(" << targetHomeIndex << ")の位置(" << targetX << "," << targetY << ")に移動しました" << std::endl;
                     }
                 }
             }
@@ -1033,13 +1013,11 @@ void NightState::attackGuard(int x, int y) {
     for (size_t i = 0; i < guards.size(); ++i) {
         if (guards[i].first == x && guards[i].second == y) {
             guardHp[i]--;
-            std::cout << "衛兵" << (i+1) << "にダメージを与えました！残りHP: " << guardHp[i] << std::endl;
             
             if (guardHp[i] <= 0) {
                 // HPが0になったら衛兵を削除
                 guards.erase(guards.begin() + i);
                 guardHp.erase(guardHp.begin() + i);
-                std::cout << "衛兵" << (i+1) << "を倒しました！" << std::endl;
             }
             break;
         }

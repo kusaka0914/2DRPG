@@ -86,14 +86,10 @@ FieldState::FieldState(std::shared_ptr<Player> player)
         
         // 街の入り口を追加（右端中央付近）
         staticTerrainMap[8][26] = MapTile(TerrainType::TOWN_ENTRANCE);
-        
-        std::cout << "固定フィールドマップを作成しました！" << std::endl;
-        std::cout << "マップサイズ: " << staticTerrainMap.size() << "x" << (staticTerrainMap[0].size()) << std::endl;
         mapGenerated = true;
     }
     
     if (!s_positionInitialized) {
-        std::cout << "フィールドの初期位置を設定しました！" << std::endl;
         s_positionInitialized = true;
     }
     
@@ -103,9 +99,6 @@ FieldState::FieldState(std::shared_ptr<Player> player)
     
     // モンスター出現場所を生成
     generateMonsterSpawnPoints();
-    
-    std::cout << "terrainMapサイズ: " << terrainMap.size() << "x" << (terrainMap.empty() ? 0 : terrainMap[0].size()) << std::endl;
-    std::cout << "プレイヤー初期位置: (" << playerX << ", " << playerY << ")" << std::endl;
 }
 
 void FieldState::enter() {
@@ -117,7 +110,6 @@ void FieldState::enter() {
         player->autoSave();
         saved = true;
         firstEnter = false;
-        std::cout << "初回フィールド入場時にセーブしました" << std::endl;
     }
     
     // 戦闘終了時の処理
@@ -129,14 +121,12 @@ void FieldState::enter() {
     // 目標レベルチェック：目標レベルに達している場合はタイマーを0にして夜の街に移動
     if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
         TownState::s_levelGoalAchieved = true;
-        std::cout << "目標レベル" << TownState::s_targetLevel << "を達成しました！" << std::endl;
     }
     
     // 目標レベルに達している場合はタイマーを0にして夜の街に移動
     if (TownState::s_levelGoalAchieved && nightTimerActive) {
         nightTimer = 0.0f;
         TownState::s_nightTimer = 0.0f;
-        std::cout << "目標レベル達成により、夜の街に移動します。" << std::endl;
     }
     
     // オープニングストーリーは王様の城で表示されるため、フィールドでは表示しない
@@ -166,7 +156,6 @@ void FieldState::update(float deltaTime) {
         if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
             TownState::s_levelGoalAchieved = true;
             // メッセージ表示はTownStateで行うため、ここではコンソール出力のみ
-            std::cout << "目標レベル" << TownState::s_targetLevel << "を達成しました！" << std::endl;
         }
         
         if (nightTimer <= 0.0f) {
@@ -351,10 +340,7 @@ void FieldState::handleMovement(const InputManager& input) {
             s_staticPlayerY = newY;
             
             moveTimer = MOVE_DELAY;
-            hasMoved = true; // 移動フラグを設定
-            
-            std::cout << "実際に移動: (" << playerX << ", " << playerY << ")" << std::endl;
-            
+            hasMoved = true; // 移動フラグを設定 
             // 移動した時のみエンカウントチェック
             checkEncounter();
             
@@ -387,8 +373,6 @@ void FieldState::checkEncounter() {
             !terrainMap[0].empty() && playerX < static_cast<int>(terrainMap[0].size())) {
             const MapTile& currentTile = terrainMap[playerY][playerX];
             if (currentTile.objectType == 2) { // モンスター専用タイル
-                std::cout << "モンスター専用タイルで敵遭遇！" << std::endl;
-                
                 // この位置の敵の種類を取得
                 EnemyType enemyType = EnemyType::SLIME; // デフォルト
                 for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
@@ -575,7 +559,6 @@ void FieldState::checkTownEntrance() {
     // プレイヤーが街の入り口の上にいる場合のみ遷移
     TerrainType currentTerrain = getCurrentTerrain();
     if (currentTerrain == TerrainType::TOWN_ENTRANCE) {
-        std::cout << "街に入ります..." << std::endl;
         if (stateManager) {
             stateManager->changeState(std::make_unique<TownState>(player));
         }
@@ -585,14 +568,12 @@ void FieldState::checkTownEntrance() {
 bool FieldState::isValidPosition(int x, int y) const {
     // 新しいマップサイズ（28x16）に対応
     if (x < 0 || x >= 28 || y < 0 || y >= 16) {
-        std::cout << "境界外アクセス: (" << x << ", " << y << ")" << std::endl;
         return false;
     }
     
     // terrainMapの境界チェックを追加（空配列チェックも含む）
     if (terrainMap.empty() || y >= static_cast<int>(terrainMap.size()) || 
         terrainMap[0].empty() || x >= static_cast<int>(terrainMap[0].size())) {
-        std::cout << "terrainMap境界外アクセス: (" << x << ", " << y << ") terrainMapサイズ: " << terrainMap.size() << "x" << (terrainMap.empty() ? 0 : terrainMap[0].size()) << std::endl;
         return false;
     }
     
@@ -618,7 +599,6 @@ TerrainType FieldState::getCurrentTerrain() const {
             !terrainMap[0].empty() && playerX < static_cast<int>(terrainMap[0].size())) {
             return terrainMap[playerY][playerX].terrain; // 正しい順序でアクセス
         } else {
-            std::cout << "getCurrentTerrain: terrainMap境界外アクセス: (" << playerX << ", " << playerY << ") terrainMapサイズ: " << terrainMap.size() << "x" << (terrainMap.empty() ? 0 : terrainMap[0].size()) << std::endl;
         }
     }
     return TerrainType::GRASS; // デフォルト
@@ -664,8 +644,6 @@ void FieldState::generateMonsterSpawnPoints() {
         terrainMap[y][x].hasObject = true;
         terrainMap[y][x].objectType = 2; // モンスター専用タイル
     }
-    
-    std::cout << "モンスター出現場所を5箇所生成しました。" << std::endl;
 }
 
 void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
@@ -704,8 +682,6 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
             break;
         }
     }
-    
-    std::cout << "モンスター出現場所を (" << oldX << "," << oldY << ") から (" << newX << "," << newY << ") に移動しました。" << std::endl;
 }
 
 // ストーリーシステム

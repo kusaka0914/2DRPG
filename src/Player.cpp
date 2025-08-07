@@ -382,7 +382,6 @@ void Player::changeKingTrust(int amount) {
 void Player::saveGame(const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "セーブファイルを開けませんでした: " << filename << std::endl;
         return;
     }
     
@@ -426,13 +425,11 @@ void Player::saveGame(const std::string& filename) {
     equipmentManager.saveToFile(file);
     
     file.close();
-    std::cout << "ゲームをセーブしました: " << filename << std::endl;
 }
 
 bool Player::loadGame(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "セーブファイルを開けませんでした: " << filename << std::endl;
         return false;
     }
     
@@ -485,7 +482,6 @@ bool Player::loadGame(const std::string& filename) {
     equipmentManager.loadFromFile(file);
     
     file.close();
-    std::cout << "ゲームをロードしました: " << filename << std::endl;
     return true;
 }
 

@@ -12,12 +12,11 @@ GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& 
 }
 
 void GameOverState::enter() {
-    std::cout << "ゲームオーバー: " << gameOverReason << std::endl;
     setupUI();
 }
 
 void GameOverState::exit() {
-    std::cout << "ゲームオーバー画面を終了しました" << std::endl;
+    
 }
 
 void GameOverState::update(float deltaTime) {

@@ -89,32 +89,21 @@ void SDL2Game::loadResources() {
     // 1. ヒラギノ角ゴシック W3 - 確実な日本語フォント
     if (graphics.loadFont("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc", 16, "default")) {
         fontLoaded = true;
-        std::cout << "フォント読み込み成功: ヒラギノ角ゴシック (確実な日本語対応)" << std::endl;
     }
     // 2. ヒラギノ角ゴシック W6 - バックアップ日本語フォント
     else if (graphics.loadFont("/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc", 16, "default")) {
         fontLoaded = true;
-        std::cout << "フォント読み込み成功: ヒラギノ角ゴシック W6 (日本語対応)" << std::endl;
     }
     // 3. ヒラギノ丸ゴ ProN - 丸ゴシック日本語フォント
     else if (graphics.loadFont("/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc", 16, "default")) {
         fontLoaded = true;
-        std::cout << "フォント読み込み成功: ヒラギノ丸ゴ (日本語対応)" << std::endl;
     }
     // 4. Hiragino Sans GB - 最後の手段
     else if (graphics.loadFont("/System/Library/Fonts/Hiragino Sans GB.ttc", 16, "default")) {
         fontLoaded = true;
-        std::cout << "フォント読み込み成功: Hiragino Sans GB (CJK対応)" << std::endl;
     }
-    
-    if (!fontLoaded) {
-        std::cout << "警告: 日本語フォントが読み込めませんでした。テキストは表示されません。" << std::endl;
-    }
-    
     // 画像リソース読み込み
     loadGameImages();
-    
-    std::cout << "リソースの読み込みが完了しました。" << std::endl;
 }
 
 float SDL2Game::calculateDeltaTime() {
@@ -185,34 +174,9 @@ void SDL2Game::loadGameImages() {
     
     // 住人の家画像
     graphics.loadTexture("assets/buildings/resident_home.png", "resident_home");
-    
-    // 建物用タイル画像（フィールド用）
-    if (graphics.loadTexture("assets/tiles/housetile.png", "house_tile")) {
-        std::cout << "自室タイル画像読み込み成功" << std::endl;
-    } else {
-        std::cout << "自室タイル画像読み込み失敗" << std::endl;
-    }
-    if (graphics.loadTexture("assets/tiles/castletile.png", "castle_tile")) {
-        std::cout << "城タイル画像読み込み成功" << std::endl;
-    } else {
-        std::cout << "城タイル画像読み込み失敗" << std::endl;
-    }
-    if (graphics.loadTexture("assets/tiles/demoncastletile.png", "demon_castle_tile")) {
-        std::cout << "魔王の城タイル画像読み込み成功" << std::endl;
-    } else {
-        std::cout << "魔王の城タイル画像読み込み失敗" << std::endl;
-    }
-    if (graphics.loadTexture("assets/tiles/nightstonetile.png", "night_stone_tile")) {
-        std::cout << "夜の石タイル画像読み込み成功" << std::endl;
-    } else {
-        std::cout << "夜の石タイル画像読み込み失敗" << std::endl;
-    }
-    
     // オブジェクト画像
     graphics.loadTexture("assets/objects/bed.png", "bed");
     graphics.loadTexture("assets/objects/desk.png", "desk");
     graphics.loadTexture("assets/objects/closed_box.png", "closed_box");
     graphics.loadTexture("assets/objects/open_box.png", "open_box");
-    
-    std::cout << "画像リソースの読み込みを試行しました（画像ファイルが存在する場合は読み込み成功）。" << std::endl;
 } 

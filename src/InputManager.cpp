@@ -121,19 +121,6 @@ void InputManager::handleEvent(const SDL_Event& event) {
                 InputKey key = sdlGameControllerButtonToInputKey(static_cast<SDL_GameControllerButton>(event.cbutton.button));
                 if (key != static_cast<InputKey>(-1)) {
                     currentKeys[key] = true;
-                    std::cout << "ゲームパッドボタン押下: " << (int)event.cbutton.button;
-                    switch (event.cbutton.button) {
-                        case SDL_CONTROLLER_BUTTON_A: std::cout << " (Aボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_B: std::cout << " (Bボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_X: std::cout << " (Xボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_Y: std::cout << " (Yボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_START: std::cout << " (START)"; break;
-                        case SDL_CONTROLLER_BUTTON_BACK: std::cout << " (BACK)"; break;
-                        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: std::cout << " (Lボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: std::cout << " (Rボタン)"; break;
-                        default: std::cout << " (不明なボタン)"; break;
-                    }
-                    std::cout << std::endl;
                 }
             }
             break;
@@ -143,19 +130,6 @@ void InputManager::handleEvent(const SDL_Event& event) {
                 InputKey key = sdlGameControllerButtonToInputKey(static_cast<SDL_GameControllerButton>(event.cbutton.button));
                 if (key != static_cast<InputKey>(-1)) {
                     currentKeys[key] = false;
-                    std::cout << "ゲームパッドボタン解放: " << (int)event.cbutton.button;
-                    switch (event.cbutton.button) {
-                        case SDL_CONTROLLER_BUTTON_A: std::cout << " (Aボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_B: std::cout << " (Bボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_X: std::cout << " (Xボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_Y: std::cout << " (Yボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_START: std::cout << " (START)"; break;
-                        case SDL_CONTROLLER_BUTTON_BACK: std::cout << " (BACK)"; break;
-                        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: std::cout << " (Lボタン)"; break;
-                        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: std::cout << " (Rボタン)"; break;
-                        default: std::cout << " (不明なボタン)"; break;
-                    }
-                    std::cout << std::endl;
                 }
             }
             break;
@@ -166,8 +140,6 @@ void InputManager::handleEvent(const SDL_Event& event) {
             if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
                 float value = event.caxis.value / 32767.0f;
                 if (abs(value) > 0.1f) { // デッドゾーンより大きい時のみ表示
-                    std::cout << "左スティック " << (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ? "X" : "Y") 
-                              << ": " << value << std::endl;
                 }
             }
             break;

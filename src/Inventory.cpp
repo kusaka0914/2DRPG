@@ -22,7 +22,6 @@ bool Inventory::addItem(std::unique_ptr<Item> item, int quantity) {
             quantity -= toAdd;
             
             if (quantity == 0) {
-                std::cout << item->getName() << " x" << toAdd << "を手に入れた！" << std::endl;
                 return true;
             }
         }
@@ -32,7 +31,6 @@ bool Inventory::addItem(std::unique_ptr<Item> item, int quantity) {
     while (quantity > 0) {
         int emptySlot = findEmptySlot();
         if (emptySlot == -1) {
-            std::cout << "インベントリがいっぱいです！" << std::endl;
             return false;
         }
         
@@ -40,8 +38,6 @@ bool Inventory::addItem(std::unique_ptr<Item> item, int quantity) {
         slots[emptySlot].item = item->clone();
         slots[emptySlot].quantity = toAdd;
         quantity -= toAdd;
-        
-        std::cout << item->getName() << " x" << toAdd << "を手に入れた！" << std::endl;
     }
     
     return true;
@@ -102,24 +98,12 @@ const InventorySlot* Inventory::getSlot(int index) const {
 }
 
 void Inventory::displayInventory() const {
-    std::cout << "\n=== アイテム (" << getUsedSlots() << "/" << maxSlots << ") ===" << std::endl;
-    
     bool hasItems = false;
     for (int i = 0; i < maxSlots; ++i) {
         if (slots[i].item) {
             hasItems = true;
-            std::cout << (i + 1) << ". " << slots[i].item->getName();
-            if (slots[i].quantity > 1) {
-                std::cout << " x" << slots[i].quantity;
-            }
-            std::cout << " - " << slots[i].item->getDescription() << std::endl;
         }
     }
-    
-    if (!hasItems) {
-        std::cout << "アイテムを持っていません。" << std::endl;
-    }
-    std::cout << std::endl;
 }
 
 bool Inventory::isEmpty() const {

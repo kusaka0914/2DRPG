@@ -64,39 +64,29 @@ bool ConsumableItem::use(Player* player, Character* target) {
     switch (consumableType) {
         case ConsumableType::YAKUSOU:
             if (player->getHp() >= player->getMaxHp()) {
-                std::cout << "HPは既に最大です！" << std::endl;
                 return false;
             }
             player->heal(effectValue);
-            std::cout << player->getName() << "は" << name << "を使った！" << std::endl;
             return true;
             
         case ConsumableType::SEISUI:
         case ConsumableType::MAHOU_SEISUI:
             if (player->getMp() >= player->getMaxMp()) {
-                std::cout << "MPは既に最大です！" << std::endl;
                 return false;
             }
             player->restoreMp(effectValue);
-            std::cout << player->getName() << "は" << name << "を使った！" << std::endl;
             return true;
             
         case ConsumableType::DOKUKESHI:
             // 将来の状態異常システム用
-            std::cout << player->getName() << "は" << name << "を使った！" << std::endl;
-            std::cout << "毒が治った！" << std::endl;
             return true;
             
         case ConsumableType::CHIKARASUI:
             // 戦闘中の一時的ステータス上昇（将来実装）
-            std::cout << player->getName() << "は" << name << "を飲んだ！" << std::endl;
-            std::cout << "攻撃力が上がった！" << std::endl;
             return true;
             
         case ConsumableType::MAMORI_SEED:
             // 戦闘中の一時的ステータス上昇（将来実装）
-            std::cout << player->getName() << "は" << name << "を食べた！" << std::endl;
-            std::cout << "防御力が上がった！" << std::endl;
             return true;
     }
     
