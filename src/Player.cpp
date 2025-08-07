@@ -70,7 +70,6 @@ void Player::displayInfo() const {
                 break;
         }
     }
-    std::cout << std::endl;
 }
 
 void Player::gainExp(int expGained) {
@@ -345,20 +344,16 @@ void Player::changeTrustLevel(int amount) {
     trustLevel += amount;
     if (trustLevel > 100) trustLevel = 100;
     if (trustLevel < 0) trustLevel = 0;
-    
-    std::cout << "信頼度が " << amount << " 変化しました。現在: " << trustLevel << std::endl;
 }
 
 void Player::performEvilAction() {
     evilActions++;
     changeTrustLevel(-5); // 悪行で信頼度が下がる
-    std::cout << "悪行を実行: 魔王の手下としての使命を果たした" << std::endl;
 }
 
 void Player::performGoodAction() {
     goodActions++;
     changeTrustLevel(3); // 善行で信頼度が上がる
-    std::cout << "善行を実行: 勇者としての評判が上がった" << std::endl;
 }
 
 void Player::setNightTime(bool night) {

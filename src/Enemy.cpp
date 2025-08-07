@@ -301,6 +301,19 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             canCastMagic = true;
             magicDamage = 250;
             break;
+            
+        case EnemyType::DEMON_LORD:
+            name = "魔王";
+            hp = maxHp = 500;
+            mp = maxMp = 200;
+            attack = 80;
+            defense = 40;
+            level = 20;
+            goldReward = 5000;
+            expReward = 1000;
+            canCastMagic = true;
+            magicDamage = 100;
+            break;
     }
     
     exp = 0;
@@ -319,12 +332,7 @@ void Enemy::levelUp() {
 }
 
 void Enemy::displayInfo() const {
-    std::cout << "【敵：" << getTypeName() << "】" << std::endl;
     displayStatus();
-    std::cout << "攻撃力: " << getAttack() << " 防御力: " << getDefense() << std::endl;
-    if (canCastMagic) {
-        std::cout << "魔法を使用可能" << std::endl;
-    }
 }
 
 std::string Enemy::getTypeName() const {
@@ -354,6 +362,7 @@ std::string Enemy::getTypeName() const {
         case EnemyType::ANCIENT_DRAGON: return "エンシェントドラゴン";
         case EnemyType::CHAOS_BEAST: return "カオスビースト";
         case EnemyType::ELDER_GOD: return "エルダーゴッド";
+        case EnemyType::DEMON_LORD: return "魔王";
         default: return "謎の敵";
     }
 }
@@ -372,7 +381,6 @@ int Enemy::performAction(Character& target) {
     } else {
         // 通常攻撃のダメージ計算のみ（ダメージ適用はBattleStateで行う）
         int damage = calculateDamage(target);
-        std::cout << name << "の攻撃！" << std::endl;
         return damage;
     }
 }
@@ -381,7 +389,6 @@ void Enemy::castMagic(Character& target) {
     if (!canCastMagic || mp < 3) return;
     
     mp -= 3;
-    std::cout << name << "は呪文を唱えた！" << std::endl;
     
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -389,13 +396,11 @@ void Enemy::castMagic(Character& target) {
     
     if (spellChoice(gen) == 1) {
         // 攻撃魔法
-        std::cout << "炎の玉が" << target.getName() << "に向かって飛んできた！" << std::endl;
         target.takeDamage(magicDamage);
     } else {
         // 回復魔法（自分）
         int healAmount = 8 + level;
         heal(healAmount);
-        std::cout << name << "は回復魔法を使った！" << std::endl;
     }
 }
 

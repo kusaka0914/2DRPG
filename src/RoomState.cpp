@@ -139,7 +139,7 @@ void RoomState::handleInput(const InputManager& input) {
         [this, &input]() { handleMovement(input); },
         [this]() { checkInteraction(); },
         [this]() { 
-            std::cout << "自室を出て城に向かいます..." << std::endl;
+            
             if (s_roomFirstTime) {
                 stateManager->changeState(std::make_unique<CastleState>(player));
                 s_roomFirstTime = false;
@@ -179,13 +179,6 @@ void RoomState::loadTextures(Graphics& graphics) {
     chestOpenTexture = graphics.loadTexture("assets/objects/open_box.png", "chest_open");
     bedTexture = graphics.loadTexture("assets/objects/bed.png", "bed");
     houseTileTexture = graphics.loadTexture("assets/tiles/housetile.png", "house_tile");
-    
-    // 読み込みエラーの場合はnullptrのまま
-    if (!playerTexture) std::cout << "プレイヤー画像の読み込みに失敗しました" << std::endl;
-    if (!deskTexture) std::cout << "机画像の読み込みに失敗しました" << std::endl;
-    if (!chestClosedTexture) std::cout << "宝箱画像の読み込みに失敗しました" << std::endl;
-    if (!chestOpenTexture) std::cout << "開いた宝箱画像の読み込みに失敗しました" << std::endl;
-    if (!houseTileTexture) std::cout << "自室タイル画像の読み込みに失敗しました" << std::endl;
 }
 
 void RoomState::handleMovement(const InputManager& input) {
@@ -395,7 +388,7 @@ void RoomState::interactWithChest() {
 void RoomState::exitToTown() {
     if (s_roomFirstTime) {
         showMessage("城に向かいます...");
-        stateManager->changeState(std::make_unique<CastleState>(player));
+        stateManager->changeState(std::make_unique<CastleState>(player, false));
         s_roomFirstTime = false;
     } else {
         showMessage("町に向かいます...");

@@ -1,6 +1,10 @@
 #include "NightState.h"
 #include "TownState.h"
 #include "GameOverState.h"
+#include "CastleState.h"
+#include "DemonCastleState.h"
+#include "BattleState.h"
+#include "Enemy.h"
 #include "Graphics.h"
 #include "InputManager.h"
 #include "CommonUI.h"
@@ -18,8 +22,11 @@ NightState::NightState(std::shared_ptr<Player> player)
       moveTimer(0), playerTexture(nullptr), guardTexture(nullptr),
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
-      messageLabel(nullptr), isShowingMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
-      guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false) {
+      messageBoard(nullptr), isShowingMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
+      allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
+      guardHp(), hasEnteredCastle(false), hasDefeatedKing(false), hasDefeatedDemon(false),
+      hasShownDemonFirstMessage(false), hasShownDemonSecondMessage(false) {
     
     // 住民画像配列を明示的にnullptrで初期化
     for (int i = 0; i < 6; ++i) {
@@ -100,6 +107,9 @@ NightState::NightState(std::shared_ptr<Player> player)
     guardTargetHomeIndices.resize(4, 0);
     guardStayTimers.resize(4, 0.0f);
     
+    // 衛兵のHPを初期化（各衛兵は2回アタックで倒す）
+    guardHp.resize(4, 2);
+    
     // UIの初期化
     setupUI();
 }
@@ -124,7 +134,7 @@ NightState::~NightState() {
         residentTextures[i] = nullptr;
     }
     
-    messageLabel = nullptr;
+    messageBoard = nullptr;
     
     // ベクターのクリーンアップ
     residents.clear();
@@ -174,6 +184,9 @@ void NightState::update(float deltaTime) {
         
         // 衛兵の更新
         updateGuards(deltaTime);
+        
+        // ゲーム進行チェック
+        checkGameProgress();
     } catch (const std::exception& e) {
         std::cout << "NightState update error: " << e.what() << std::endl;
     }
@@ -227,6 +240,14 @@ void NightState::render(Graphics& graphics) {
         // UI更新
         updateUI();
         
+        // メッセージがある時のみメッセージボードの黒背景を描画
+        if (messageBoard && !messageBoard->getText().empty()) {
+            graphics.setDrawColor(0, 0, 0, 255); // 黒色
+            graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+            graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+            graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+        }
+        
         // UI描画
         ui.render(graphics);
         
@@ -243,17 +264,42 @@ void NightState::handleInput(const InputManager& input) {
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
-            // 3人倒した後のメッセージの場合は街に戻る
-            if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+            
+            // 王様のメッセージをクリアした後の処理
+            if (hasEnteredCastle && !hasDefeatedKing) {
+                hasDefeatedKing = true;
+                showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+            }
+            // 魔王への報告メッセージをクリアした後の処理
+            else if (hasDefeatedKing && !hasShownDemonFirstMessage) {
+                hasShownDemonFirstMessage = true;
+                // 魔王の城に移動
                 if (stateManager) {
-                    // 夜の回数を増加
-                    TownState::s_nightCount++;
-                    // タイマーを再起動して街に戻る
-                    TownState::s_nightTimerActive = true;
-                    TownState::s_nightTimer = 5.0f; // 5分 = 300秒
-                    stateManager->changeState(std::make_unique<TownState>(player));
+                    stateManager->changeState(std::make_unique<DemonCastleState>(player, false));
                 }
             }
+            // 魔王の最初のメッセージをクリアした後の処理
+            else if (hasShownDemonFirstMessage && !hasShownDemonSecondMessage) {
+                hasShownDemonSecondMessage = true;
+                showMessage("魔王: どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？");
+            }
+            // 魔王の2番目のメッセージをクリアした後の処理
+            else if (hasShownDemonSecondMessage && !hasDefeatedDemon) {
+                hasDefeatedDemon = true;
+                showMessage("勇者: 誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！");
+            }
+            // 勇者のメッセージをクリアした後の処理
+            else if (hasDefeatedDemon) {
+                // 魔王とのバトルを開始
+                if (stateManager) {
+                    // 魔王とのバトル用のEnemyを作成
+                    auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
+                    
+                    // BattleStateに移動
+                    stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
+                }
+            }
+            // その他のメッセージ（初期メッセージなど）は何もしない
         }
         return; // メッセージ表示中は他の操作を無効化
     }
@@ -271,8 +317,21 @@ void NightState::handleInput(const InputManager& input) {
         return;
     }
     
-    // スペースキーで住民を襲撃
+    // スペースキーで住民を襲撃、衛兵を攻撃、城に入る
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        // 城に入れる場合は城に入る
+        if (canEnterCastle) {
+            checkCastleEntrance();
+            return;
+        }
+        
+        // 衛兵を攻撃可能な場合は衛兵を攻撃
+        if (canAttackGuards) {
+            checkGuardInteraction();
+            return;
+        }
+        
+        // 住民を襲撃
         checkResidentInteraction();
         return;
     }
@@ -285,13 +344,12 @@ void NightState::setupUI() {
     try {
         ui.clear();
         
-        // メッセージ表示用
-        auto messageLabelPtr = std::make_unique<Label>(50, 450, "", "default");
-        if (messageLabelPtr) {
-            messageLabelPtr->setColor({255, 255, 255, 255});
-            messageLabel = messageLabelPtr.get();
-            ui.addElement(std::move(messageLabelPtr));
-        }
+        // メッセージボード（画面中央下部）- TownStateと同じ仕様
+        auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default");
+        messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+        messageBoardLabel->setText("");
+        messageBoard = messageBoardLabel.get(); // ポインタを保存
+        ui.addElement(std::move(messageBoardLabel));
         
         std::cout << "NightState: UIの初期化が完了しました" << std::endl;
     } catch (const std::exception& e) {
@@ -317,14 +375,10 @@ void NightState::checkResidentInteraction() {
 }
 
 void NightState::attackResident(int x, int y) {
-    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
-        showMessage("今夜はもう十分です。これ以上は危険です。\n街に戻ります。");
-        // メッセージをクリアしたら街に戻る
-        return;
-    }
+    // 住民を倒す制限を削除（全住民を倒せるように）
     
-    // 衛兵の近くで襲撃した場合のチェック
-    if (isNearGuard(x, y)) {
+    // 衛兵の近くで襲撃した場合のチェック（衛兵攻撃可能な場合はスキップ）
+    if (!canAttackGuards && isNearGuard(x, y)) {
         showMessage("衛兵に見つかりました！王様からの信頼度が0になりました。");
         player->setKingTrust(0); // 王様からの信頼度を0に設定
         if (stateManager) {
@@ -335,13 +389,13 @@ void NightState::attackResident(int x, int y) {
     
     // メンタルに応じた成功率を計算
     int mental = player->getMental();
-    int successRate = 50; // 基本成功率50%
+    int successRate = 80; // 基本成功率50%
     
     // メンタルが低いほど成功率が下がる
     if (mental < 30) {
-        successRate = 20;
+        successRate = 40;
     } else if (mental < 50) {
-        successRate = 35;
+        successRate = 60;
     } else if (mental > 80) {
         successRate = 70; // メンタルが高いと成功率が上がる
     }
@@ -356,7 +410,7 @@ void NightState::attackResident(int x, int y) {
         residentsKilled++;
         
         // 信頼度の変更
-        player->changeKingTrust(-10); // 王様からの信頼度を10減少
+        // player->changeKingTrust(-10); // 王様からの信頼度を10減少
         player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
         
         // メンタルの変更
@@ -396,11 +450,11 @@ void NightState::hideEvidence() {
 }
 
 void NightState::showMessage(const std::string& message) {
-    GameState::showMessage(message, messageLabel, isShowingMessage);
+    GameState::showMessage(message, messageBoard, isShowingMessage);
 }
 
 void NightState::clearMessage() {
-    GameState::clearMessage(messageLabel, isShowingMessage);
+    GameState::clearMessage(messageBoard, isShowingMessage);
 }
 
 void NightState::drawNightTown(Graphics& graphics) {
@@ -591,8 +645,8 @@ void NightState::updateGuards(float deltaTime) {
         
         guardMoveTimer += deltaTime;
         
-        // 衛兵の移動間隔（1秒ごと）
-        if (guardMoveTimer >= 1.0f) {
+        // 衛兵の移動間隔（2秒ごと）
+        if (guardMoveTimer >= 2.0f) {
             guardMoveTimer = 0;
             
             for (size_t i = 0; i < guards.size(); ++i) {
@@ -610,82 +664,25 @@ void NightState::updateGuards(float deltaTime) {
                     int distanceToHome = std::max(abs(currentX - targetX), abs(currentY - targetY));
                     
                     if (distanceToHome <= 1) {
-                        // 家に到着した場合、滞在タイマーを開始
-                        guardStayTimers[i] += deltaTime;
+                        // 家に到着した場合、次の家をランダムに選択
+                        std::random_device rd;
+                        std::mt19937 gen(rd());
+                        std::uniform_int_distribution<> dis(0, residentHomes.size() - 1);
                         
-                        // 3秒間滞在したら次の家をランダムに選択
-                        if (guardStayTimers[i] >= 3.0f) {
-                            guardStayTimers[i] = 0.0f;
-                            
-                            // ランダムに次の家を選択（現在の家以外）
-                            std::random_device rd;
-                            std::mt19937 gen(rd());
-                            std::uniform_int_distribution<> dis(0, residentHomes.size() - 1);
-                            
-                            int newTargetIndex;
-                            do {
-                                newTargetIndex = dis(gen);
-                            } while (newTargetIndex == targetHomeIndex);
-                            
-                            guardTargetHomeIndices[i] = newTargetIndex;
-                            
-                            std::cout << "衛兵" << (i+1) << "が新しい家(" << newTargetIndex << ")に移動します" << std::endl;
-                        }
+                        int newTargetIndex;
+                        do {
+                            newTargetIndex = dis(gen);
+                        } while (newTargetIndex == targetHomeIndex);
+                        
+                        guardTargetHomeIndices[i] = newTargetIndex;
+                        
+                        std::cout << "衛兵" << (i+1) << "が新しい家(" << newTargetIndex << ")に移動します" << std::endl;
                     } else {
-                        // 家の前の位置を計算
-                        int guardX, guardY;
+                        // 直接家の位置に移動（一気に移動）
+                        guards[i].first = targetX;
+                        guards[i].second = targetY;
                         
-                        // 家の位置に応じて衛兵の配置を決定（家の前1マス）
-                        if (targetX > 0) {
-                            guardX = targetX - 1; // 家の左側
-                        } else {
-                            guardX = targetX + 1; // 家の右側
-                        }
-                        
-                        if (targetY > 0) {
-                            guardY = targetY - 1; // 家の上側
-                        } else {
-                            guardY = targetY + 1; // 家の下側
-                        }
-                        
-                        // 境界チェック
-                        if (guardX < 0 || guardX >= 28 || guardY < 0 || guardY >= 16) {
-                            guardX = targetX;
-                            guardY = targetY;
-                        }
-                        
-                        // 建物との衝突チェック
-                        bool collision = false;
-                        for (const auto& building : buildings) {
-                            if (GameUtils::isColliding(guardX, guardY, 1, 1, building.first, building.second, 2, 2)) {
-                                collision = true;
-                                break;
-                            }
-                        }
-                        
-                        // 他の住人の家との衝突チェック
-                        if (!collision) {
-                            for (size_t j = 0; j < residentHomes.size(); ++j) {
-                                if (j != static_cast<size_t>(targetHomeIndex)) {
-                                    if (GameUtils::isColliding(guardX, guardY, 1, 1, residentHomes[j].first, residentHomes[j].second, 2, 2)) {
-                                        collision = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 衝突がある場合は家の位置に配置
-                        if (collision) {
-                            guardX = targetX;
-                            guardY = targetY;
-                        }
-                        
-                        // 位置を更新
-                        guards[i].first = guardX;
-                        guards[i].second = guardY;
-                        
-                        std::cout << "衛兵" << (i+1) << "が家(" << targetHomeIndex << ")の前(" << guardX << "," << guardY << ")に移動しました" << std::endl;
+                        std::cout << "衛兵" << (i+1) << "が家(" << targetHomeIndex << ")の位置(" << targetX << "," << targetY << ")に移動しました" << std::endl;
                     }
                 }
             }
@@ -852,5 +849,65 @@ void NightState::drawGate(Graphics& graphics) {
         graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
         graphics.setDrawColor(0, 0, 0, 255);
         graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
+    }
+}
+
+void NightState::checkGameProgress() {
+    // 全住民を倒したかチェック
+    if (!allResidentsKilled && residents.empty()) {
+        allResidentsKilled = true;
+        canAttackGuards = true;
+        showMessage("住人を全員倒せたようですね。残るは衛兵と王様だけです。まずは外にいる衛兵を全員倒してしまいましょう。");
+    }
+    
+    // 全衛兵を倒したかチェック
+    if (allResidentsKilled && !allGuardsKilled && guards.empty()) {
+        allGuardsKilled = true;
+        canEnterCastle = true;
+        showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。");
+    }
+}
+
+void NightState::checkGuardInteraction() {
+    // 近くの衛兵をチェック
+    for (auto& guard : guards) {
+        if (GameUtils::isNearPositionEuclidean(playerX, playerY, guard.first, guard.second, 1.5f)) {
+            attackGuard(guard.first, guard.second);
+            return;
+        }
+    }
+}
+
+void NightState::attackGuard(int x, int y) {
+    // 衛兵のHPを減らす（2回アタックで倒す）
+    for (size_t i = 0; i < guards.size(); ++i) {
+        if (guards[i].first == x && guards[i].second == y) {
+            guardHp[i]--;
+            std::cout << "衛兵" << (i+1) << "にダメージを与えました！残りHP: " << guardHp[i] << std::endl;
+            
+            if (guardHp[i] <= 0) {
+                // HPが0になったら衛兵を削除
+                guards.erase(guards.begin() + i);
+                guardHp.erase(guardHp.begin() + i);
+                std::cout << "衛兵" << (i+1) << "を倒しました！" << std::endl;
+            }
+            break;
+        }
+    }
+}
+
+void NightState::checkCastleEntrance() {
+    // 城の周辺でスペースを押した場合（全衛兵を倒した後のみ）
+    int distanceToCastle = std::max(abs(playerX - castleX), abs(playerY - castleY));
+    if (distanceToCastle <= 2 && canEnterCastle && !hasEnteredCastle) {
+        enterCastle();
+    }
+}
+
+void NightState::enterCastle() {
+    hasEnteredCastle = true;
+    // 城に移動（CastleStateに移動）
+    if (stateManager) {
+        stateManager->changeState(std::make_unique<CastleState>(player, true));
     }
 } 

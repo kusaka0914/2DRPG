@@ -39,8 +39,11 @@ private:
     SDL_Texture* demonTexture;
     SDL_Texture* demonCastleTileTexture;
     
+    // CastleStateから来たかどうか
+    bool fromCastleState;
+    
 public:
-    DemonCastleState(std::shared_ptr<Player> player);
+    DemonCastleState(std::shared_ptr<Player> player, bool fromCastleState = false);
     
     void enter() override;
     void exit() override;

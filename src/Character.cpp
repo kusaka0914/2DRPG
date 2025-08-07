@@ -14,12 +14,9 @@ void Character::takeDamage(int damage) {
     int actualDamage = std::max(1, damage);
     hp -= actualDamage;
     
-    std::cout << name << "は" << actualDamage << "のダメージを受けた！" << std::endl;
-    
     if (hp <= 0) {
         hp = 0;
         isAlive = false;
-        std::cout << name << "は倒れた..." << std::endl;
     }
 }
 
@@ -27,22 +24,16 @@ void Character::heal(int amount) {
     if (!isAlive) return;
     
     hp = std::min(maxHp, hp + amount);
-    std::cout << name << "のHPが" << amount << "回復した！" << std::endl;
 }
 
 void Character::restoreMp(int amount) {
     if (!isAlive) return;
     
     mp = std::min(maxMp, mp + amount);
-    std::cout << name << "のMPが" << amount << "回復した！" << std::endl;
 }
 
 void Character::displayStatus() const {
-    std::cout << "【" << name << "】" << std::endl;
-    std::cout << "HP: " << hp << "/" << maxHp << std::endl;
-    std::cout << "MP: " << mp << "/" << maxMp << std::endl;
-    std::cout << "レベル: " << level << std::endl;
-    std::cout << "経験値: " << exp << std::endl;
+    
 }
 
 int Character::calculateDamage(const Character& target) const {
@@ -94,7 +85,6 @@ void Character::processStatusEffects() {
         int poisonDamage = maxHp / 8; // 最大HPの1/8のダメージ
         poisonDamage = std::max(1, poisonDamage); // 最低1ダメージ
         takeDamage(poisonDamage);
-        std::cout << name << "は毒のダメージを" << poisonDamage << "受けた！" << std::endl;
     }
     
     // ターン数を減らす
@@ -107,13 +97,11 @@ void Character::processStatusEffects() {
             // 状態異常解除メッセージ
             switch (effect) {
                 case StatusEffect::POISON:
-                    std::cout << name << "の毒が治った！" << std::endl;
                     break;
                 case StatusEffect::PARALYSIS:
-                    std::cout << name << "の麻痺が治った！" << std::endl;
                     break;
                 case StatusEffect::SLEEP:
-                    std::cout << name << "が目を覚ました！" << std::endl;
+                    
                     break;
                 default:
                     break;

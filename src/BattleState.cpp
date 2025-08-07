@@ -56,7 +56,6 @@ void BattleState::update(float deltaTime) {
         if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
             TownState::s_levelGoalAchieved = true;
             // メッセージ表示はTownStateで行うため、ここではコンソール出力のみ
-            std::cout << "目標レベル" << TownState::s_targetLevel << "を達成しました！" << std::endl;
         }
         
         if (nightTimer <= 0.0f) {
@@ -717,24 +716,20 @@ void BattleState::handleOptionSelection(const InputManager& input) {
         if (stickTimer <= 0.0f) {
             // 上下移動
             if (stickY < -DEADZONE) {
-                std::cout << "戦闘: スティック上入力 - 選択肢変更" << std::endl;
                 selectedOption = (selectedOption - 1 + currentOptions.size()) % currentOptions.size();
                 updateOptionDisplay();
                 stickTimer = STICK_DELAY;
             } else if (stickY > DEADZONE) {
-                std::cout << "戦闘: スティック下入力 - 選択肢変更" << std::endl;
                 selectedOption = (selectedOption + 1) % currentOptions.size();
                 updateOptionDisplay();
                 stickTimer = STICK_DELAY;
             }
             // 左右移動（選択肢をスキップ）
             else if (stickX < -DEADZONE) {
-                std::cout << "戦闘: スティック左入力 - 選択肢スキップ" << std::endl;
                 selectedOption = (selectedOption - 2 + currentOptions.size()) % currentOptions.size();
                 updateOptionDisplay();
                 stickTimer = STICK_DELAY;
             } else if (stickX > DEADZONE) {
-                std::cout << "戦闘: スティック右入力 - 選択肢スキップ" << std::endl;
                 selectedOption = (selectedOption + 2) % currentOptions.size();
                 updateOptionDisplay();
                 stickTimer = STICK_DELAY;

@@ -50,8 +50,17 @@ private:
     float nightTimer;
     const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
     
+    // NightStateから来たかどうか
+    bool fromNightState;
+    
+    // NightStateからの場合の戦闘用変数
+    bool kingDefeated;
+    bool guardLeftDefeated;
+    bool guardRightDefeated;
+    bool allDefeated;
+    
 public:
-    CastleState(std::shared_ptr<Player> player);
+    CastleState(std::shared_ptr<Player> player, bool fromNightState = false);
     
     void enter() override;
     void exit() override;
@@ -79,5 +88,9 @@ private:
     bool isNearObject(int x, int y) const;
     void interactWithThrone();
     void interactWithGuard();
+    void attackKing();
+    void attackGuardLeft();
+    void attackGuardRight();
+    void checkAllDefeated();
     void exitToTown();
 }; 

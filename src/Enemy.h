@@ -27,7 +27,8 @@ enum class EnemyType {
     SHADOW_LORD,    // レベル90以降
     ANCIENT_DRAGON, // レベル100以降
     CHAOS_BEAST,    // レベル150以降
-    ELDER_GOD       // レベル200以降
+    ELDER_GOD,      // レベル200以降
+    DEMON_LORD      // 魔王（最終ボス）
 };
 
 class Enemy : public Character {

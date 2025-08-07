@@ -9,14 +9,27 @@
 // 静的変数（ファイル内で共有）
 static bool s_castleFirstTime = true;
 
-CastleState::CastleState(std::shared_ptr<Player> player)
+CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     : player(player), playerX(6), playerY(4), 
       messageBoard(nullptr), isShowingMessage(false),
       moveTimer(0), dialogueStep(0), isTalkingToKing(false),
-      nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
+      nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
+      fromNightState(fromNightState) {
     
-    // 王様の会話を初期化
-    if (s_castleFirstTime) {
+    // NightStateから来た場合の処理
+    if (fromNightState) {
+        kingDialogues = {
+            "住人を襲っていた犯人はやはりお主であったか、、我が街の完敗である。さあ、お主の好きにするがいい。"
+        };
+        kingDefeated = false;
+        guardLeftDefeated = false;
+        guardRightDefeated = false;
+        allDefeated = false;
+        playerX = 4;
+        playerY = 4;
+    }
+    // 通常の王様の会話を初期化
+    else if (s_castleFirstTime) {
         kingDialogues = {
         "よく来てくれた勇者よ",
         "実はな、最近街の住民が夜間に失踪する事件が多発しているんだ。",
@@ -26,7 +39,7 @@ CastleState::CastleState(std::shared_ptr<Player> player)
         };
         playerX = 4;
         playerY = 4;
-    }else {
+    } else {
         kingDialogues = {};
         playerX = 4;
         playerY = 9;
@@ -37,14 +50,14 @@ CastleState::CastleState(std::shared_ptr<Player> player)
 }
 
 void CastleState::enter() {
-    // 自動で王様との会話を開始（初回のみ）
-    if (s_castleFirstTime) {
+    // 自動で王様との会話を開始（初回のみ、またはNightStateから来た場合）
+    if (s_castleFirstTime || fromNightState) {
         startDialogue();
     }
 }
 
 void CastleState::exit() {
-    std::cout << "城を出ました" << std::endl;
+    
 }
 
 void CastleState::update(float deltaTime) {
@@ -145,6 +158,15 @@ void CastleState::handleInput(const InputManager& input) {
     // メッセージ表示中の場合はスペースキーでクリア
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            // NightStateから来て全員倒した後のメッセージをクリアした場合
+            if (fromNightState && allDefeated) {
+                clearMessage();
+                // 魔王の城に移動
+                if (stateManager) {
+                    stateManager->changeState(std::make_unique<DemonCastleState>(player, true));
+                }
+                return;
+            }
             nextDialogue(); // メッセージクリアではなく次の会話に進む
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -163,7 +185,7 @@ void CastleState::handleInput(const InputManager& input) {
         [this, &input]() { handleMovement(input); },
         [this]() { checkInteraction(); },
         [this]() { 
-            std::cout << "城を出て街に向かいます..." << std::endl;
+            
             exitToTown();
         },
         [this]() { return isNearObject(doorX, doorY); },
@@ -196,11 +218,6 @@ void CastleState::loadTextures(Graphics& graphics) {
     guardTexture = GameState::loadGuardTexture(graphics);
     castleTileTexture = graphics.loadTexture("assets/tiles/castletile.png", "castle_tile");
     
-    // 読み込みエラーの場合はnullptrのまま
-    if (!playerTexture) std::cout << "プレイヤー画像の読み込みに失敗しました" << std::endl;
-    if (!kingTexture) std::cout << "王様画像の読み込みに失敗しました" << std::endl;
-    if (!guardTexture) std::cout << "衛兵画像の読み込みに失敗しました" << std::endl;
-    if (!castleTileTexture) std::cout << "城タイル画像の読み込みに失敗しました" << std::endl;
 }
 
 void CastleState::handleMovement(const InputManager& input) {
@@ -210,17 +227,34 @@ void CastleState::handleMovement(const InputManager& input) {
 }
 
 void CastleState::checkInteraction() {
-    // 王座との相互作用
-    if (isNearObject(throneX, throneY)) {
-        interactWithThrone();
-    }
-    // 左衛兵との相互作用
-    else if (isNearObject(guardLeftX, guardLeftY)) {
-        interactWithGuard();
-    }
-    // 右衛兵との相互作用
-    else if (isNearObject(guardRightX, guardRightY)) {
-        interactWithGuard();
+    // NightStateから来た場合の戦闘処理
+    if (fromNightState && !isTalkingToKing) {
+        // 王様との戦闘
+        if (isNearObject(throneX, throneY) && !kingDefeated) {
+            attackKing();
+        }
+        // 左衛兵との戦闘
+        else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
+            attackGuardLeft();
+        }
+        // 右衛兵との戦闘
+        else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
+            attackGuardRight();
+        }
+    } else {
+        // 通常の相互作用
+        // 王座との相互作用
+        if (isNearObject(throneX, throneY)) {
+            interactWithThrone();
+        }
+        // 左衛兵との相互作用
+        else if (isNearObject(guardLeftX, guardLeftY)) {
+            interactWithGuard();
+        }
+        // 右衛兵との相互作用
+        else if (isNearObject(guardRightX, guardRightY)) {
+            interactWithGuard();
+        }
     }
 }
 
@@ -234,6 +268,31 @@ void CastleState::interactWithThrone() {
 
 void CastleState::interactWithGuard() {
     showMessage("衛兵: 王様の城を守るのが私の使命です。");
+}
+
+void CastleState::attackKing() {
+    kingDefeated = true;
+    showMessage("王様を倒しました！");
+    checkAllDefeated();
+}
+
+void CastleState::attackGuardLeft() {
+    guardLeftDefeated = true;
+    showMessage("左衛兵を倒しました！");
+    checkAllDefeated();
+}
+
+void CastleState::attackGuardRight() {
+    guardRightDefeated = true;
+    showMessage("右衛兵を倒しました！");
+    checkAllDefeated();
+}
+
+void CastleState::checkAllDefeated() {
+    if (kingDefeated && guardLeftDefeated && guardRightDefeated && !allDefeated) {
+        allDefeated = true;
+        showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+    }
 }
 
 void CastleState::exitToTown() {
@@ -255,7 +314,6 @@ void CastleState::nextDialogue() {
         isTalkingToKing = false;
         hasReceivedQuest = true;
         shouldGoToDemonCastle = true;
-        std::cout << "王様との会話が終了しました。魔王の城に向かいます。" << std::endl;
         
         // メッセージをクリア
         clearMessage();
@@ -272,8 +330,7 @@ void CastleState::nextDialogue() {
 }
 
 void CastleState::showCurrentDialogue() {
-    if (dialogueStep < kingDialogues.size() && s_castleFirstTime) {
-        std::cout << "王様: " << kingDialogues[dialogueStep] << std::endl;
+    if (dialogueStep < kingDialogues.size() && (s_castleFirstTime || fromNightState)) {
         showMessage("王様: " + kingDialogues[dialogueStep]);
     }
 }
@@ -352,29 +409,35 @@ void CastleState::drawCastleObjects(Graphics& graphics) {
     graphics.setDrawColor(139, 69, 19, 255);
     graphics.drawRect((ROOM_OFFSET_X + throneX + 0.25) * TILE_SIZE, (ROOM_OFFSET_Y + throneY + 0.25) * TILE_SIZE, TILE_SIZE * 0.5, TILE_SIZE * 0.5, true);
     
-    // 王様を描画（画像または金色の四角）
-    if (kingTexture) {
-        graphics.drawTexture(kingTexture, ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    // 王様を描画（画像または金色の四角）- 倒していない場合のみ
+    if (!kingDefeated) {
+        if (kingTexture) {
+            graphics.drawTexture(kingTexture, ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
     }
     
-    // 左衛兵を描画（画像または銀色の四角）
-    if (guardTexture) {
-        graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-    } else {
-        graphics.setDrawColor(192, 192, 192, 255);
-        graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    // 左衛兵を描画（画像または銀色の四角）- 倒していない場合のみ
+    if (!guardLeftDefeated) {
+        if (guardTexture) {
+            graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        } else {
+            graphics.setDrawColor(192, 192, 192, 255);
+            graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
     }
     
-    // 右衛兵を描画（画像または銀色の四角）
-    if (guardTexture) {
-        graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-    } else {
-        graphics.setDrawColor(192, 192, 192, 255);
-        graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-        graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    // 右衛兵を描画（画像または銀色の四角）- 倒していない場合のみ
+    if (!guardRightDefeated) {
+        if (guardTexture) {
+            graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        } else {
+            graphics.setDrawColor(192, 192, 192, 255);
+            graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
     }
     
     // ドアを描画（茶色）

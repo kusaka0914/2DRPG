@@ -49,7 +49,7 @@ private:
     SDL_Texture* toriiTexture;
     
     // メッセージ表示
-    Label* messageLabel;
+    Label* messageBoard;
     bool isShowingMessage;
     
     // 建物の位置（街と同じ）
@@ -65,6 +65,22 @@ private:
     std::vector<int> guardTargetHomeIndices;
     std::vector<float> guardStayTimers;
     bool guardsInitialized;
+    
+    // ゲーム進行管理
+    bool allResidentsKilled;  // 全住民を倒したか
+    bool allGuardsKilled;     // 全衛兵を倒したか
+    bool canAttackGuards;     // 衛兵を攻撃可能か
+    bool canEnterCastle;      // 城に入れるか
+    
+    // 衛兵のHP管理
+    std::vector<int> guardHp;  // 各衛兵のHP（2回アタックで倒す）
+    
+    // ゲーム進行フラグ
+    bool hasEnteredCastle;     // 城に入ったか
+    bool hasDefeatedKing;      // 王様を倒したか
+    bool hasDefeatedDemon;     // 魔王を倒したか
+    bool hasShownDemonFirstMessage;  // 魔王の最初のメッセージを表示したか
+    bool hasShownDemonSecondMessage; // 魔王の2番目のメッセージを表示したか
     
 public:
     NightState(std::shared_ptr<Player> player);
@@ -104,4 +120,11 @@ private:
     void checkTrustLevels();
     void updateGuards(float deltaTime);
     bool isNearGuard(int x, int y) const;
+    void checkGameProgress();
+    void checkGuardInteraction();
+    void attackGuard(int x, int y);
+    void checkCastleEntrance();
+    void enterCastle();
+    void defeatKing();
+    void defeatDemon();
 }; 

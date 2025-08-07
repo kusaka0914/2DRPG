@@ -78,8 +78,6 @@ void TownState::exit() {
         
         // メッセージボードのクリーンアップ
         messageBoard = nullptr;
-        
-        std::cout << "TownState: クリーンアップが完了しました" << std::endl;
     } catch (const std::exception& e) {
         std::cout << "TownState: クリーンアップエラー: " << e.what() << std::endl;
     }
@@ -230,7 +228,6 @@ void TownState::handleInput(const InputManager& input) {
     // メッセージ表示中の場合はスペースキーでクリア
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
-            std::cout << "メッセージクリア処理実行" << std::endl;
             clearMessage();
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -276,7 +273,6 @@ void TownState::handleInput(const InputManager& input) {
         if (currentLocation == TownLocation::SQUARE) {
             // まず城のチェック
             int castleDistance = abs(playerX - castleX) + abs(playerY - castleY);
-            std::cout << "プレイヤー位置: (" << playerX << ", " << playerY << "), 城位置: (" << castleX << ", " << castleY << "), 距離: " << castleDistance << std::endl;
             if (GameUtils::isNearPositionEuclidean(playerX, playerY, castleX, castleY, 3.0f)) {
                 checkCastleEntrance();
                 return;
@@ -459,32 +455,22 @@ void TownState::handleNPCDialogue(const NPC& npc) {
 
 void TownState::openShop() {
     isShopOpen = true;
-    std::cout << "\n=== 道具屋 ===" << std::endl;
     showShopMenu();
 }
 
 void TownState::openInn() {
     isInnOpen = true;
-    std::cout << "\n=== 宿屋 ===" << std::endl;
-    std::cout << "宿代は10ゴールドです。休みますか？(y/n)" << std::endl;
     
     // HPとMPを全回復
     player->heal(player->getTotalMaxHp());
     player->restoreMp(player->getTotalMaxMp());
     player->gainGold(-10);
-    std::cout << "ゆっくり休んで体力が回復しました！" << std::endl;
     
     isInnOpen = false;
 }
 
 void TownState::showShopMenu() {
-    std::cout << "\n=== 商品一覧 ===" << std::endl;
-    for (size_t i = 0; i < shopItems.size(); ++i) {
-        std::cout << (i + 1) << ". " << shopItems[i]->getName() 
-                  << " - " << shopItems[i]->getPrice() << "G" << std::endl;
-    }
-    std::cout << "0. やめる" << std::endl;
-    std::cout << "現在のゴールド: " << player->getGold() << "G" << std::endl;
+    
 }
 
 void TownState::buyItem(int itemIndex) {
@@ -495,13 +481,13 @@ void TownState::buyItem(int itemIndex) {
         player->gainGold(-item->getPrice());
         auto clonedItem = item->clone();
         if (player->getInventory().addItem(std::move(clonedItem))) {
-            std::cout << item->getName() << "を購入しました！" << std::endl;
+
         } else {
-            std::cout << "インベントリがいっぱいです！" << std::endl;
+            
             player->gainGold(item->getPrice()); // ゴールドを返金
         }
     } else {
-        std::cout << "ゴールドが足りません！" << std::endl;
+        
     }
 }
 
@@ -999,7 +985,6 @@ void TownState::exitBuilding() {
 void TownState::checkCastleEntrance() {
     // 城の上にいるかチェック
     if (playerX == castleX && playerY == castleY) {
-        std::cout << "城に入ります..." << std::endl;
         if (stateManager) {
             stateManager->changeState(std::make_unique<CastleState>(player));
         }

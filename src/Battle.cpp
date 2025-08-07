@@ -7,9 +7,6 @@ Battle::Battle(Player* player, Enemy* enemy)
 }
 
 BattleResult Battle::startBattle() {
-    std::cout << "\n=== 戦闘開始！ ===" << std::endl;
-    std::cout << enemy->getTypeName() << "が現れた！" << std::endl;
-    
     while (!isBattleOver()) {
         displayBattleStatus();
         
@@ -31,33 +28,18 @@ BattleResult Battle::startBattle() {
         if (!player->getIsAlive()) {
             return BattleResult::PLAYER_DEFEAT;
         }
-        
-        std::cout << "\n--- 次のターン ---\n" << std::endl;
     }
     
     return BattleResult::PLAYER_DEFEAT;
 }
 
 void Battle::displayBattleStatus() const {
-    std::cout << "\n=== 戦闘状況 ===" << std::endl;
-    std::cout << "【" << player->getName() << "】 HP: " << player->getHp() << "/" << player->getMaxHp() 
-              << " MP: " << player->getMp() << "/" << player->getMaxMp() << std::endl;
-    std::cout << "【" << enemy->getName() << "】 HP: " << enemy->getHp() << "/" << enemy->getMaxHp() << std::endl;
-    std::cout << std::endl;
+    
 }
 
 PlayerAction Battle::getPlayerChoice() const {
-    std::cout << "行動を選んでください：" << std::endl;
-    std::cout << "1. 攻撃" << std::endl;
-    std::cout << "2. 呪文" << std::endl;
-    std::cout << "3. アイテム" << std::endl;
-    std::cout << "4. 防御" << std::endl;
-    std::cout << "5. 逃げる" << std::endl;
-    std::cout << "選択 (1-5): ";
-    
     int choice;
     while (!(std::cin >> choice) || choice < 1 || choice > 5) {
-        std::cout << "無効な選択です。1-5で選んでください: ";
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
@@ -127,26 +109,13 @@ bool Battle::isBattleOver() const {
 }
 
 void Battle::showMagicMenu() const {
-    std::cout << "\n使用する呪文を選んでください：" << std::endl;
-    std::cout << "1. ホイミ (HP回復, 3MP)" << std::endl;
     
-    if (player->canCastSpell(SpellType::FIREBALL)) {
-        std::cout << "2. メラ (攻撃魔法, 5MP)" << std::endl;
-    }
-    
-    if (player->canCastSpell(SpellType::LIGHTNING)) {
-        std::cout << "3. いなずま (強力攻撃魔法, 8MP)" << std::endl;
-    }
-    
-    std::cout << "4. やめる" << std::endl;
 }
 
 SpellType Battle::chooseMagic() const {
     int choice;
-    std::cout << "選択 (1-4): ";
     
     while (!(std::cin >> choice) || choice < 1 || choice > 4) {
-        std::cout << "無効な選択です。1-4で選んでください: ";
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
@@ -161,53 +130,41 @@ SpellType Battle::chooseMagic() const {
 }
 
 void Battle::showItemMenu() const {
-    std::cout << "\n=== アイテムを使う ===" << std::endl;
     player->showInventory();
 }
 
 int Battle::chooseItem() const {
-    std::cout << "使用するアイテムを選んでください (0で戻る): ";
-    
     int choice;
     std::cin >> choice;
     
     if (choice == 0) {
-        std::cout << "アイテム使用をキャンセルしました。" << std::endl;
         return 0;
     }
     
     const Inventory& inventory = player->getInventory();
     if (choice < 1 || choice > inventory.getMaxSlots()) {
-        std::cout << "無効な選択です。" << std::endl;
         return 0;
     }
     
     const InventorySlot* slot = inventory.getSlot(choice - 1);
     if (!slot || !slot->item) {
-        std::cout << "そのスロットにはアイテムがありません。" << std::endl;
         return 0;
     }
     
     return choice;
 }
 
-void Battle::handleBattleEnd(BattleResult result) {
-    std::cout << "\n=== 戦闘終了 ===" << std::endl;
-    
+void Battle::handleBattleEnd(BattleResult result) { 
     switch (result) {
         case BattleResult::PLAYER_VICTORY:
-            std::cout << "勝利！" << std::endl;
             player->gainExp(enemy->getExpReward());
             player->gainGold(enemy->getGoldReward());
             break;
             
         case BattleResult::PLAYER_DEFEAT:
-            std::cout << "敗北..." << std::endl;
-            std::cout << "ゲームオーバー" << std::endl;
             break;
             
         case BattleResult::PLAYER_ESCAPED:
-            std::cout << "戦闘から逃走しました。" << std::endl;
             break;
     }
 } 

@@ -2,40 +2,55 @@
 #include "TownState.h"
 #include "Graphics.h"
 #include "InputManager.h"
+#include "BattleState.h"
+#include "Enemy.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
 static bool s_demonCastleFirstTime = true;
 
-DemonCastleState::DemonCastleState(std::shared_ptr<Player> player)
+DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCastleState)
     : player(player), playerX(4), playerY(4), moveTimer(0), // 魔王の目の前に配置
       messageBoard(nullptr), isShowingMessage(false),
       isTalkingToDemon(false), dialogueStep(0), hasReceivedEvilQuest(false),
-      playerTexture(nullptr), demonTexture(nullptr) {
+      playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState) {
     
     // 魔王の会話を初期化
-    demonDialogues = {
-        "ん？なにやら勇者は魔王と話しているみたいですよ。",
-        "...",
-        "王様に魔王討伐を頼まれただと？",
-        "実に愉快だ。よくやったぞ、勇者。",
-        "お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。", 
-        "だが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。",
-        "そこでお前は我が手下たちを倒し、王様に適宜報告し、より信頼されるように努めるのだ。",
-        "その合間に街の住人を倒していくことで、勘付かれずに街を滅ぼすことができる。",
-        "頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。",
-        "...",
-        "勇者は魔王の手先みたいですね、、",
-        "それでは、街を滅ぼすために頑張っていきましょう。",
-    };
+    if (fromCastleState) {
+        // CastleStateから来た場合（街を滅ぼした後）
+        demonDialogues = {
+            "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
+            "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
+            "誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！"
+        };
+    } else if (s_demonCastleFirstTime) {
+        // 初回の場合
+        demonDialogues = {
+            "ん？なにやら勇者は魔王と話しているみたいですよ。",
+            "...",
+            "王様に魔王討伐を頼まれただと？",
+            "実に愉快だ。よくやったぞ、勇者。",
+            "お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。", 
+            "だが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。",
+            "そこでお前は我が手下たちを倒し、王様に適宜報告し、より信頼されるように努めるのだ。",
+            "その合間に街の住人を倒していくことで、勘付かれずに街を滅ぼすことができる。",
+            "頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。",
+            "...",
+            "勇者は魔王の手先みたいですね、、",
+            "それでは、街を滅ぼすために頑張っていきましょう。",
+        };
+    } else {
+        // 2回目以降の場合
+        demonDialogues = {
+            "魔王: また来たな、勇者。"
+        };
+    }
     
     setupDemonCastle();
     setupUI();
 }
 
 void DemonCastleState::enter() {
-    std::cout << "魔王の城に入りました" << std::endl;
-    
     // プレイヤーを魔王の目の前に配置
     playerX = 4;
     playerY = 4; // 魔王の目の前
@@ -47,7 +62,7 @@ void DemonCastleState::enter() {
 }
 
 void DemonCastleState::exit() {
-    std::cout << "魔王の城を出ました" << std::endl;
+    
 }
 
 void DemonCastleState::update(float deltaTime) {
@@ -185,17 +200,27 @@ void DemonCastleState::nextDialogue() {
         // 会話終了
         isTalkingToDemon = false;
         hasReceivedEvilQuest = true;
-        std::cout << "魔王との会話が終了しました。街に戻ります。" << std::endl;
         
         // メッセージをクリア
         clearMessage();
         
-        // 自動で街に移動（タイマー付き）
-        if (stateManager) {
-            // TownStateにDemonCastleStateから来たことを通知
-            TownState::s_fromDemonCastle = true;
-            auto townState = std::make_unique<TownState>(player);
-            stateManager->changeState(std::move(townState));
+        if (fromCastleState) {
+            // CastleStateから来た場合（街を滅ぼした後）は戦闘画面に移行
+            if (stateManager) {
+                // 魔王とのバトル用のEnemyを作成
+                auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
+                
+                // BattleStateに移動
+                stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
+            }
+        } else {
+            // 通常の場合は街に移動
+            if (stateManager) {
+                // TownStateにDemonCastleStateから来たことを通知
+                TownState::s_fromDemonCastle = true;
+                auto townState = std::make_unique<TownState>(player);
+                stateManager->changeState(std::move(townState));
+            }
         }
     } else {
         showCurrentDialogue();
