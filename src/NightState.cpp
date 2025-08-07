@@ -32,7 +32,13 @@ NightState::NightState(std::shared_ptr<Player> player)
         {11, 8},  // 町の住人3
         {5, 10},  // 町の住人4
         {19, 8},  // 町の住人5
-        {21, 13}  // 町の住人6
+        {23, 6},  // 町の住人6
+        {27, 7},  // 町の住人7
+        {6, 13},  // 町の住人8
+        {24, 13},  // 町の住人9
+        {3, 14},  // 町の住人10
+        {19, 14},  // 町の住人11,
+        {20, 4}  // 町の住人12
     };
     
     // 建物配置データを初期化
@@ -48,7 +54,7 @@ NightState::NightState(std::shared_ptr<Player> player)
     };
     
     residentHomes = {
-        {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6}, {4, 12}, {22, 12}
+        {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6}, {4, 12}, {22, 12},{1,13},{17,13},{18,3}
     };
     
     // 衛兵配置データを初期化（residentHomesの初期化後に実行）
@@ -143,7 +149,7 @@ void NightState::exit() {
     
     // 街に戻る時にタイマーを再起動
     TownState::s_nightTimerActive = true;
-    TownState::s_nightTimer = 300.0f; // 5分 = 300秒
+    TownState::s_nightTimer = 5.0f; // 5分 = 300秒
 }
 
 void NightState::update(float deltaTime) {
@@ -226,7 +232,7 @@ void NightState::handleInput(const InputManager& input) {
                     TownState::s_nightCount++;
                     // タイマーを再起動して街に戻る
                     TownState::s_nightTimerActive = true;
-                    TownState::s_nightTimer = 300.0f; // 5分 = 300秒
+                    TownState::s_nightTimer = 5.0f; // 5分 = 300秒
                     stateManager->changeState(std::make_unique<TownState>(player));
                 }
             }
@@ -241,7 +247,7 @@ void NightState::handleInput(const InputManager& input) {
             TownState::s_nightCount++;
             // タイマーを再起動して街に戻る
             TownState::s_nightTimerActive = true;
-            TownState::s_nightTimer = 300.0f; // 5分 = 300秒
+            TownState::s_nightTimer = 5.0f; // 5分 = 300秒
             stateManager->changeState(std::make_unique<TownState>(player));
         }
         return;
