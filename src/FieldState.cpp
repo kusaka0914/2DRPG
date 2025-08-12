@@ -20,7 +20,7 @@ static bool saved = TownState::saved;
 
 FieldState::FieldState(std::shared_ptr<Player> player)
     : player(player), storyBox(nullptr), hasMoved(false),
-      moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
+      moveTimer(0), nightTimerActive(false), nightTimer(0.0f),
       shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0) {
     
     // 固定マップの作成（28x16）
@@ -104,13 +104,17 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 void FieldState::enter() {
     setupUI();
     loadFieldImages();
+
+    // 静的変数からタイマー情報を読み込み
+    nightTimerActive = TownState::s_nightTimerActive;
+    nightTimer = TownState::s_nightTimer;
     
-    // 初回フィールド入場時にセーブ
-    if (firstEnter && !saved) {
-        player->autoSave();
-        saved = true;
-        firstEnter = false;
-    }
+    // デバッグ出力
+    std::cout << "FieldState: 静的変数から読み込み - Timer: " << nightTimer 
+              << ", Active: " << (nightTimerActive ? "true" : "false") << std::endl;
+
+    // タイマー情報も含めてautosave
+    player->saveGame("autosave.dat", nightTimer, nightTimerActive);
     
     // 戦闘終了時の処理
     if (shouldRelocateMonster) {
@@ -437,7 +441,7 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
             textureName = "rock";
             break;
         case TerrainType::TOWN_ENTRANCE:
-            textureName = "town_entrance";
+            textureName = "grass"; // town_entrance.pngが存在しないため、grassを使用
             break;
         default:
             textureName = "grass"; // デフォルト

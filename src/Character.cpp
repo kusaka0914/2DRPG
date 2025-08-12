@@ -21,15 +21,23 @@ void Character::takeDamage(int damage) {
 }
 
 void Character::heal(int amount) {
-    if (!isAlive) return;
-    
+    // isAliveがfalseでもHP回復処理を実行
     hp = std::min(maxHp, hp + amount);
+    
+    // HPが回復した場合は生存状態に戻す
+    if (hp > 0) {
+        isAlive = true;
+    }
 }
 
 void Character::restoreMp(int amount) {
-    if (!isAlive) return;
-    
+    // isAliveがfalseでもMP回復処理を実行
     mp = std::min(maxMp, mp + amount);
+    
+    // HPが0より大きい場合は生存状態に戻す
+    if (hp > 0) {
+        isAlive = true;
+    }
 }
 
 void Character::displayStatus() const {

@@ -41,7 +41,20 @@ void GameOverState::handleInput(const InputManager& input) {
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (stateManager) {
             // オートセーブデータをロード
-            if (player->autoLoad()) {
+            float nightTimer;
+            bool nightTimerActive;
+            if (player->autoLoad(nightTimer, nightTimerActive)) {
+                // デバッグ出力
+                std::cout << "GameOverState: タイマー情報を復元 - Timer: " << nightTimer 
+                          << ", Active: " << (nightTimerActive ? "true" : "false") << std::endl;
+                
+                // プレイヤーのHPとMPを全回復
+                player->heal(player->getMaxHp());
+                player->restoreMp(player->getMaxMp());
+                
+                std::cout << "GameOverState: プレイヤーHP復元 - HP: " << player->getHp() 
+                          << "/" << player->getMaxHp() << ", isAlive: " << (player->getIsAlive() ? "true" : "false") << std::endl;
+                
                 // ゲームオーバー理由に応じて適切な場所に戻る
                 if (gameOverReason.find("戦闘に敗北") != std::string::npos) {
                     // 戦闘敗北の場合はフィールドに戻る
@@ -51,9 +64,12 @@ void GameOverState::handleInput(const InputManager& input) {
                     stateManager->changeState(std::make_unique<NightState>(player));
                 }
                 
-                // リスタート時にタイマーを起動
-                TownState::s_nightTimerActive = true;
-                TownState::s_nightTimer = 300.0f; // 5分 = 300秒
+                // タイマー情報を静的変数に復元
+                TownState::s_nightTimerActive = nightTimerActive;
+                TownState::s_nightTimer = nightTimer;
+                
+                std::cout << "GameOverState: 静的変数に復元 - s_nightTimer: " << TownState::s_nightTimer 
+                          << ", s_nightTimerActive: " << (TownState::s_nightTimerActive ? "true" : "false") << std::endl;
             } else {
                 // ロード失敗した場合はメインメニューに戻る
                 auto newPlayer = std::make_shared<Player>("勇者");

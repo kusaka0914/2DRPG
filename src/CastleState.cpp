@@ -4,6 +4,7 @@
 #include "Graphics.h"
 #include "InputManager.h"
 #include "NightState.h"
+#include "CommonUI.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
@@ -19,7 +20,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     // NightStateから来た場合の処理
     if (fromNightState) {
         kingDialogues = {
-            "住人を襲っていた犯人はやはりお主であったか、、我が街の完敗である。さあ、お主の好きにするがいい。"
+            "住人を襲っていた犯人はやはりお主であったか、、我が街の完敗である。\nさあ、お主の好きにするがいい。"
         };
         kingDefeated = false;
         guardLeftDefeated = false;
@@ -117,39 +118,9 @@ void CastleState::render(Graphics& graphics) {
     
     // 夜のタイマーを表示
     if (nightTimerActive) {
-        int remainingMinutes = static_cast<int>(nightTimer) / 60;
-        int remainingSeconds = static_cast<int>(nightTimer) % 60;
-        
-        // タイマー背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 10, 200, 40, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 10, 200, 40, false);
-        
-        // タイマーテキスト
-        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
-                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
-        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
+        CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+        CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
     }
-    
-    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
-    if (nightTimerActive) {
-        // パラメータ背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(800, 10, 300, 80, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(800, 10, 300, 80, false);
-        
-        // パラメータテキスト
-        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
-        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
-        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
-        
-        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
-    }
-    
     graphics.present();
 }
 

@@ -62,6 +62,7 @@ private:
     
     // 夜の表示
     Label* nightDisplayLabel; // 夜の表示用ラベル
+    Label* nightOperationLabel; // 夜の操作用ラベル
     
     // 建物の位置（街と同じ）
     std::vector<std::pair<int, int>> buildings;

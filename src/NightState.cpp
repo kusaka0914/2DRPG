@@ -23,7 +23,7 @@ NightState::NightState(std::shared_ptr<Player> player)
       moveTimer(0), playerTexture(nullptr), guardTexture(nullptr),
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
-      messageBoard(nullptr), nightDisplayLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
+      messageBoard(nullptr), nightDisplayLabel(nullptr), nightOperationLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
       selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
@@ -203,9 +203,9 @@ void NightState::enter() {
             nightDisplayLabel->setText("第" + std::to_string(currentNight) + "夜");
         }
         // メッセージ表示
-        showMessage("夜の街に潜入しました。住民を襲撃して街を壊滅させましょう。");
+        showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
     } catch (const std::exception& e) {
-        std::cout << "NightState: 初期化エラー: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -228,7 +228,7 @@ void NightState::update(float deltaTime) {
         // ゲーム進行チェック
         checkGameProgress();
     } catch (const std::exception& e) {
-        std::cout << "NightState update error: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -283,11 +283,19 @@ void NightState::render(Graphics& graphics) {
         // 夜の表示の黒背景を描画（左上）
         if (nightDisplayLabel && !nightDisplayLabel->getText().empty()) {
             graphics.setDrawColor(0, 0, 0, 255); // 黒色
-            graphics.drawRect(5, 5, 150, 30, true); // 夜の表示背景（左上）
+            graphics.drawRect(10, 5, 65, 40, true); // 夜の表示背景（左上）
             graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-            graphics.drawRect(5, 5, 150, 30); // 夜の表示枠（左上）
+            graphics.drawRect(10, 5, 65, 40); // 夜の表示枠（左上）
+        }
+
+        if (nightOperationLabel && !nightOperationLabel->getText().empty()) {
+            graphics.setDrawColor(0, 0, 0, 255); // 黒色
+            graphics.drawRect(85, 5, 205, 40, true); // 夜の操作用背景（右上）
+            graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+            graphics.drawRect(85, 5, 205, 40); // 夜の操作用枠（右上）
         }
         
+
         // メッセージがある時のみメッセージボードの黒背景を描画
         if (messageBoard && !messageBoard->getText().empty()) {
             graphics.setDrawColor(0, 0, 0, 255); // 黒色
@@ -303,7 +311,7 @@ void NightState::render(Graphics& graphics) {
         
         graphics.present();
     } catch (const std::exception& e) {
-        std::cout << "NightState render error: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -352,7 +360,7 @@ void NightState::handleInput(const InputManager& input) {
                     } else if (player->getCurrentNight() == 2) {
                         TownState::s_nightTimer = 180.0f;
                     } else {
-                        TownState::s_nightTimer = 120.0f;
+                        TownState::s_nightTimer = 180.0f;
                     }
                     stateManager->changeState(std::make_unique<TownState>(player));
                 }
@@ -360,8 +368,11 @@ void NightState::handleInput(const InputManager& input) {
             // 恨みメッセージをクリアした後の処理
             else if (showResidentKilledMessage) {
                 showResidentKilledMessage = false;
-                showMessage("住民を倒しました。\n魔王からの信頼度+10\nメンタル" + 
-                           std::string(totalResidentsKilled >= 6 ? "+20" : "-20"));
+                if (totalResidentsKilled <= 6) {
+                    showMessage("住民を倒しました。\n勇者: ああぁぁぁぁ、ごめんなさい。倒さないと私が魔王にやられちゃうんだ、、\n\n魔王からの信頼度 +10 メンタル -20");
+                } else {
+                    showMessage("住民を倒しました。\n勇者: ふふっ、だんだん楽しくなってきたぁ、、！\n\n魔王からの信頼度 +10 メンタル +20");
+                }
             }
             // その他のメッセージ（初期メッセージなど）は何もしない
         }
@@ -414,13 +425,20 @@ void NightState::setupUI() {
         ui.addElement(std::move(messageBoardLabel));
         
         // 夜の表示ラベル（左上）
-        auto nightDisplayLabel = std::make_unique<Label>(10, 10, "", "default");
+        auto nightDisplayLabel = std::make_unique<Label>(20, 15, "", "default");
         nightDisplayLabel->setColor({255, 255, 255, 255}); // 白文字
         nightDisplayLabel->setText("");
         this->nightDisplayLabel = nightDisplayLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightDisplayLabel));
+
+        // 夜の操作用ラベル（右上）
+        auto nightOperationLabel = std::make_unique<Label>(95, 15, "", "default");
+        nightOperationLabel->setColor({255, 255, 255, 255}); // 白文字
+        nightOperationLabel->setText("住人を倒す: スペースキー");
+        this->nightOperationLabel = nightOperationLabel.get(); // ポインタを保存
+        ui.addElement(std::move(nightOperationLabel));
     } catch (const std::exception& e) {
-        std::cout << "NightState: UI初期化エラー: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -470,7 +488,7 @@ void NightState::attackResident(int x, int y) {
     choiceOptions.push_back("倒さない");
     
     // 命乞いメッセージを表示（選択肢は表示しない）
-    showMessage("住民：「お願いします！助けてください！\n家族が待っています...」");
+    showMessage("住民：「お願いします！助けてください！\n私には家族がいるんです、、！」");
     isShowingResidentChoice = true;
     selectedChoice = 0;
 }
@@ -553,7 +571,7 @@ void NightState::executeResidentChoice(int choice) {
                 }), residents.end());
             
             // 恨みのメッセージを表示
-            showMessage("住民：「ああ...なぜ...\n家族が...家族が...」");
+            showMessage("住民：「みんなお前を信じてたんだぞ。\nほんっと、最低な勇者だな。」");
             
             // 恨みメッセージをクリアした後に倒したメッセージを表示するフラグを設定
             isShowingResidentChoice = false; // 選択肢表示を終了
@@ -565,17 +583,17 @@ void NightState::executeResidentChoice(int choice) {
             if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
                 int currentNight = player->getCurrentNight();
                 if (currentNight < 4) {
-                    showMessage("今夜はもう十分です。これ以上は危険です。\n街に戻ります。");
+                    showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
                     // メッセージをクリアした後に街に戻る処理はhandleInputで行う
                 } else {
-                    showMessage("住民を全て倒しました。次は衛兵を倒しましょう。");
+                    showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
                     canAttackGuards = true; // 衛兵を攻撃可能にする
                 }
             }
         } else {
             // 失敗
             player->changeDemonTrust(-10); // 魔王からの信頼度を10減少
-            showMessage("住民を倒すのに失敗しました。\n魔王からの信頼度-10");
+            showMessage("住人を倒すのをためらいました。\n勇者: ああぁぁぁぁぁ、私には出来ないよ、、\n\n魔王からの信頼度 -10");
         }
     } else if (choice == 1) {
         // 「倒さない」を選択した場合
@@ -586,7 +604,7 @@ void NightState::executeResidentChoice(int choice) {
         player->changeMental(20);
         
         // 住民からの感謝メッセージ
-        showMessage("住民：「ありがとうございます！\n本当にありがとうございます！」\n魔王からの信頼度-10");
+        showMessage("住民：「ありがとうございます！本当にありがとうございます！」\n魔王からの信頼度 -10 メンタル +20");
     }
 }
 
@@ -756,11 +774,11 @@ void NightState::loadTextures(Graphics& graphics) {
         weaponShopTexture = graphics.getTexture("weapon_shop");
         houseTexture = graphics.getTexture("house");
         castleTexture = graphics.getTexture("castle");
-        stoneTileTexture = graphics.getTexture("night_stone_tile");
+        stoneTileTexture = graphics.loadTexture("assets/tiles/nightstonetile.png", "night_stone_tile");
         residentHomeTexture = graphics.getTexture("resident_home");
         toriiTexture = graphics.getTexture("torii");
     } catch (const std::exception& e) {
-        std::cout << "NightState: テクスチャ読み込みエラー: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -818,7 +836,7 @@ void NightState::updateGuards(float deltaTime) {
             }
         }
     } catch (const std::exception& e) {
-        std::cout << "NightState updateGuards error: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -987,7 +1005,7 @@ void NightState::checkGameProgress() {
     if (!allResidentsKilled && residents.empty()) {
         allResidentsKilled = true;
         canAttackGuards = true;
-        showMessage("住人を全員倒せたようですね。残るは衛兵と王様だけです。まずは外にいる衛兵を全員倒してしまいましょう。");
+        showMessage("住人を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。");
     }
     
     // 全衛兵を倒したかチェック

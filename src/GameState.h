@@ -14,7 +14,8 @@ enum class StateType {
     ROOM,
     NIGHT,
     DEMON_CASTLE,
-    GAME_OVER
+    GAME_OVER,
+    ENDING
 };
 
 // 前方宣言

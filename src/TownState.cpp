@@ -86,7 +86,7 @@ void TownState::exit() {
         // メッセージボードのクリーンアップ
         messageBoard = nullptr;
     } catch (const std::exception& e) {
-        std::cout << "TownState: クリーンアップエラー: " << e.what() << std::endl;
+        // エラーハンドリング（必要に応じてログ出力）
     }
 }
 
@@ -912,6 +912,7 @@ void TownState::checkFieldEntrance() {
 
 void TownState::enterField() {
     showMessage("フィールドに出ます...");
+    
     if (stateManager) {
         stateManager->changeState(std::make_unique<FieldState>(player));
     }
@@ -1004,7 +1005,10 @@ void TownState::setupGameExplanation() {
     gameExplanationTexts.push_back("これからゲーム説明を始めます。よく聞いてくださいね。");
     gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。");
     gameExplanationTexts.push_back("夜時間では住人を倒すことができ、1夜につき最大3人まで倒せます。");
-    gameExplanationTexts.push_back("しかし住人を倒すと勇者のメンタルが下がって倒せる確率が下がります。");
+    gameExplanationTexts.push_back("衛兵が住人の家を徘徊しているので、衛兵がいない時に倒しましょう。");
+    gameExplanationTexts.push_back("住人を全員倒すことで街を滅ぼすことができます。どんどん倒しましょう。");
+    gameExplanationTexts.push_back("しかし住人を倒すと勇者のメンタルが下がってしまいます。");
+    gameExplanationTexts.push_back("メンタルが下がると勇者が住人を倒すのをためらって、失敗してしまいます。");
     gameExplanationTexts.push_back("（倒すのになれてしまうと逆にメンタルが上がるかもしれませんね。）");
     gameExplanationTexts.push_back("住人を倒せば魔王からの信頼度が上がり王様からの信頼度が下がります。");
     gameExplanationTexts.push_back("住人を倒さなければ魔王からの信頼度が下がりますがメンタルが回復します。");

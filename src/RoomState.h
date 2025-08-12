@@ -12,6 +12,7 @@ private:
     
     // メッセージボード用UI
     Label* messageBoard;
+    Label* howtooperateBoard;
     
     // プレイヤーの位置
     int playerX, playerY;

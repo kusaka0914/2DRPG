@@ -66,7 +66,7 @@ void Battle::executePlayerAction(PlayerAction action) {
             showMagicMenu();
             {
                 SpellType spell = chooseMagic();
-                if (spell == SpellType::HEAL) {
+                if (spell == SpellType::KIZUGAIAERU) {
                     player->castSpell(spell);
                 } else {
                     player->castSpell(spell, enemy);
@@ -115,17 +115,21 @@ void Battle::showMagicMenu() const {
 SpellType Battle::chooseMagic() const {
     int choice;
     
-    while (!(std::cin >> choice) || choice < 1 || choice > 4) {
+    while (!(std::cin >> choice) || choice < 1 || choice > 8) {
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
     
     switch (choice) {
-        case 1: return SpellType::HEAL;
-        case 2: return SpellType::FIREBALL;
-        case 3: return SpellType::LIGHTNING;
-        case 4: 
-        default: return SpellType::HEAL; // デフォルト
+        case 1: return SpellType::KIZUGAIAERU;
+        case 2: return SpellType::ATSUIATSUI;
+        case 3: return SpellType::BIRIBIRIDOKKAN;
+        case 4: return SpellType::DARKNESSIMPACT;
+        case 5: return SpellType::ICHIKABACHIKA;
+        case 6: return SpellType::TSUGICHOTTOTSUYOI;
+        case 7: return SpellType::TSUGIMECHATSUYOI;
+        case 8: return SpellType::WANCHANTAOSERU;
+        default: return SpellType::KIZUGAIAERU; // デフォルト
     }
 }
 

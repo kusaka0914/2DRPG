@@ -5,10 +5,14 @@
 #include <map>
 
 enum class SpellType {
-    HEAL,
-    FIREBALL,
-    LIGHTNING,
-    POISON_DART  // 毒の針
+    KIZUGAIAERU,  // キズガイエール（体力20%回復）
+    ATSUIATSUI,   // アツイアツーイ（低MP攻撃呪文）
+    BIRIBIRIDOKKAN, // ビリビリドッカーン（中MP攻撃呪文）
+    DARKNESSIMPACT, // ダークネスインパクト（高MP攻撃呪文）
+    ICHIKABACHIKA,   // イチカバチーカ（カウンター技）
+    TSUGICHOTTOTSUYOI,     // ツギチョットツヨーイ（次のターン2.5倍）
+    TSUGIMECHATSUYOI,   // ツギメッチャツヨーイ（次のターン4倍）
+    WANCHANTAOSERU  // ワンチャンタオセール（即死技）
 };
 
 class Player : public Character {
@@ -39,6 +43,12 @@ private:
     // 夜の情報
     int currentNight;     // 現在の夜の回数
     std::vector<std::pair<int, int>> killedResidents; // 倒した住民の位置
+    
+    // 新しい呪文の効果管理
+    bool hasCounterEffect;     // イチカバチーカの効果
+    bool hasNextTurnBonus;     // 次のターンの攻撃ボーナス
+    float nextTurnMultiplier;  // 次のターンの攻撃倍率
+    int nextTurnBonusTurns;    // ボーナス効果の残りターン数
 
 public:
     Player(const std::string& name);
@@ -83,6 +93,7 @@ public:
     int attack(Character& target);
     void defend();
     bool tryToEscape();
+    int calculateDamageWithBonus(const Character& target) const; // 攻撃ボーナスを考慮したダメージ計算
     
     // ストーリーシステム
     std::vector<std::string> getOpeningStory() const;
@@ -90,6 +101,10 @@ public:
     bool hasLevelUpStory() const { return hasLevelUpStoryToShow; }
     int getLevelUpStoryLevel() const { return levelUpStoryLevel; }
     void clearLevelUpStoryFlag() { hasLevelUpStoryToShow = false; }
+    
+    // 呪文名取得
+    static std::string getSpellName(SpellType spell);
+    static std::vector<SpellType> getSpellsLearnedAtLevel(int level);
 
     // 信頼度システムのメソッド
     int getTrustLevel() const { return trustLevel; }
@@ -128,8 +143,20 @@ public:
     void clearKilledResidents() { killedResidents.clear(); }
     
     // セーブ/ロード機能
-    void saveGame(const std::string& filename = "savegame.dat");
-    bool loadGame(const std::string& filename = "savegame.dat");
+    void saveGame(const std::string& filename, float nightTimer = 0.0f, bool nightTimerActive = false);
+    bool loadGame(const std::string& filename, float& nightTimer, bool& nightTimerActive);
     void autoSave();
-    bool autoLoad();
+    bool autoLoad(float& nightTimer, bool& nightTimerActive);
+    
+    // レベルのsetter
+    void setLevel(int newLevel);
+    
+    // 新しい呪文の効果管理メソッド
+    bool hasCounterEffectActive() const { return hasCounterEffect; }
+    void setCounterEffect(bool active) { hasCounterEffect = active; }
+    bool hasNextTurnBonusActive() const { return hasNextTurnBonus; }
+    float getNextTurnMultiplier() const { return nextTurnMultiplier; }
+    void setNextTurnBonus(bool active, float multiplier = 1.0f, int turns = 1);
+    void processNextTurnBonus();
+    void clearNextTurnBonus();
 }; 

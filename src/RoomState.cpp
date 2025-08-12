@@ -4,6 +4,7 @@
 #include "TownState.h"
 #include "CastleState.h"
 #include "NightState.h"
+#include "CommonUI.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
@@ -11,7 +12,7 @@ static bool s_roomFirstTime = true;
 
 RoomState::RoomState(std::shared_ptr<Player> player)
     : player(player), playerX(3), playerY(2), 
-      messageBoard(nullptr), isShowingMessage(false),
+      messageBoard(nullptr), howtooperateBoard(nullptr), isShowingMessage(false),
       hasOpenedChest(false), bedTexture(nullptr), houseTileTexture(nullptr),
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
     if (s_roomFirstTime) {
@@ -93,45 +94,23 @@ void RoomState::render(Graphics& graphics) {
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
         graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
     }
+
+    if (howtooperateBoard && !howtooperateBoard->getText().empty()) {
+        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.drawRect(190, 10, 395, 70, true); // メッセージボード背景（画面中央）
+        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.drawRect(190, 10, 395, 70); // メッセージボード枠（画面中央）
+    }
     
     // UI描画
     ui.render(graphics);
     
     // 夜のタイマーを表示
     if (nightTimerActive) {
-        int remainingMinutes = static_cast<int>(nightTimer) / 60;
-        int remainingSeconds = static_cast<int>(nightTimer) % 60;
-        
-        // タイマー背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(10, 10, 200, 40, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(10, 10, 200, 40, false);
-        
-        // タイマーテキスト
-        std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
-                               (remainingSeconds < 10 ? "0" : "") + std::to_string(remainingSeconds);
-        graphics.drawText(timerText, 20, 20, "default", {255, 255, 255, 255});
+        CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+        CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
     }
-    
-    // 新しいパラメータを表示（タイマーがアクティブな場合のみ）
-    if (nightTimerActive) {
-        // パラメータ背景
-        graphics.setDrawColor(0, 0, 0, 200);
-        graphics.drawRect(800, 10, 300, 80, true);
-        graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(800, 10, 300, 80, false);
         
-        // パラメータテキスト
-        std::string mentalText = "メンタル: " + std::to_string(player->getMental());
-        std::string demonTrustText = "魔王からの信頼: " + std::to_string(player->getDemonTrust());
-        std::string kingTrustText = "王様からの信頼: " + std::to_string(player->getKingTrust());
-        
-        graphics.drawText(mentalText, 810, 20, "default", {255, 255, 255, 255});
-        graphics.drawText(demonTrustText, 810, 40, "default", {255, 100, 100, 255}); // 赤色
-        graphics.drawText(kingTrustText, 810, 60, "default", {100, 100, 255, 255}); // 青色
-    }
-    
     graphics.present();
 }
 
@@ -162,6 +141,12 @@ void RoomState::setupUI() {
     messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
+
+    auto howtooperateLabel = std::make_unique<Label>(205, 25, "", "default"); // メッセージボード背景の左上付近
+    howtooperateLabel->setColor({255, 255, 255, 255}); // 白文字
+    howtooperateLabel->setText("移動: 矢印キー\n調べる/ドアに入る/次のメッセージ: スペースキー");
+    howtooperateBoard = howtooperateLabel.get(); // ポインタを保存
+    ui.addElement(std::move(howtooperateLabel));
 }
 
 void RoomState::setupRoom() {

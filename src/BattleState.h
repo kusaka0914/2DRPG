@@ -94,4 +94,5 @@ private:
     void showItemOptions();
     void updateOptionDisplay();
     void executeSelectedOption();
+    std::string getSpellDescription(int spellIndex);
 }; 

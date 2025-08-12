@@ -79,7 +79,7 @@ void SDL2Game::initializeGame() {
     player = std::make_shared<Player>(playerName);
     
     // 自室から冒険開始（RoomStateから開始）
-    stateManager.changeState(std::make_unique<RoomState>(player));
+    stateManager.changeState(std::make_unique<MainMenuState>(player));
 }
 
 void SDL2Game::loadResources() {
@@ -97,6 +97,14 @@ void SDL2Game::loadResources() {
     // 3. ヒラギノ丸ゴ ProN - 丸ゴシック日本語フォント
     else if (graphics.loadFont("/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc", 16, "default")) {
         fontLoaded = true;
+    }
+    
+    // 大きなフォント（タイトル用）を読み込み
+    if (fontLoaded) {
+        // 同じフォントファイルで大きなサイズを読み込み
+        if (graphics.loadFont("/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc", 32, "title")) {
+            // 成功
+        }
     }
     // 4. Hiragino Sans GB - 最後の手段
     else if (graphics.loadFont("/System/Library/Fonts/Hiragino Sans GB.ttc", 16, "default")) {
@@ -156,6 +164,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/enemies/ancient_dragon.png", "enemy_エンシェントドラゴン");
     graphics.loadTexture("assets/enemies/chaos_beast.png", "enemy_カオスビースト");
     graphics.loadTexture("assets/enemies/elder_god.png", "enemy_エルダーゴッド");
+    graphics.loadTexture("assets/characters/demon.png", "enemy_魔王");
     
     // フィールド用タイル画像
     graphics.loadTexture("assets/tiles/grass.png", "grass");
@@ -163,7 +172,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/tiles/river.png", "river");
     graphics.loadTexture("assets/tiles/bridge.png", "bridge");
     graphics.loadTexture("assets/tiles/rock.png", "rock");
-    graphics.loadTexture("assets/tiles/town_entrance.png", "town_entrance");
+    // graphics.loadTexture("assets/tiles/town_entrance.png", "town_entrance");
     
     // 建物画像
     graphics.loadTexture("assets/buildings/house.png", "house");

@@ -1,5 +1,6 @@
 # Build directories
 build/
+build_web/
 bin/
 
 # Object files
@@ -10,6 +11,19 @@ bin/
 rpg_game_2d
 DragonQuestRPG
 *.exe
+
+# Emscripten build files
+*.js
+*.wasm
+*.html
+*.data
+
+# Web build files
+web/DragonQuestRPG_Web.js
+web/DragonQuestRPG_Web.wasm
+web/DragonQuestRPG_Web.html
+web/DragonQuestRPG_Web.data
+web/assets/
 
 # Debug files (macOS)
 *.dSYM/
@@ -56,4 +70,54 @@ Makefile.cmake
 # Backup files
 *.bak
 *.backup
-*~ 
+*~
+
+# Emscripten SDK
+emsdk/
+
+# Node modules (if using npm packages)
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Log files
+*.log
+logs/
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local 

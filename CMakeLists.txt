@@ -1,50 +1,28 @@
 cmake_minimum_required(VERSION 3.16)
-project(DragonQuestRPG VERSION 1.0.0 LANGUAGES CXX)
+project(DragonQuestRPG_Web VERSION 1.0.0 LANGUAGES CXX)
 
-# C++17を要求
+# Emscripten用の設定
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# デバッグ情報とビルドタイプ
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+# Emscripten固有の設定
+if(EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_TTF=2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s EXPORTED_FUNCTIONS=['_main']")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_WEBGL2=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s FULL_ES3=1")
+    # PNGサポートを有効にする
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s SDL2_IMAGE_FORMATS=['png']")
+    # デバッグ情報を追加
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ASSERTIONS=1")
+    # WebGL2の設定を改善
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MIN_WEBGL_VERSION=2")
 endif()
 
-# コンパイラオプション
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-
-# SDL2の検索と設定 (macOS対応)
-find_package(PkgConfig REQUIRED)
-
-# SDL2のライブラリを検索
-execute_process(
-    COMMAND pkg-config --libs sdl2
-    OUTPUT_VARIABLE SDL2_LIBRARIES
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-execute_process(
-    COMMAND pkg-config --cflags sdl2
-    OUTPUT_VARIABLE SDL2_CFLAGS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# SDL2_imageのライブラリを検索
-execute_process(
-    COMMAND pkg-config --libs SDL2_image
-    OUTPUT_VARIABLE SDL2_IMAGE_LIBRARIES
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# SDL2_ttfのライブラリを検索
-execute_process(
-    COMMAND pkg-config --libs SDL2_ttf
-    OUTPUT_VARIABLE SDL2_TTF_LIBRARIES
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# ソースファイル（src/ディレクトリから）
+# ソースファイル
 set(SOURCES
     src/main_sdl.cpp
     src/Character.cpp
@@ -63,9 +41,17 @@ set(SOURCES
     src/Inventory.cpp
     src/Equipment.cpp
     src/MapTerrain.cpp
+    src/Battle.cpp
+    src/CastleState.cpp
+    src/RoomState.cpp
+    src/NightState.cpp
+    src/DemonCastleState.cpp
+    src/GameOverState.cpp
+    src/CommonUI.cpp
+    src/TownLayout.cpp
 )
 
-# ヘッダーファイル（src/ディレクトリから）
+# ヘッダーファイル
 set(HEADERS
     src/Character.h
     src/Player.h
@@ -83,36 +69,27 @@ set(HEADERS
     src/Inventory.h
     src/Equipment.h
     src/MapTerrain.h
+    src/Battle.h
+    src/CastleState.h
+    src/RoomState.h
+    src/NightState.h
+    src/DemonCastleState.h
+    src/GameOverState.h
+    src/CommonUI.h
+    src/TownLayout.h
+    src/GameUtils.h
 )
 
 # 実行ファイル作成
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
-# コンパイラフラグとライブラリを設定
-separate_arguments(SDL2_CFLAGS_LIST UNIX_COMMAND "${SDL2_CFLAGS}")
-separate_arguments(SDL2_LIBS_LIST UNIX_COMMAND "${SDL2_LIBRARIES}")
-separate_arguments(SDL2_IMAGE_LIBS_LIST UNIX_COMMAND "${SDL2_IMAGE_LIBRARIES}")
-separate_arguments(SDL2_TTF_LIBS_LIST UNIX_COMMAND "${SDL2_TTF_LIBRARIES}")
-
-target_compile_options(${PROJECT_NAME} PRIVATE ${SDL2_CFLAGS_LIST})
-target_link_libraries(${PROJECT_NAME} ${SDL2_LIBS_LIST} ${SDL2_IMAGE_LIBS_LIST} ${SDL2_TTF_LIBS_LIST})
-
-# インストール
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
-
-# assetsディレクトリも一緒にインストール
-install(DIRECTORY assets/ DESTINATION share/${PROJECT_NAME}/assets)
-
-# ヘルプメッセージ
-message(STATUS "")
-message(STATUS "ドラクエ風RPG ビルド設定:")
-message(STATUS "  プロジェクト名: ${PROJECT_NAME}")
-message(STATUS "  バージョン: ${PROJECT_VERSION}")
-message(STATUS "  ビルドタイプ: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  C++標準: ${CMAKE_CXX_STANDARD}")
-message(STATUS "")
-message(STATUS "ビルド方法:")
-message(STATUS "  mkdir build && cd build")
-message(STATUS "  cmake ..")
-message(STATUS "  make")
-message(STATUS "") 
+# Emscripten用の設定
+if(EMSCRIPTEN)
+    # assetsディレクトリをコピー
+    file(COPY assets/ DESTINATION ${CMAKE_BINARY_DIR}/assets)
+    
+    # HTMLテンプレートを設定
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        LINK_FLAGS "-s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_TTF=2 -s SDL2_IMAGE_FORMATS=['png'] -s USE_WEBGL2=1 -s FULL_ES3=1"
+    )
+endif()
