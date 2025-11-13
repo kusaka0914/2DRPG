@@ -134,7 +134,7 @@ public:
     std::vector<std::string> gameExplanationTexts;
     
 private:
-    void setupUI();
+    void setupUI(Graphics& graphics);
     void setupNPCs();
     void setupShopItems();
     void loadTextures(Graphics& graphics);

@@ -2,10 +2,11 @@
 #include "../game/MainMenuState.h"
 #include "../game/RoomState.h"
 #include "../game/CastleState.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <string>
 
-SDL2Game::SDL2Game() : isRunning(false) {
+SDL2Game::SDL2Game() : isRunning(false), uiConfigCheckTimer(0.0f) {
 }
 
 SDL2Game::~SDL2Game() {
@@ -20,6 +21,9 @@ bool SDL2Game::initialize() {
     
     loadResources();
     initializeGame();
+    
+    // UI設定ファイルを読み込み（3DAttractionと同じ実装）
+    UIConfig::UIConfigManager::getInstance().loadConfig("assets/config/ui_config.json");
     
     lastTime = std::chrono::high_resolution_clock::now();
     isRunning = true;
@@ -65,6 +69,13 @@ void SDL2Game::handleEvents() {
 }
 
 void SDL2Game::update(float deltaTime) {
+    // UI設定ファイルのホットリロードチェック
+    uiConfigCheckTimer += deltaTime;
+    if (uiConfigCheckTimer >= UI_CONFIG_CHECK_INTERVAL) {
+        uiConfigCheckTimer = 0.0f;
+        UIConfig::UIConfigManager::getInstance().checkAndReloadConfig();
+    }
+    
     stateManager.update(deltaTime);
 }
 

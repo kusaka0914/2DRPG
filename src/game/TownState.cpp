@@ -6,6 +6,7 @@
 #include "CastleState.h"
 #include "GameOverState.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 // 静的変数の初期化
@@ -31,13 +32,13 @@ TownState::TownState(std::shared_ptr<Player> player)
     buildingTypes = TownLayout::BUILDING_TYPES;
     residentHomes = TownLayout::RESIDENT_HOMES;
     
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
     s_targetLevel = 25 * (s_nightCount+1);
     // s_targetLevel = 1;
 }
 
 void TownState::enter() {
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
     setupNPCs();
     setupShopItems();
     
@@ -154,6 +155,11 @@ void TownState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // UIが未初期化の場合は初期化
+    if (!messageBoard) {
+        setupUI(graphics);
+    }
+    
     // 現在の場所に応じて背景色を設定
     switch (currentLocation) {
         case TownLocation::SQUARE:
@@ -186,12 +192,18 @@ void TownState::render(Graphics& graphics) {
     
     drawPlayer(graphics);
     
-    // メッセージがある時のみメッセージボードの黒背景を描画
+    // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
     if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto mbConfig = config.getMessageBoardConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true); // メッセージボード背景
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height); // メッセージボード枠
     }
     
     // UI描画
@@ -248,7 +260,7 @@ void TownState::handleInput(const InputManager& input) {
         if (isShopOpen || isInnOpen) {
             isShopOpen = false;
             isInnOpen = false;
-            setupUI(); // UIをリセット
+            // setupUI()はrender()で呼ばれるため、ここではスキップ
             return;
         }
         
@@ -318,15 +330,20 @@ void TownState::handleInput(const InputManager& input) {
     }
 }
 
-void TownState::setupUI() {
+void TownState::setupUI(Graphics& graphics) {
     ui.clear();
     
-    // プレイヤー情報表示
-    auto playerInfoLabel = std::make_unique<Label>(10, 10, "", "default");
-    playerInfoLabel->setColor({255, 255, 255, 255});
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    
+    // プレイヤー情報表示（JSONから座標を取得）
+    auto townConfig = config.getTownConfig();
+    int playerInfoX, playerInfoY;
+    config.calculatePosition(playerInfoX, playerInfoY, townConfig.playerInfo.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto playerInfoLabel = std::make_unique<Label>(playerInfoX, playerInfoY, "", "default");
+    playerInfoLabel->setColor(townConfig.playerInfo.color);
     ui.addElement(std::move(playerInfoLabel));
     
-    // 操作説明（現在の場所に応じて変更）
+    // 操作説明（現在の場所に応じて変更、JSONから座標を取得）
     std::string controlsText;
     switch (currentLocation) {
         case TownLocation::SHOP:
@@ -340,13 +357,20 @@ void TownState::setupUI() {
             break;
     }
     
-    auto controlsLabel = std::make_unique<Label>(10, 550, controlsText, "default");
-    controlsLabel->setColor({255, 255, 255, 255});
+    int controlsX, controlsY;
+    config.calculatePosition(controlsX, controlsY, townConfig.controls.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto controlsLabel = std::make_unique<Label>(controlsX, controlsY, controlsText, "default");
+    controlsLabel->setColor(townConfig.controls.color);
     ui.addElement(std::move(controlsLabel));
     
-    // メッセージボード（画面中央下部）
-    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
-    messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+    // メッセージボード（JSONから座標を取得）
+    auto mbConfig = config.getMessageBoardConfig();
+    
+    int textX, textY;
+    config.calculatePosition(textX, textY, mbConfig.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    
+    auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
+    messageBoardLabel->setColor(mbConfig.text.color);
     messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
@@ -967,13 +991,13 @@ void TownState::checkBuildingEntrance() {
 
 void TownState::enterShop() {
     currentLocation = TownLocation::SHOP;
-    setupUI(); // UIを更新
+    // setupUI()はrender()で呼ばれるため、ここではスキップ
     showMessage("道具屋に入りました。武器、防具、薬草などが売っています。スペースで買い物、ESCで外に出ます。");
 }
 
 void TownState::enterInn() {
     currentLocation = TownLocation::INN;
-    setupUI(); // UIを更新
+    // setupUI()はrender()で呼ばれるため、ここではスキップ
     showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。スペースで休むとHPが全回復します。ESCで外に出ます。");
 }
 
@@ -981,13 +1005,13 @@ void TownState::enterInn() {
 
 void TownState::enterChurch() {
     currentLocation = TownLocation::CHURCH;
-    setupUI(); // UIを更新
+    // setupUI()はrender()で呼ばれるため、ここではスキップ
     showMessage("教会に入りました。ステンドグラスから差し込む光が神聖な雰囲気を作り出しています。スペースで祈りを捧げることができます。ESCで外に出ます。");
 }
 
 void TownState::exitBuilding() {
     currentLocation = TownLocation::SQUARE;
-    setupUI(); // UIを更新
+    // setupUI()はrender()で呼ばれるため、ここではスキップ
     showMessage("建物を出ました。");
 } 
 

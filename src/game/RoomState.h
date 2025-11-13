@@ -59,7 +59,7 @@ public:
     StateType getType() const override;
     
 private:
-    void setupUI();
+    void setupUI(Graphics& graphics);
     void setupRoom();
     void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);

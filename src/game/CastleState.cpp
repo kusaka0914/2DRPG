@@ -5,6 +5,7 @@
 #include "../io/InputManager.h"
 #include "NightState.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
@@ -47,7 +48,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     }
     
     setupCastle();
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
 }
 
 void CastleState::enter() {
@@ -97,6 +98,11 @@ void CastleState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // UIが未初期化の場合は初期化
+    if (!messageBoard) {
+        setupUI(graphics);
+    }
+    
     // 背景色を設定（明るい城）
     graphics.setDrawColor(240, 240, 220, 255);
     graphics.clear();
@@ -105,12 +111,18 @@ void CastleState::render(Graphics& graphics) {
     drawCastleObjects(graphics);
     drawPlayer(graphics);
     
-    // メッセージがある時のみメッセージボードの黒背景を描画
+    // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
     if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto castleConfig = config.getCastleConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, castleConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+        graphics.drawRect(bgX, bgY, castleConfig.messageBoard.background.width, castleConfig.messageBoard.background.height, true);
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+        graphics.drawRect(bgX, bgY, castleConfig.messageBoard.background.width, castleConfig.messageBoard.background.height);
     }
     
     // UI描画
@@ -164,12 +176,17 @@ void CastleState::handleInput(const InputManager& input) {
         [this]() { clearMessage(); });
 }
 
-void CastleState::setupUI() {
+void CastleState::setupUI(Graphics& graphics) {
     ui.clear();
     
-    // メッセージボード（画面中央下部）
-    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
-    messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto castleConfig = config.getCastleConfig();
+    
+    // メッセージボード（JSONから座標を取得）
+    int textX, textY;
+    config.calculatePosition(textX, textY, castleConfig.messageBoard.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
+    messageBoardLabel->setColor(castleConfig.messageBoard.text.color);
     messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));

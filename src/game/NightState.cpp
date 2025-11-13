@@ -9,6 +9,7 @@
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <random>
 #include <algorithm>
@@ -280,28 +281,37 @@ void NightState::render(Graphics& graphics) {
         // UI更新
         updateUI();
         
-        // 夜の表示の黒背景を描画（左上）
+        // 夜の表示の黒背景を描画（JSONから座標を取得）
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto nightConfig = config.getNightConfig();
+        
         if (nightDisplayLabel && !nightDisplayLabel->getText().empty()) {
+            int bgX, bgY;
+            config.calculatePosition(bgX, bgY, nightConfig.nightDisplayBackground.position, graphics.getScreenWidth(), graphics.getScreenHeight());
             graphics.setDrawColor(0, 0, 0, 255); // 黒色
-            graphics.drawRect(10, 5, 65, 40, true); // 夜の表示背景（左上）
+            graphics.drawRect(bgX, bgY, nightConfig.nightDisplayBackground.width, nightConfig.nightDisplayBackground.height, true);
             graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-            graphics.drawRect(10, 5, 65, 40); // 夜の表示枠（左上）
+            graphics.drawRect(bgX, bgY, nightConfig.nightDisplayBackground.width, nightConfig.nightDisplayBackground.height);
         }
 
         if (nightOperationLabel && !nightOperationLabel->getText().empty()) {
+            int bgX, bgY;
+            config.calculatePosition(bgX, bgY, nightConfig.nightOperationBackground.position, graphics.getScreenWidth(), graphics.getScreenHeight());
             graphics.setDrawColor(0, 0, 0, 255); // 黒色
-            graphics.drawRect(85, 5, 205, 40, true); // 夜の操作用背景（右上）
+            graphics.drawRect(bgX, bgY, nightConfig.nightOperationBackground.width, nightConfig.nightOperationBackground.height, true);
             graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-            graphics.drawRect(85, 5, 205, 40); // 夜の操作用枠（右上）
+            graphics.drawRect(bgX, bgY, nightConfig.nightOperationBackground.width, nightConfig.nightOperationBackground.height);
         }
         
 
-        // メッセージがある時のみメッセージボードの黒背景を描画
+        // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
         if (messageBoard && !messageBoard->getText().empty()) {
+            int bgX, bgY;
+            config.calculatePosition(bgX, bgY, nightConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
             graphics.setDrawColor(0, 0, 0, 255); // 黒色
-            graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+            graphics.drawRect(bgX, bgY, nightConfig.messageBoard.background.width, nightConfig.messageBoard.background.height, true);
             graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-            graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+            graphics.drawRect(bgX, bgY, nightConfig.messageBoard.background.width, nightConfig.messageBoard.background.height);
         }
         
         

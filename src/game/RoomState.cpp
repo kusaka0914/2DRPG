@@ -5,6 +5,7 @@
 #include "CastleState.h"
 #include "NightState.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
@@ -23,11 +24,11 @@ RoomState::RoomState(std::shared_ptr<Player> player)
         playerY = 3;
     }
     setupRoom();
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
 }
 
 void RoomState::enter() {
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
     
     // テクスチャを読み込み
     // 注意：Graphicsオブジェクトが必要なので、render時に読み込む
@@ -79,6 +80,11 @@ void RoomState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // UIが未初期化の場合は初期化
+    if (!messageBoard) {
+        setupUI(graphics);
+    }
+    
     // 背景色を設定（温かい部屋の色）
     graphics.setDrawColor(139, 69, 19, 255); // 茶色
     graphics.clear();
@@ -87,19 +93,31 @@ void RoomState::render(Graphics& graphics) {
     drawRoomObjects(graphics);
     drawPlayer(graphics);
     
-    // メッセージがある時のみメッセージボードの黒背景を描画
+    // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
     if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto roomConfig = config.getRoomConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, roomConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+        graphics.drawRect(bgX, bgY, roomConfig.messageBoard.background.width, roomConfig.messageBoard.background.height, true);
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+        graphics.drawRect(bgX, bgY, roomConfig.messageBoard.background.width, roomConfig.messageBoard.background.height);
     }
 
     if (howtooperateBoard && !howtooperateBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto roomConfig = config.getRoomConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, roomConfig.howToOperateBackground.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(190, 10, 395, 70, true); // メッセージボード背景（画面中央）
+        graphics.drawRect(bgX, bgY, roomConfig.howToOperateBackground.width, roomConfig.howToOperateBackground.height, true);
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(190, 10, 395, 70); // メッセージボード枠（画面中央）
+        graphics.drawRect(bgX, bgY, roomConfig.howToOperateBackground.width, roomConfig.howToOperateBackground.height);
     }
     
     // UI描画
@@ -132,18 +150,26 @@ void RoomState::handleInput(const InputManager& input) {
         [this]() { clearMessage(); });
 }
 
-void RoomState::setupUI() {
+void RoomState::setupUI(Graphics& graphics) {
     ui.clear();
     
-    // メッセージボード（画面中央下部）
-    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
-    messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto roomConfig = config.getRoomConfig();
+    
+    // メッセージボード（JSONから座標を取得）
+    int messageX, messageY;
+    config.calculatePosition(messageX, messageY, roomConfig.messageBoard.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto messageBoardLabel = std::make_unique<Label>(messageX, messageY, "", "default");
+    messageBoardLabel->setColor(roomConfig.messageBoard.text.color);
     messageBoardLabel->setText("");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
 
-    auto howtooperateLabel = std::make_unique<Label>(205, 25, "", "default"); // メッセージボード背景の左上付近
-    howtooperateLabel->setColor({255, 255, 255, 255}); // 白文字
+    // 操作方法ボード（JSONから座標を取得）
+    int howToX, howToY;
+    config.calculatePosition(howToX, howToY, roomConfig.howToOperateText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto howtooperateLabel = std::make_unique<Label>(howToX, howToY, "", "default");
+    howtooperateLabel->setColor(roomConfig.howToOperateText.color);
     howtooperateLabel->setText("移動: 矢印キー\n調べる/ドアに入る/次のメッセージ: スペースキー");
     howtooperateBoard = howtooperateLabel.get(); // ポインタを保存
     ui.addElement(std::move(howtooperateLabel));

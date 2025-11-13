@@ -72,7 +72,7 @@ public:
     StateType getType() const override { return StateType::BATTLE; }
     
 private:
-    void setupUI();
+    void setupUI(Graphics& graphics);
     void updateStatus();
     void addBattleLog(const std::string& message);
     void showMessage(const std::string& message);

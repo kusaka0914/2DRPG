@@ -6,6 +6,7 @@
 #include "GameOverState.h"
 #include "EndingState.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <sstream>
 #include <random>
 #include <cmath> // abs関数のために追加
@@ -28,7 +29,7 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
 }
 
 void BattleState::enter() {
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
     loadBattleImages();
     
     // 敵出現メッセージをバトルログにのみ表示（画面中央には表示しない）
@@ -197,47 +198,63 @@ void BattleState::update(float deltaTime) {
 }
 
 void BattleState::render(Graphics& graphics) {
+    // UIが未初期化の場合は初期化
+    if (!battleLogLabel) {
+        setupUI(graphics);
+    }
+    
     // 戦闘背景（黒）
     graphics.setDrawColor(0, 0, 0, 255);
     graphics.clear();
     
-    // 敵キャラクター描画
+    // 敵キャラクター描画（JSONから座標を取得）
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = config.getBattleConfig();
+    int enemyX, enemyY;
+    config.calculatePosition(enemyX, enemyY, battleConfig.enemyPosition, graphics.getScreenWidth(), graphics.getScreenHeight());
+    
     SDL_Texture* enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
     if (enemyTexture) {
         // 画像が存在する場合は画像を描画
-        graphics.drawTexture(enemyTexture, 500, 150, 100, 100);
+        graphics.drawTexture(enemyTexture, enemyX, enemyY, battleConfig.enemyWidth, battleConfig.enemyHeight);
     } else {
         // 画像が存在しない場合は四角形で描画（フォールバック）
         graphics.setDrawColor(255, 0, 0, 255);
-        graphics.drawRect(350, 150, 100, 100, true);
+        graphics.drawRect(enemyX - 150, enemyY, battleConfig.enemyWidth, battleConfig.enemyHeight, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(350, 150, 100, 100, false);
+        graphics.drawRect(enemyX - 150, enemyY, battleConfig.enemyWidth, battleConfig.enemyHeight, false);
     }
     
-    // 敵の体力表示（敵の真上）
-    graphics.setDrawColor(255, 255, 255, 255);
+    // 敵の体力表示（JSONから座標を取得）
+    int enemyHpX, enemyHpY;
+    config.calculatePosition(enemyHpX, enemyHpY, battleConfig.enemyHp.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     std::string enemyHpText = "HP: " + std::to_string(enemy->getHp()) + "/" + std::to_string(enemy->getMaxHp());
-    graphics.drawText(enemyHpText, 500, 120, "default");
+    graphics.drawText(enemyHpText, enemyHpX, enemyHpY, "default", battleConfig.enemyHp.color);
     
-    // プレイヤーキャラクター描画
+    // プレイヤーキャラクター描画（JSONから座標を取得）
+    int playerX, playerY;
+    config.calculatePosition(playerX, playerY, battleConfig.playerPosition, graphics.getScreenWidth(), graphics.getScreenHeight());
+    
     SDL_Texture* playerTexture = graphics.getTexture("player");
     if (playerTexture) {
         // 画像が存在する場合は画像を描画
-        graphics.drawTexture(playerTexture, 500, 300, 60, 60);
+        graphics.drawTexture(playerTexture, playerX, playerY, battleConfig.playerWidth, battleConfig.playerHeight);
     } else {
         // 画像が存在しない場合は四角形で描画（フォールバック）
         graphics.setDrawColor(0, 0, 255, 255);
-        graphics.drawRect(150, 300, 60, 60, true);
+        graphics.drawRect(playerX - 350, playerY, battleConfig.playerWidth, battleConfig.playerHeight, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(150, 300, 60, 60, false);
+        graphics.drawRect(playerX - 350, playerY, battleConfig.playerWidth, battleConfig.playerHeight, false);
     }
     
-    // プレイヤーの体力・MP表示（プレイヤーの真上）
-    graphics.setDrawColor(255, 255, 255, 255);
+    // プレイヤーの体力・MP表示（JSONから座標を取得）
+    int playerHpX, playerHpY, playerMpX, playerMpY;
+    config.calculatePosition(playerHpX, playerHpY, battleConfig.playerHp.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    config.calculatePosition(playerMpX, playerMpY, battleConfig.playerMp.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
     std::string playerMpText = "MP: " + std::to_string(player->getMp()) + "/" + std::to_string(player->getMaxMp());
-    graphics.drawText(playerHpText, 500, 260, "default");
-    graphics.drawText(playerMpText, 500, 280, "default");
+    graphics.drawText(playerHpText, playerHpX, playerHpY, "default", battleConfig.playerHp.color);
+    graphics.drawText(playerMpText, playerMpX, playerMpY, "default", battleConfig.playerMp.color);
     
     // UI描画
     ui.render(graphics);
@@ -271,27 +288,41 @@ void BattleState::handleInput(const InputManager& input) {
     }
 }
 
-void BattleState::setupUI() {
+void BattleState::setupUI(Graphics& graphics) {
     ui.clear();
     
-    // 戦闘ログ
-    auto battleLogLabelPtr = std::make_unique<Label>(150, 400, "", "default");
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = config.getBattleConfig();
+    
+    // 戦闘ログ（JSONから座標を取得）
+    int battleLogX, battleLogY;
+    config.calculatePosition(battleLogX, battleLogY, battleConfig.battleLog.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto battleLogLabelPtr = std::make_unique<Label>(battleLogX, battleLogY, "", "default");
+    battleLogLabelPtr->setColor(battleConfig.battleLog.color);
     battleLogLabel = battleLogLabelPtr.get();
     ui.addElement(std::move(battleLogLabelPtr));
     
-    // プレイヤーステータス
-    auto playerStatusLabelPtr = std::make_unique<Label>(50, 50, "", "default");
+    // プレイヤーステータス（JSONから座標を取得）
+    int playerStatusX, playerStatusY;
+    config.calculatePosition(playerStatusX, playerStatusY, battleConfig.playerStatus.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto playerStatusLabelPtr = std::make_unique<Label>(playerStatusX, playerStatusY, "", "default");
+    playerStatusLabelPtr->setColor(battleConfig.playerStatus.color);
     playerStatusLabel = playerStatusLabelPtr.get();
     ui.addElement(std::move(playerStatusLabelPtr));
     
-    // 敵ステータス
-    auto enemyStatusLabelPtr = std::make_unique<Label>(400, 50, "", "default");
+    // 敵ステータス（JSONから座標を取得）
+    int enemyStatusX, enemyStatusY;
+    config.calculatePosition(enemyStatusX, enemyStatusY, battleConfig.enemyStatus.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto enemyStatusLabelPtr = std::make_unique<Label>(enemyStatusX, enemyStatusY, "", "default");
+    enemyStatusLabelPtr->setColor(battleConfig.enemyStatus.color);
     enemyStatusLabel = enemyStatusLabelPtr.get();
     ui.addElement(std::move(enemyStatusLabelPtr));
     
-    // メッセージラベル（画面下部に表示）
-    auto messageLabelPtr = std::make_unique<Label>(50, 450, "", "default");
-    messageLabelPtr->setColor({255, 255, 255, 255}); // 白色
+    // メッセージラベル（JSONから座標を取得）
+    int messageX, messageY;
+    config.calculatePosition(messageX, messageY, battleConfig.message.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto messageLabelPtr = std::make_unique<Label>(messageX, messageY, "", "default");
+    messageLabelPtr->setColor(battleConfig.message.color);
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
     

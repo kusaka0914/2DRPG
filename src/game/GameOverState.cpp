@@ -5,6 +5,7 @@
 #include "TownState.h"
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason)
@@ -21,6 +22,17 @@ void GameOverState::exit() {
 
 void GameOverState::update(float deltaTime) {
     ui.update(deltaTime);
+    
+    // ホットリロードチェック：設定が変更された場合はUIを再初期化
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
+    // リロードが発生した場合（前回falseで今回trueになった場合）
+    if (!lastReloadState && currentReloadState) {
+        setupUI();
+    }
+    lastReloadState = currentReloadState;
 }
 
 void GameOverState::render(Graphics& graphics) {
@@ -86,21 +98,30 @@ void GameOverState::handleInput(const InputManager& input) {
 void GameOverState::setupUI() {
     ui.clear();
     
-    // タイトル
-    auto titleLabelPtr = std::make_unique<Label>(550, 200, "GAME OVER", "default");
-    titleLabelPtr->setColor({255, 0, 0, 255});
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto gameOverConfig = config.getGameOverConfig();
+    
+    // タイトル（JSONから座標を取得）
+    int titleX, titleY;
+    config.calculatePosition(titleX, titleY, gameOverConfig.title.position, 1100, 650);
+    auto titleLabelPtr = std::make_unique<Label>(titleX, titleY, "GAME OVER", "default");
+    titleLabelPtr->setColor(gameOverConfig.title.color);
     titleLabel = titleLabelPtr.get();
     ui.addElement(std::move(titleLabelPtr));
     
-    // ゲームオーバー理由
-    auto reasonLabelPtr = std::make_unique<Label>(550, 250, gameOverReason, "default");
-    reasonLabelPtr->setColor({255, 255, 255, 255});
+    // ゲームオーバー理由（JSONから座標を取得）
+    int reasonX, reasonY;
+    config.calculatePosition(reasonX, reasonY, gameOverConfig.reason.position, 1100, 650);
+    auto reasonLabelPtr = std::make_unique<Label>(reasonX, reasonY, gameOverReason, "default");
+    reasonLabelPtr->setColor(gameOverConfig.reason.color);
     reasonLabel = reasonLabelPtr.get();
     ui.addElement(std::move(reasonLabelPtr));
     
-    // 操作説明
-    auto instructionLabelPtr = std::make_unique<Label>(550, 400, "スペースキーまたはAボタンで夜の街に再スタート", "default");
-    instructionLabelPtr->setColor({200, 200, 200, 255});
+    // 操作説明（JSONから座標を取得）
+    int instructionX, instructionY;
+    config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.position, 1100, 650);
+    auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, "スペースキーまたはAボタンで夜の街に再スタート", "default");
+    instructionLabelPtr->setColor(gameOverConfig.instruction.color);
     instruction = instructionLabelPtr.get();
     ui.addElement(std::move(instructionLabelPtr));
 } 

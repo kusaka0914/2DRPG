@@ -2,6 +2,7 @@
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
 #include "MainMenuState.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 EndingState::EndingState(std::shared_ptr<Player> player)
@@ -29,6 +30,17 @@ void EndingState::exit() {
 void EndingState::update(float deltaTime) {
     phaseTimer += deltaTime;
     ui.update(deltaTime);
+    
+    // ホットリロードチェック：設定が変更された場合はUIを再初期化
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
+    // リロードが発生した場合（前回falseで今回trueになった場合）
+    if (!lastReloadState && currentReloadState) {
+        setupUI();
+    }
+    lastReloadState = currentReloadState;
     
     switch (currentPhase) {
         case EndingPhase::ENDING_MESSAGE:
@@ -69,29 +81,43 @@ void EndingState::render(Graphics& graphics) {
     
     switch (currentPhase) {
         case EndingPhase::ENDING_MESSAGE:
-            // エンディングメッセージを表示
+            // エンディングメッセージを表示（JSONから座標を取得）
             if (messageLabel) {
-                graphics.setDrawColor(255, 255, 255, 255);
-                graphics.drawText(messageLabel->getText(), 450, 325, "default", {255, 255, 255, 255});
+                auto& config = UIConfig::UIConfigManager::getInstance();
+                auto endingConfig = config.getEndingConfig();
+                int msgX, msgY;
+                config.calculatePosition(msgX, msgY, endingConfig.message.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+                graphics.drawText(messageLabel->getText(), msgX, msgY, "default", endingConfig.message.color);
             }
             break;
             
         case EndingPhase::STAFF_ROLL:
-            // スタッフロールを表示
-            graphics.setDrawColor(255, 255, 255, 255);
-            for (int i = 0; i < currentStaffIndex && i < staffRoll.size(); i++) {
-                int y = 650 - scrollOffset + i * 50; // 行間隔を50に調整
-                if (y > -50 && y < 700) { // 表示範囲を拡大
-                    graphics.drawText(staffRoll[i], 500, y, "default", {255, 255, 255, 255});
+            // スタッフロールを表示（JSONから座標を取得）
+            {
+                auto& config = UIConfig::UIConfigManager::getInstance();
+                auto endingConfig = config.getEndingConfig();
+                int staffX, staffY;
+                config.calculatePosition(staffX, staffY, endingConfig.staffRoll.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+                for (int i = 0; i < currentStaffIndex && i < staffRoll.size(); i++) {
+                    int y = 650 - scrollOffset + i * 50; // 行間隔を50に調整
+                    if (y > -50 && y < 700) { // 表示範囲を拡大
+                        graphics.drawText(staffRoll[i], staffX, y, "default", endingConfig.staffRoll.color);
+                    }
                 }
             }
             break;
             
         case EndingPhase::COMPLETE:
-            // 完了メッセージ
-            graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawText("THE END", 550, 300, "default", {255, 255, 255, 255});
-            graphics.drawText("スペースキーでメインメニューに戻る", 550, 350, "default", {200, 200, 200, 255});
+            // 完了メッセージ（JSONから座標を取得）
+            {
+                auto& config = UIConfig::UIConfigManager::getInstance();
+                auto endingConfig = config.getEndingConfig();
+                int theEndX, theEndY, returnX, returnY;
+                config.calculatePosition(theEndX, theEndY, endingConfig.theEnd.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+                config.calculatePosition(returnX, returnY, endingConfig.returnToMenu.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+                graphics.drawText("THE END", theEndX, theEndY, "default", endingConfig.theEnd.color);
+                graphics.drawText("スペースキーでメインメニューに戻る", returnX, returnY, "default", endingConfig.returnToMenu.color);
+            }
             break;
     }
     
@@ -117,15 +143,22 @@ void EndingState::handleInput(const InputManager& input) {
 }
 
 void EndingState::setupUI() {
-    // メッセージ表示用のラベル
-    auto messageLabelPtr = std::make_unique<Label>(450, 325, "", "default");
-    messageLabelPtr->setColor({255, 255, 255, 255});
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto endingConfig = config.getEndingConfig();
+    
+    // メッセージ表示用のラベル（JSONから座標を取得）
+    int msgX, msgY;
+    config.calculatePosition(msgX, msgY, endingConfig.message.position, 1100, 650);
+    auto messageLabelPtr = std::make_unique<Label>(msgX, msgY, "", "default");
+    messageLabelPtr->setColor(endingConfig.message.color);
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
     
-    // スタッフロール用のラベル
-    auto staffRollLabelPtr = std::make_unique<Label>(450, 325, "", "default");
-    staffRollLabelPtr->setColor({255, 255, 255, 255});
+    // スタッフロール用のラベル（JSONから座標を取得）
+    int staffX, staffY;
+    config.calculatePosition(staffX, staffY, endingConfig.staffRoll.position, 1100, 650);
+    auto staffRollLabelPtr = std::make_unique<Label>(staffX, staffY, "", "default");
+    staffRollLabelPtr->setColor(endingConfig.staffRoll.color);
     staffRollLabel = staffRollLabelPtr.get();
     ui.addElement(std::move(staffRollLabelPtr));
 }

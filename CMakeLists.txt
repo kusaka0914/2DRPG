@@ -19,6 +19,9 @@ pkg_check_modules(SDL2 REQUIRED sdl2)
 pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
+# JSON library (nlohmann/json)
+find_package(nlohmann_json REQUIRED)
+
 # ソースファイル
 set(SOURCES
     src/app/main_sdl.cpp
@@ -47,6 +50,7 @@ set(SOURCES
     src/ui/CommonUI.cpp
     src/utils/MapTerrain.cpp
     src/utils/TownLayout.cpp
+    src/core/utils/ui_config_manager.cpp
 )
 
 # ヘッダーファイル
@@ -77,6 +81,7 @@ set(HEADERS
     src/ui/CommonUI.h
     src/utils/MapTerrain.h
     src/utils/TownLayout.h
+    src/core/utils/ui_config_manager.h
 )
 
 # 実行ファイルを作成
@@ -102,6 +107,7 @@ target_link_libraries(${PROJECT_NAME}
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
     ${SDL2_TTF_LIBRARIES}
+    nlohmann_json::nlohmann_json
 )
 
 # コンパイラフラグ
@@ -124,6 +130,6 @@ install(TARGETS ${PROJECT_NAME}
 
 # assetsディレクトリをビルドディレクトリにコピー（開発用）
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}
-    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md"
+    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md" PATTERN "*.json"
 )
 

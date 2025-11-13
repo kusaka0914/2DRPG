@@ -71,7 +71,7 @@ public:
     StateType getType() const override { return StateType::CASTLE; }
     
 private:
-    void setupUI();
+    void setupUI(Graphics& graphics);
     void setupCastle();
     void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);

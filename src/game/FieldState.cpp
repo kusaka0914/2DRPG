@@ -8,6 +8,7 @@
 #include "../utils/MapTerrain.h"
 #include "NightState.h"
 #include "../ui/CommonUI.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <random>
 
@@ -515,19 +516,27 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
                 int enemyY = drawY + (TILE_SIZE - enemySize) / 2;
                 graphics.drawTexture(enemyTexture, enemyX, enemyY, enemySize, enemySize);
                 
-                // 敵のレベルを表示
+                // 敵のレベルを表示（JSONから座標を取得）
+                auto& config = UIConfig::UIConfigManager::getInstance();
+                auto fieldConfig = config.getFieldConfig();
                 Enemy tempEnemy(enemyType);
                 std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
-                graphics.drawText(levelText, drawX + 6, drawY - 10, "default", {255, 255, 255, 255});
+                int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
+                int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
+                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
             } else {
                 // 画像がない場合は赤色で表示
                 graphics.setDrawColor(255, 0, 0, 255);
                 graphics.drawRect(objX, objY, objSize, objSize, true);
                 
-                // 敵のレベルを表示
+                // 敵のレベルを表示（JSONから座標を取得）
+                auto& config = UIConfig::UIConfigManager::getInstance();
+                auto fieldConfig = config.getFieldConfig();
                 Enemy tempEnemy(enemyType);
                 std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
-                graphics.drawText(levelText, drawX + 6, drawY - 10, "default", {255, 255, 255, 255});
+                int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
+                int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
+                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
             }
 
         } else { // 岩や木の場合は四角形

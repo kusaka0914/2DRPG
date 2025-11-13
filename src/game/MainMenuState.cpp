@@ -2,6 +2,7 @@
 #include "FieldState.h"
 #include "RoomState.h"
 #include "BattleState.h"
+#include "../core/utils/ui_config_manager.h"
 #include <sstream>
 #include <cstdlib>
 
@@ -19,6 +20,17 @@ void MainMenuState::exit() {
 
 void MainMenuState::update(float deltaTime) {
     ui.update(deltaTime);
+    
+    // ホットリロードチェック：設定が変更された場合はUIを再初期化
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
+    // リロードが発生した場合（前回falseで今回trueになった場合）
+    if (!lastReloadState && currentReloadState) {
+        setupUI();
+    }
+    lastReloadState = currentReloadState;
 }
 
 void MainMenuState::render(Graphics& graphics) {
@@ -43,18 +55,28 @@ void MainMenuState::handleInput(const InputManager& input) {
 void MainMenuState::setupUI() {
     ui.clear();
     
-    // タイトルラベル
-    titleLabel = std::make_unique<Label>(350, 250, "勇者だって強者に逆らえない。", "title");
-    titleLabel->setColor({255, 215, 0, 255}); // ゴールド色
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto mainMenuConfig = config.getMainMenuConfig();
+    
+    // タイトルラベル（JSONから座標を取得）
+    int titleX, titleY;
+    config.calculatePosition(titleX, titleY, mainMenuConfig.title.position, 1100, 650);
+    titleLabel = std::make_unique<Label>(titleX, titleY, "勇者だって強者に逆らえない。", "title");
+    titleLabel->setColor(mainMenuConfig.title.color);
     ui.addElement(std::move(titleLabel));
     
-    // プレイヤー情報ラベル
-    playerInfoLabel = std::make_unique<Label>(50, 120, "", "default");
+    // プレイヤー情報ラベル（JSONから座標を取得）
+    int playerInfoX, playerInfoY;
+    config.calculatePosition(playerInfoX, playerInfoY, mainMenuConfig.playerInfo.position, 1100, 650);
+    playerInfoLabel = std::make_unique<Label>(playerInfoX, playerInfoY, "", "default");
+    playerInfoLabel->setColor(mainMenuConfig.playerInfo.color);
     ui.addElement(std::move(playerInfoLabel));
     
-    // 冒険に出るボタン
-    auto adventureBtn = std::make_unique<Button>(450, 350, 200, 50, "冒険に出る");
-    adventureBtn->setColors({0, 100, 0, 255}, {0, 150, 0, 255}, {0, 50, 0, 255});
+    // 冒険に出るボタン（JSONから座標を取得）
+    int btnX, btnY;
+    config.calculatePosition(btnX, btnY, mainMenuConfig.adventureButton.position, 1100, 650);
+    auto adventureBtn = std::make_unique<Button>(btnX, btnY, mainMenuConfig.adventureButton.width, mainMenuConfig.adventureButton.height, "冒険に出る");
+    adventureBtn->setColors(mainMenuConfig.adventureButton.normalColor, mainMenuConfig.adventureButton.hoverColor, mainMenuConfig.adventureButton.pressedColor);
     adventureBtn->setOnClick([this]() {
         if (stateManager) {
             stateManager->changeState(std::make_unique<RoomState>(player));

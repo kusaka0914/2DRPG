@@ -1,0 +1,397 @@
+{
+  "messageBoard": {
+    "background": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 190,
+        "absoluteY": 480
+      },
+      "width": 720,
+      "height": 100
+    },
+    "text": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 210,
+        "absoluteY": 500
+      },
+      "color": [255, 255, 255, 255]
+    }
+  },
+  "commonUI": {
+    "nightTimer": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 10,
+        "absoluteY": 10
+      },
+      "width": 160,
+      "height": 40
+    },
+    "nightTimerText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 25,
+        "absoluteY": 20
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "targetLevel": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 10,
+        "absoluteY": 60
+      },
+      "width": 160,
+      "height": 60
+    },
+    "targetLevelText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 25,
+        "absoluteY": 70
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "trustLevels": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 900,
+        "absoluteY": 10
+      },
+      "width": 180,
+      "height": 80
+    },
+    "trustLevelsText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 915,
+        "absoluteY": 20
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "gameControllerStatus": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 700,
+        "absoluteY": 10
+      },
+      "width": 80,
+      "height": 20
+    }
+  },
+  "mainMenu": {
+    "title": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 350,
+        "absoluteY": 250
+      },
+      "color": [255, 215, 0, 255]
+    },
+    "playerInfo": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 50,
+        "absoluteY": 120
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "adventureButton": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 450,
+        "absoluteY": 350
+      },
+      "width": 200,
+      "height": 50,
+      "normalColor": [0, 100, 0, 255],
+      "hoverColor": [0, 150, 0, 255],
+      "pressedColor": [0, 50, 0, 255],
+      "textColor": [255, 255, 255, 255]
+    }
+  },
+  "battle": {
+    "battleLog": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 150,
+        "absoluteY": 400
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "playerStatus": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 50,
+        "absoluteY": 50
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "enemyStatus": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 400,
+        "absoluteY": 50
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "message": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 50,
+        "absoluteY": 450
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "playerHp": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 500,
+        "absoluteY": 260
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "playerMp": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 500,
+        "absoluteY": 280
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "enemyHp": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 500,
+        "absoluteY": 120
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "enemyPosition": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 500,
+        "absoluteY": 150
+      },
+      "width": 100,
+      "height": 100
+    },
+    "playerPosition": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 500,
+        "absoluteY": 300
+      },
+      "width": 60,
+      "height": 60
+    }
+  },
+  "room": {
+    "messageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 210,
+          "absoluteY": 500
+        },
+        "color": [255, 255, 255, 255]
+      }
+    },
+    "howToOperateBackground": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 190,
+        "absoluteY": 10
+      },
+      "width": 395,
+      "height": 70
+    },
+    "howToOperateText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 205,
+        "absoluteY": 25
+      },
+      "color": [255, 255, 255, 255]
+    }
+  },
+  "town": {
+    "playerInfo": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 10,
+        "absoluteY": 10
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "controls": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 10,
+        "absoluteY": 550
+      },
+      "color": [255, 255, 255, 255]
+    }
+  },
+  "castle": {
+    "messageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 210,
+          "absoluteY": 500
+        },
+        "color": [255, 255, 255, 255]
+      }
+    }
+  },
+  "demonCastle": {
+    "messageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 210,
+          "absoluteY": 500
+        },
+        "color": [255, 255, 255, 255]
+      }
+    }
+  },
+  "gameOver": {
+    "title": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 550,
+        "absoluteY": 200
+      },
+      "color": [255, 0, 0, 255]
+    },
+    "reason": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 550,
+        "absoluteY": 250
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "instruction": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 550,
+        "absoluteY": 400
+      },
+      "color": [200, 200, 200, 255]
+    }
+  },
+  "ending": {
+    "message": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 450,
+        "absoluteY": 325
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "staffRoll": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 450,
+        "absoluteY": 325
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "theEnd": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 550,
+        "absoluteY": 300
+      },
+      "color": [255, 255, 255, 255]
+    },
+    "returnToMenu": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 550,
+        "absoluteY": 350
+      },
+      "color": [200, 200, 200, 255]
+    }
+  },
+  "night": {
+    "nightDisplayBackground": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 10,
+        "absoluteY": 5
+      },
+      "width": 65,
+      "height": 40
+    },
+    "nightOperationBackground": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 85,
+        "absoluteY": 5
+      },
+      "width": 205,
+      "height": 40
+    },
+    "messageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 210,
+          "absoluteY": 500
+        },
+        "color": [255, 255, 255, 255]
+      }
+    }
+  },
+  "field": {
+    "monsterLevel": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 0,
+        "absoluteY": -10
+      },
+      "color": [255, 255, 255, 255]
+    }
+  }
+}

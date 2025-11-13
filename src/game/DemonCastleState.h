@@ -54,7 +54,7 @@ public:
     StateType getType() const override { return StateType::DEMON_CASTLE; }
     
 private:
-    void setupUI();
+    void setupUI(Graphics& graphics);
     void setupDemonCastle();
     void loadTextures(Graphics& graphics);
     void handleMovement(const InputManager& input);

@@ -16,6 +16,10 @@ private:
     bool isRunning;
     std::chrono::high_resolution_clock::time_point lastTime;
     
+    // UI設定ファイルのホットリロード用タイマー
+    float uiConfigCheckTimer;
+    const float UI_CONFIG_CHECK_INTERVAL = 0.1f;  // 0.1秒ごとにチェック（より頻繁にチェック）
+    
     const int SCREEN_WIDTH = 1100;
     const int SCREEN_HEIGHT = 650;
 

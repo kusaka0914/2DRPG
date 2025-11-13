@@ -4,6 +4,7 @@
 #include "../io/InputManager.h"
 #include "BattleState.h"
 #include "../entities/Enemy.h"
+#include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
 // 静的変数（ファイル内で共有）
@@ -46,7 +47,7 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
     }
     
     setupDemonCastle();
-    setupUI();
+    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
 }
 
 void DemonCastleState::enter() {
@@ -75,6 +76,11 @@ void DemonCastleState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // UIが未初期化の場合は初期化
+    if (!messageBoard) {
+        setupUI(graphics);
+    }
+    
     // 背景色を設定（暗い魔王の城）
     graphics.setDrawColor(20, 0, 20, 255);
     graphics.clear();
@@ -83,12 +89,18 @@ void DemonCastleState::render(Graphics& graphics) {
     drawDemonCastleObjects(graphics);
     drawPlayer(graphics);
     
-    // メッセージがある時のみメッセージボードの黒背景を描画
+    // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
     if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto demonCastleConfig = config.getDemonCastleConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, demonCastleConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
         graphics.setDrawColor(0, 0, 0, 255); // 黒色
-        graphics.drawRect(190, 480, 720, 100, true); // メッセージボード背景（画面中央）
+        graphics.drawRect(bgX, bgY, demonCastleConfig.messageBoard.background.width, demonCastleConfig.messageBoard.background.height, true);
         graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
-        graphics.drawRect(190, 480, 720, 100); // メッセージボード枠（画面中央）
+        graphics.drawRect(bgX, bgY, demonCastleConfig.messageBoard.background.width, demonCastleConfig.messageBoard.background.height);
     }
     
     // UI描画
@@ -127,12 +139,17 @@ void DemonCastleState::handleInput(const InputManager& input) {
         [this]() { clearMessage(); });
 }
 
-void DemonCastleState::setupUI() {
+void DemonCastleState::setupUI(Graphics& graphics) {
     ui.clear();
     
-    // メッセージボード（画面中央下部）
-    auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default"); // メッセージボード背景の左上付近
-    messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto demonCastleConfig = config.getDemonCastleConfig();
+    
+    // メッセージボード（JSONから座標を取得）
+    int textX, textY;
+    config.calculatePosition(textX, textY, demonCastleConfig.messageBoard.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
+    messageBoardLabel->setColor(demonCastleConfig.messageBoard.text.color);
     messageBoardLabel->setText("魔王の城を探索してみましょう");
     messageBoard = messageBoardLabel.get(); // ポインタを保存
     ui.addElement(std::move(messageBoardLabel));
