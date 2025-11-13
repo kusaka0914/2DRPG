@@ -188,7 +188,7 @@ void CastleState::loadTextures(Graphics& graphics) {
     playerTexture = GameState::loadPlayerTexture(graphics);
     kingTexture = GameState::loadKingTexture(graphics);
     guardTexture = GameState::loadGuardTexture(graphics);
-    castleTileTexture = graphics.loadTexture("assets/tiles/castletile.png", "castle_tile");
+    castleTileTexture = graphics.loadTexture("assets/textures/tiles/castletile.png", "castle_tile");
     
 }
 

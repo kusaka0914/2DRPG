@@ -189,19 +189,19 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
 
 // 共通の画像管理機能の実装
 SDL_Texture* GameState::loadPlayerTexture(Graphics& graphics) {
-    return graphics.loadTexture("assets/characters/player.png", "player");
+    return graphics.loadTexture("assets/textures/characters/player.png", "player");
 }
 
 SDL_Texture* GameState::loadKingTexture(Graphics& graphics) {
-    return graphics.loadTexture("assets/characters/king.png", "king");
+    return graphics.loadTexture("assets/textures/characters/king.png", "king");
 }
 
 SDL_Texture* GameState::loadGuardTexture(Graphics& graphics) {
-    return graphics.loadTexture("assets/characters/guard.png", "guard");
+    return graphics.loadTexture("assets/textures/characters/guard.png", "guard");
 }
 
 SDL_Texture* GameState::loadDemonTexture(Graphics& graphics) {
-    return graphics.loadTexture("assets/characters/demon.png", "demon");
+    return graphics.loadTexture("assets/textures/characters/demon.png", "demon");
 }
 
 void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTexture, 

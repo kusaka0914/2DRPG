@@ -148,7 +148,7 @@ void DemonCastleState::loadTextures(Graphics& graphics) {
     // 画像を読み込み
     playerTexture = GameState::loadPlayerTexture(graphics);
     demonTexture = GameState::loadDemonTexture(graphics);
-    demonCastleTileTexture = graphics.loadTexture("assets/tiles/demoncastletile.png", "demon_castle_tile");
+    demonCastleTileTexture = graphics.loadTexture("assets/textures/tiles/demoncastletile.png", "demon_castle_tile");
 }
 
 void DemonCastleState::handleMovement(const InputManager& input) {

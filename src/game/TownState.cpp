@@ -504,11 +504,11 @@ void TownState::buyItem(int itemIndex) {
 void TownState::loadTextures(Graphics& graphics) {
     // 画像を読み込み
     playerTexture = GameState::loadPlayerTexture(graphics);
-    shopTexture = graphics.loadTexture("assets/buildings/shop.png", "shop");
-    weaponShopTexture = graphics.loadTexture("assets/buildings/weaponshop.png", "weapon_shop");
-    houseTexture = graphics.loadTexture("assets/buildings/house.png", "house");
-    castleTexture = graphics.loadTexture("assets/buildings/castle.png", "castle");    
-    stoneTileTexture = graphics.loadTexture("assets/tiles/stonetile.png", "stone_tile");
+    shopTexture = graphics.loadTexture("assets/textures/buildings/shop.png", "shop");
+    weaponShopTexture = graphics.loadTexture("assets/textures/buildings/weaponshop.png", "weapon_shop");
+    houseTexture = graphics.loadTexture("assets/textures/buildings/house.png", "house");
+    castleTexture = graphics.loadTexture("assets/textures/buildings/castle.png", "castle");    
+    stoneTileTexture = graphics.loadTexture("assets/textures/tiles/stonetile.png", "stone_tile");
     
     // 住人画像を読み込み
     residentTextures[0] = graphics.getTexture("resident_1");

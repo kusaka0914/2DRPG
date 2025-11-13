@@ -754,7 +754,7 @@ int NightState::getResidentTextureIndex(int x, int y) const {
 void NightState::loadTextures(Graphics& graphics) {
     try {
         if (!playerTexture) {
-            playerTexture = graphics.loadTexture("assets/characters/player.png", "player");
+            playerTexture = graphics.loadTexture("assets/textures/characters/player.png", "player");
         }
         
         // 住民画像を個別に読み込み
@@ -766,7 +766,7 @@ void NightState::loadTextures(Graphics& graphics) {
         }
         
         if (!guardTexture) {
-            guardTexture = graphics.loadTexture("assets/characters/guard.png", "guard");
+            guardTexture = graphics.loadTexture("assets/textures/characters/guard.png", "guard");
         }
         
         // 建物画像を読み込み
@@ -774,7 +774,7 @@ void NightState::loadTextures(Graphics& graphics) {
         weaponShopTexture = graphics.getTexture("weapon_shop");
         houseTexture = graphics.getTexture("house");
         castleTexture = graphics.getTexture("castle");
-        stoneTileTexture = graphics.loadTexture("assets/tiles/nightstonetile.png", "night_stone_tile");
+        stoneTileTexture = graphics.loadTexture("assets/textures/tiles/nightstonetile.png", "night_stone_tile");
         residentHomeTexture = graphics.getTexture("resident_home");
         toriiTexture = graphics.getTexture("torii");
     } catch (const std::exception& e) {

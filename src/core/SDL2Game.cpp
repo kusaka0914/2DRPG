@@ -135,63 +135,63 @@ float SDL2Game::calculateDeltaTime() {
 
 void SDL2Game::loadGameImages() {
     // キャラクター画像
-    graphics.loadTexture("assets/characters/player.png", "player");
-    graphics.loadTexture("assets/characters/player_field.png", "player_field");
-    graphics.loadTexture("assets/characters/king.png", "king");
-    graphics.loadTexture("assets/characters/guard.png", "guard");
-    graphics.loadTexture("assets/characters/demon.png", "demon");
+    graphics.loadTexture("assets/textures/characters/player.png", "player");
+    graphics.loadTexture("assets/textures/characters/player_field.png", "player_field");
+    graphics.loadTexture("assets/textures/characters/king.png", "king");
+    graphics.loadTexture("assets/textures/characters/guard.png", "guard");
+    graphics.loadTexture("assets/textures/characters/demon.png", "demon");
     
     // 住人画像
-    graphics.loadTexture("assets/characters/resident_1.png", "resident_1");
-    graphics.loadTexture("assets/characters/resident_2.png", "resident_2");
-    graphics.loadTexture("assets/characters/resident_3.png", "resident_3");
-    graphics.loadTexture("assets/characters/resident_4.png", "resident_4");
-    graphics.loadTexture("assets/characters/resident_5.png", "resident_5");
-    graphics.loadTexture("assets/characters/resident_6.png", "resident_6");
+    graphics.loadTexture("assets/textures/characters/resident_1.png", "resident_1");
+    graphics.loadTexture("assets/textures/characters/resident_2.png", "resident_2");
+    graphics.loadTexture("assets/textures/characters/resident_3.png", "resident_3");
+    graphics.loadTexture("assets/textures/characters/resident_4.png", "resident_4");
+    graphics.loadTexture("assets/textures/characters/resident_5.png", "resident_5");
+    graphics.loadTexture("assets/textures/characters/resident_6.png", "resident_6");
     
     // 敵画像
-    graphics.loadTexture("assets/enemies/slime.png", "enemy_スライム");
-    graphics.loadTexture("assets/enemies/goblin.png", "enemy_ゴブリン");
-    graphics.loadTexture("assets/enemies/orc.png", "enemy_オーク");
-    graphics.loadTexture("assets/enemies/dragon.png", "enemy_ドラゴン");
-    graphics.loadTexture("assets/enemies/skeleton.png", "enemy_スケルトン");
-    graphics.loadTexture("assets/enemies/ghost.png", "enemy_ゴースト");
-    graphics.loadTexture("assets/enemies/vampire.png", "enemy_ヴァンパイア");
-    graphics.loadTexture("assets/enemies/demon_soldier.png", "enemy_デーモンソルジャー");
-    graphics.loadTexture("assets/enemies/werewolf.png", "enemy_ウェアウルフ");
-    graphics.loadTexture("assets/enemies/minotaur.png", "enemy_ミノタウロス");
-    graphics.loadTexture("assets/enemies/cyclops.png", "enemy_サイクロプス");
-    graphics.loadTexture("assets/enemies/gargoyle.png", "enemy_ガーゴイル");
-    graphics.loadTexture("assets/enemies/phantom.png", "enemy_ファントム");
-    graphics.loadTexture("assets/enemies/dark_knight.png", "enemy_ダークナイト");
-    graphics.loadTexture("assets/enemies/ice_giant.png", "enemy_アイスジャイアント");
-    graphics.loadTexture("assets/enemies/fire_demon.png", "enemy_ファイアデーモン");
-    graphics.loadTexture("assets/enemies/shadow_lord.png", "enemy_シャドウロード");
-    graphics.loadTexture("assets/enemies/ancient_dragon.png", "enemy_エンシェントドラゴン");
-    graphics.loadTexture("assets/enemies/chaos_beast.png", "enemy_カオスビースト");
-    graphics.loadTexture("assets/enemies/elder_god.png", "enemy_エルダーゴッド");
-    graphics.loadTexture("assets/characters/demon.png", "enemy_魔王");
+    graphics.loadTexture("assets/textures/enemies/slime.png", "enemy_スライム");
+    graphics.loadTexture("assets/textures/enemies/goblin.png", "enemy_ゴブリン");
+    graphics.loadTexture("assets/textures/enemies/orc.png", "enemy_オーク");
+    graphics.loadTexture("assets/textures/enemies/dragon.png", "enemy_ドラゴン");
+    graphics.loadTexture("assets/textures/enemies/skeleton.png", "enemy_スケルトン");
+    graphics.loadTexture("assets/textures/enemies/ghost.png", "enemy_ゴースト");
+    graphics.loadTexture("assets/textures/enemies/vampire.png", "enemy_ヴァンパイア");
+    graphics.loadTexture("assets/textures/enemies/demon_soldier.png", "enemy_デーモンソルジャー");
+    graphics.loadTexture("assets/textures/enemies/werewolf.png", "enemy_ウェアウルフ");
+    graphics.loadTexture("assets/textures/enemies/minotaur.png", "enemy_ミノタウロス");
+    graphics.loadTexture("assets/textures/enemies/cyclops.png", "enemy_サイクロプス");
+    graphics.loadTexture("assets/textures/enemies/gargoyle.png", "enemy_ガーゴイル");
+    graphics.loadTexture("assets/textures/enemies/phantom.png", "enemy_ファントム");
+    graphics.loadTexture("assets/textures/enemies/dark_knight.png", "enemy_ダークナイト");
+    graphics.loadTexture("assets/textures/enemies/ice_giant.png", "enemy_アイスジャイアント");
+    graphics.loadTexture("assets/textures/enemies/fire_demon.png", "enemy_ファイアデーモン");
+    graphics.loadTexture("assets/textures/enemies/shadow_lord.png", "enemy_シャドウロード");
+    graphics.loadTexture("assets/textures/enemies/ancient_dragon.png", "enemy_エンシェントドラゴン");
+    graphics.loadTexture("assets/textures/enemies/chaos_beast.png", "enemy_カオスビースト");
+    graphics.loadTexture("assets/textures/enemies/elder_god.png", "enemy_エルダーゴッド");
+    graphics.loadTexture("assets/textures/characters/demon.png", "enemy_魔王");
     
     // フィールド用タイル画像
-    graphics.loadTexture("assets/tiles/grass.png", "grass");
-    graphics.loadTexture("assets/tiles/forest.png", "forest");
-    graphics.loadTexture("assets/tiles/river.png", "river");
-    graphics.loadTexture("assets/tiles/bridge.png", "bridge");
-    graphics.loadTexture("assets/tiles/rock.png", "rock");
-    // graphics.loadTexture("assets/tiles/town_entrance.png", "town_entrance");
+    graphics.loadTexture("assets/textures/tiles/grass.png", "grass");
+    graphics.loadTexture("assets/textures/tiles/forest.png", "forest");
+    graphics.loadTexture("assets/textures/tiles/river.png", "river");
+    graphics.loadTexture("assets/textures/tiles/bridge.png", "bridge");
+    graphics.loadTexture("assets/textures/tiles/rock.png", "rock");
+    // graphics.loadTexture("assets/textures/tiles/town_entrance.png", "town_entrance");
     
     // 建物画像
-    graphics.loadTexture("assets/buildings/house.png", "house");
-    graphics.loadTexture("assets/buildings/castle.png", "castle");
+    graphics.loadTexture("assets/textures/buildings/house.png", "house");
+    graphics.loadTexture("assets/textures/buildings/castle.png", "castle");
     
     // 鳥居画像
-    graphics.loadTexture("assets/objects/torii.png", "torii");
+    graphics.loadTexture("assets/textures/objects/torii.png", "torii");
     
     // 住人の家画像
-    graphics.loadTexture("assets/buildings/resident_home.png", "resident_home");
+    graphics.loadTexture("assets/textures/buildings/resident_home.png", "resident_home");
     // オブジェクト画像
-    graphics.loadTexture("assets/objects/bed.png", "bed");
-    graphics.loadTexture("assets/objects/desk.png", "desk");
-    graphics.loadTexture("assets/objects/closed_box.png", "closed_box");
-    graphics.loadTexture("assets/objects/open_box.png", "open_box");
+    graphics.loadTexture("assets/textures/objects/bed.png", "bed");
+    graphics.loadTexture("assets/textures/objects/desk.png", "desk");
+    graphics.loadTexture("assets/textures/objects/closed_box.png", "closed_box");
+    graphics.loadTexture("assets/textures/objects/open_box.png", "open_box");
 } 

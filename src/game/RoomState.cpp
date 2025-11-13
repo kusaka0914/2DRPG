@@ -159,12 +159,12 @@ void RoomState::setupRoom() {
 
 void RoomState::loadTextures(Graphics& graphics) {
     // 画像を読み込み
-    playerTexture = graphics.loadTexture("assets/characters/player.png", "player");
-    deskTexture = graphics.loadTexture("assets/objects/desk.png", "desk");
-    chestClosedTexture = graphics.loadTexture("assets/objects/closed_box.png", "chest_closed");
-    chestOpenTexture = graphics.loadTexture("assets/objects/open_box.png", "chest_open");
-    bedTexture = graphics.loadTexture("assets/objects/bed.png", "bed");
-    houseTileTexture = graphics.loadTexture("assets/tiles/housetile.png", "house_tile");
+    playerTexture = graphics.loadTexture("assets/textures/characters/player.png", "player");
+    deskTexture = graphics.loadTexture("assets/textures/objects/desk.png", "desk");
+    chestClosedTexture = graphics.loadTexture("assets/textures/objects/closed_box.png", "chest_closed");
+    chestOpenTexture = graphics.loadTexture("assets/textures/objects/open_box.png", "chest_open");
+    bedTexture = graphics.loadTexture("assets/textures/objects/bed.png", "bed");
+    houseTileTexture = graphics.loadTexture("assets/textures/tiles/housetile.png", "house_tile");
 }
 
 void RoomState::handleMovement(const InputManager& input) {
