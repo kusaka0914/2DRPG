@@ -33,9 +33,6 @@ web/assets/
 *.gch
 *.pch
 
-# Core dumps
-core
-
 # IDE files
 .vscode/
 .idea/
