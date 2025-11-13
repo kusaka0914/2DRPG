@@ -20,18 +20,16 @@ class Battle {
 private:
     Player* player;
     Enemy* enemy;
-    bool playerDefending;
 
 public:
     Battle(Player* player, Enemy* enemy);
     
     BattleResult startBattle();
-    void displayBattleStatus() const;
+    int getValidInput(int min, int max) const;
     PlayerAction getPlayerChoice() const;
     void executePlayerAction(PlayerAction action);
     void executeEnemyAction();
     bool isBattleOver() const;
-    void showMagicMenu() const;
     SpellType chooseMagic() const;
     void showItemMenu() const;
     int chooseItem() const;

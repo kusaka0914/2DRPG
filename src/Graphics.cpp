@@ -31,12 +31,12 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
         return false;
     }
     
-    // ウィンドウ作成
+    // フルスクリーンモードでウィンドウ作成
     window = SDL_CreateWindow(title.c_str(), 
                               SDL_WINDOWPOS_CENTERED, 
                               SDL_WINDOWPOS_CENTERED,
-                              width, height, 
-                              SDL_WINDOW_SHOWN);
+                              0, 0, 
+                              SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
     
     if (!window) {
         std::cerr << "ウィンドウ作成エラー: " << SDL_GetError() << std::endl;
@@ -49,6 +49,13 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
         std::cerr << "レンダラー作成エラー: " << SDL_GetError() << std::endl;
         return false;
     }
+    
+    // 論理的な解像度を設定（ゲームは1100x650で描画し、自動的にフルスクリーンにスケール）
+    SDL_RenderSetLogicalSize(renderer, width, height);
+    
+    // 論理サイズをscreenWidth/screenHeightに設定（ゲームコードは論理サイズを使用）
+    screenWidth = width;
+    screenHeight = height;
     
     // デフォルト描画色設定
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);

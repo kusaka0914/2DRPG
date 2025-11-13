@@ -2,14 +2,14 @@
 #include <iostream>
 #include <limits>
 
+// バトルクラスのコンストラクタ
 Battle::Battle(Player* player, Enemy* enemy) 
-    : player(player), enemy(enemy), playerDefending(false) {
+    : player(player), enemy(enemy) {
 }
 
+// バトルを開始し、結果を返す       
 BattleResult Battle::startBattle() {
     while (!isBattleOver()) {
-        displayBattleStatus();
-        
         // プレイヤーのターン
         PlayerAction action = getPlayerChoice();
         executePlayerAction(action);
@@ -33,16 +33,23 @@ BattleResult Battle::startBattle() {
     return BattleResult::PLAYER_DEFEAT;
 }
 
-void Battle::displayBattleStatus() const {
-    
-}
-
-PlayerAction Battle::getPlayerChoice() const {
+// 入力検証の共通関数
+int Battle::getValidInput(int min, int max) const {
     int choice;
-    while (!(std::cin >> choice) || choice < 1 || choice > 5) {
+    while (!(std::cin >> choice) || choice < min || choice > max) {
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "有効な値を入力してください (" << min << "-" << max << "): ";
     }
+    return choice;
+}
+
+// プレイヤーの行動選択を取得
+PlayerAction Battle::getPlayerChoice() const {
+    std::cout << "1: 攻撃, 2: 魔法, 3: アイテム, 4: 防御, 5: 逃走\n";
+    std::cout << "選択してください: ";
+    
+    int choice = getValidInput(1, 5);
     
     switch (choice) {
         case 1: return PlayerAction::ATTACK;
@@ -54,16 +61,14 @@ PlayerAction Battle::getPlayerChoice() const {
     }
 }
 
+// プレイヤーの行動を実行
 void Battle::executePlayerAction(PlayerAction action) {
-    playerDefending = false;
-    
     switch (action) {
         case PlayerAction::ATTACK:
             player->attack(*enemy);
             break;
             
         case PlayerAction::MAGIC:
-            showMagicMenu();
             {
                 SpellType spell = chooseMagic();
                 if (spell == SpellType::KIZUGAIAERU) {
@@ -86,7 +91,6 @@ void Battle::executePlayerAction(PlayerAction action) {
             
         case PlayerAction::DEFEND:
             player->defend();
-            playerDefending = true;
             break;
             
         case PlayerAction::ESCAPE:
@@ -95,30 +99,20 @@ void Battle::executePlayerAction(PlayerAction action) {
     }
 }
 
+// 敵の行動を実行
 void Battle::executeEnemyAction() {
     if (!enemy->getIsAlive()) return;
-    
     enemy->performAction(*player);
-    
-    // プレイヤーが防御していた場合、ダメージを半減
-    // （この実装は簡略化されており、実際のダメージ計算は各攻撃メソッド内で行われる）
 }
 
+// バトルが終了したかどうかを判定
 bool Battle::isBattleOver() const {
     return !player->getIsAlive() || !enemy->getIsAlive();
 }
 
-void Battle::showMagicMenu() const {
-    
-}
-
+// 魔法を選択する
 SpellType Battle::chooseMagic() const {
-    int choice;
-    
-    while (!(std::cin >> choice) || choice < 1 || choice > 8) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }
+    int choice = getValidInput(1, 8);
     
     switch (choice) {
         case 1: return SpellType::KIZUGAIAERU;
@@ -129,15 +123,18 @@ SpellType Battle::chooseMagic() const {
         case 6: return SpellType::TSUGICHOTTOTSUYOI;
         case 7: return SpellType::TSUGIMECHATSUYOI;
         case 8: return SpellType::WANCHANTAOSERU;
-        default: return SpellType::KIZUGAIAERU; // デフォルト
+        default: return SpellType::KIZUGAIAERU;
     }
 }
 
+// アイテムメニューを表示
 void Battle::showItemMenu() const {
     player->showInventory();
 }
 
+// アイテムを選択する
 int Battle::chooseItem() const {
+    std::cout << "アイテムを選択してください (0: キャンセル): ";
     int choice;
     std::cin >> choice;
     
@@ -158,6 +155,7 @@ int Battle::chooseItem() const {
     return choice;
 }
 
+// バトル終了時の処理
 void Battle::handleBattleEnd(BattleResult result) { 
     switch (result) {
         case BattleResult::PLAYER_VICTORY:
@@ -166,9 +164,11 @@ void Battle::handleBattleEnd(BattleResult result) {
             break;
             
         case BattleResult::PLAYER_DEFEAT:
+            // ゲームオーバー処理は別途実装
             break;
             
         case BattleResult::PLAYER_ESCAPED:
+            // 逃走時の処理
             break;
     }
 } 
