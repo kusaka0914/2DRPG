@@ -35,6 +35,10 @@ private:
     bool isFirstTime;    // 初回プレイか
     bool isShowingMessage; // メッセージ表示中か
     
+    // メッセージ表示用フラグ
+    bool pendingWelcomeMessage; // ウェルカムメッセージを表示するか
+    std::string pendingMessage; // 保留中のメッセージ
+    
     // 画像テクスチャ
     SDL_Texture* playerTexture;
     SDL_Texture* deskTexture;

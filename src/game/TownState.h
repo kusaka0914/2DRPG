@@ -133,6 +133,10 @@ public:
     int explanationStep;
     std::vector<std::string> gameExplanationTexts;
     
+    // 初回メッセージ表示用フラグ
+    bool pendingWelcomeMessage;
+    std::string pendingMessage;
+    
 private:
     void setupUI(Graphics& graphics);
     void setupNPCs();

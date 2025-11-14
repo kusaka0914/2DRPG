@@ -42,6 +42,9 @@ private:
     // CastleStateから来たかどうか
     bool fromCastleState;
     
+    // ダイアログ表示用フラグ
+    bool pendingDialogue;
+    
 public:
     DemonCastleState(std::shared_ptr<Player> player, bool fromCastleState = false);
     

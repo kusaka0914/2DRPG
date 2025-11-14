@@ -16,7 +16,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
       messageBoard(nullptr), isShowingMessage(false),
       moveTimer(0), dialogueStep(0), isTalkingToKing(false),
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
-      fromNightState(fromNightState) {
+      fromNightState(fromNightState), pendingDialogue(false) {
     
     // NightStateから来た場合の処理
     if (fromNightState) {
@@ -52,9 +52,9 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 }
 
 void CastleState::enter() {
-    // 自動で王様との会話を開始（初回のみ、またはNightStateから来た場合）
+    // ダイアログはsetupUI()後に表示するため、フラグを設定
     if (s_castleFirstTime || fromNightState) {
-        startDialogue();
+        pendingDialogue = true;
     }
 }
 
@@ -99,8 +99,16 @@ void CastleState::render(Graphics& graphics) {
     }
     
     // UIが未初期化の場合は初期化
+    bool uiJustInitialized = false;
     if (!messageBoard) {
         setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    // 初回のみ保留中のダイアログを開始
+    if (uiJustInitialized && pendingDialogue) {
+        startDialogue();
+        pendingDialogue = false;
     }
     
     // 背景色を設定（明るい城）

@@ -32,9 +32,9 @@ void BattleState::enter() {
     // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
     loadBattleImages();
     
-    // 敵出現メッセージをバトルログにのみ表示（画面中央には表示しない）
+    // 敵出現メッセージをバトルログに保存（render()でUI初期化後に表示される）
     std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
-    addBattleLog(enemyAppearMessage);
+    battleLog = enemyAppearMessage; // battleLogLabelがまだ初期化されていないので、直接battleLogに保存
     
     // INTROフェーズから開始
     currentPhase = BattlePhase::INTRO;
@@ -199,8 +199,15 @@ void BattleState::update(float deltaTime) {
 
 void BattleState::render(Graphics& graphics) {
     // UIが未初期化の場合は初期化
+    bool uiJustInitialized = false;
     if (!battleLogLabel) {
         setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    // UI初期化後、battleLogの内容をbattleLogLabelに反映
+    if (uiJustInitialized && !battleLog.empty() && battleLogLabel) {
+        battleLogLabel->setText(battleLog);
     }
     
     // 戦闘背景（黒）

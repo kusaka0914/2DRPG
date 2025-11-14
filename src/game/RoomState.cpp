@@ -15,7 +15,8 @@ RoomState::RoomState(std::shared_ptr<Player> player)
     : player(player), playerX(3), playerY(2), 
       messageBoard(nullptr), howtooperateBoard(nullptr), isShowingMessage(false),
       hasOpenedChest(false), bedTexture(nullptr), houseTileTexture(nullptr),
-      moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer) {
+      moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
+      pendingWelcomeMessage(false), pendingMessage("") {
     if (s_roomFirstTime) {
         playerX = 3;
         playerY = 2;
@@ -32,11 +33,11 @@ void RoomState::enter() {
     
     // テクスチャを読み込み
     // 注意：Graphicsオブジェクトが必要なので、render時に読み込む
-    
+    // メッセージはsetupUI()後に表示するため、フラグを設定
     if (s_roomFirstTime) {
-        showWelcomeMessage();
+        pendingWelcomeMessage = true;
     } else {
-        showMessage("自室に戻りました。");
+        pendingMessage = "自室に戻りました。";
     }
 }
 
@@ -79,10 +80,22 @@ void RoomState::render(Graphics& graphics) {
     if (!playerTexture) {
         loadTextures(graphics);
     }
-    
     // UIが未初期化の場合は初期化
+    bool uiJustInitialized = false;
     if (!messageBoard) {
         setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    // 初回のみ保留中のメッセージを表示
+    if (uiJustInitialized) {
+        if (pendingWelcomeMessage) {
+            showWelcomeMessage();
+            pendingWelcomeMessage = false;
+        } else if (!pendingMessage.empty()) {
+            showMessage(pendingMessage);
+            pendingMessage.clear();
+        }
     }
     
     // 背景色を設定（温かい部屋の色）

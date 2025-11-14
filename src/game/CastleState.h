@@ -59,6 +59,9 @@ private:
     bool guardRightDefeated;
     bool allDefeated;
     
+    // ダイアログ表示用フラグ
+    bool pendingDialogue;
+    
 public:
     CastleState(std::shared_ptr<Player> player, bool fromNightState = false);
     

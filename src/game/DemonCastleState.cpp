@@ -14,7 +14,8 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
     : player(player), playerX(4), playerY(4), moveTimer(0), // 魔王の目の前に配置
       messageBoard(nullptr), isShowingMessage(false),
       isTalkingToDemon(false), dialogueStep(0), hasReceivedEvilQuest(false),
-      playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState) {
+      playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState),
+      pendingDialogue(false) {
     
     // 魔王の会話を初期化
     if (fromCastleState) {
@@ -55,9 +56,9 @@ void DemonCastleState::enter() {
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
-    // 自動で魔王との会話を開始（初回のみ）
-    if (s_demonCastleFirstTime) {
-        startDialogue();
+    // ダイアログはsetupUI()後に表示するため、フラグを設定
+    if (s_demonCastleFirstTime || fromCastleState) {
+        pendingDialogue = true;
     }
 }
 
@@ -77,8 +78,16 @@ void DemonCastleState::render(Graphics& graphics) {
     }
     
     // UIが未初期化の場合は初期化
+    bool uiJustInitialized = false;
     if (!messageBoard) {
         setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    // 初回のみ保留中のダイアログを開始
+    if (uiJustInitialized && pendingDialogue) {
+        startDialogue();
+        pendingDialogue = false;
     }
     
     // 背景色を設定（暗い魔王の城）

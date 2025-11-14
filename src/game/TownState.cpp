@@ -17,6 +17,7 @@ bool TownState::s_levelGoalAchieved = false;
 bool TownState::s_fromDemonCastle = false;
 int TownState::s_nightCount = 0; // 夜の回数を追跡
 bool TownState::saved = false; // セーブ状態の管理
+static bool s_townFirstTime = true; // 初回街入場フラグ
 std::vector<std::pair<int, int>> residentHomes = {
     {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
 };
@@ -25,7 +26,8 @@ TownState::TownState(std::shared_ptr<Player> player)
     : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
       messageBoard(nullptr), isShowingMessage(false), 
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
-      showGameExplanation(false), explanationStep(0) {
+      showGameExplanation(false), explanationStep(0),
+      pendingWelcomeMessage(false), pendingMessage("") {
     
     // 共通配置データを使用
     buildings = TownLayout::BUILDINGS;
@@ -50,6 +52,12 @@ void TownState::enter() {
     if (s_fromDemonCastle) {
         startNightTimer();
         s_fromDemonCastle = false; // フラグをリセット
+    }
+    
+    // 初回メッセージはsetupUI()後に表示するため、フラグを設定
+    if (s_townFirstTime) {
+        pendingWelcomeMessage = true;
+        s_townFirstTime = false;
     }
 }
 
@@ -156,8 +164,21 @@ void TownState::render(Graphics& graphics) {
     }
     
     // UIが未初期化の場合は初期化
+    bool uiJustInitialized = false;
     if (!messageBoard) {
         setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    // 初回のみ保留中のメッセージを表示
+    if (uiJustInitialized) {
+        if (pendingWelcomeMessage) {
+            showMessage("街に到着しました。\nここでは道具屋、宿屋、教会など様々な施設を利用できます。\n城に向かって冒険を始めましょう。");
+            pendingWelcomeMessage = false;
+        } else if (!pendingMessage.empty()) {
+            showMessage(pendingMessage);
+            pendingMessage.clear();
+        }
     }
     
     // 現在の場所に応じて背景色を設定
