@@ -38,7 +38,6 @@ void Button::render(Graphics& graphics) {
     graphics.setDrawColor(255, 255, 255, 255);
     graphics.drawRect(x, y, width, height, false);
     
-    // テキストを中央に描画
     if (!text.empty()) {
         int textX = x + width / 2 - (text.length() * 6); // 簡易的な中央寄せ
         int textY = y + height / 2 - 8;
@@ -89,20 +88,17 @@ Label::Label(int x, int y, const std::string& text, const std::string& fontName)
 }
 
 Label::~Label() {
-    // テクスチャは使用しないので何もしない
 }
 
 void Label::render(Graphics& graphics) {
     if (!visible || text.empty()) return;
     
-    // 改行文字でテキストを分割して各ラインを個別に描画
     splitTextIntoLines();
     
     int currentY = y;
     for (const auto& line : lines) {
         if (!line.empty()) {
             graphics.drawText(line, x, currentY, fontName, textColor);
-            // 次のラインの位置を計算（フォントサイズに応じて調整）
             currentY += 20; // 仮の行間
         }
     }
@@ -131,8 +127,6 @@ void Label::splitTextIntoLines() {
     }
 }
 
-
-
 // UIManager
 void UIManager::addElement(std::unique_ptr<UIElement> element) {
     elements.push_back(std::move(element));
@@ -155,7 +149,6 @@ void UIManager::render(Graphics& graphics) {
 }
 
 void UIManager::handleInput(const InputManager& input) {
-    // 逆順で処理（後から追加された要素が優先）
     for (auto it = elements.rbegin(); it != elements.rend(); ++it) {
         if ((*it)->handleInput(input)) {
             break;
@@ -181,7 +174,6 @@ StoryMessageBox::~StoryMessageBox() {
 void StoryMessageBox::render(Graphics& graphics) {
     if (!visible) return;
     
-    // テクスチャが未作成で、メッセージがある場合のみ作成
     if (lineTextures.empty() && !lines.empty()) {
         updateTextures(graphics);
     }
@@ -207,7 +199,6 @@ void StoryMessageBox::render(Graphics& graphics) {
                 SDL_QueryTexture(lineTextures[i], nullptr, nullptr, nullptr, &textHeight);
                 currentY += textHeight + lineSpacing;
             } else {
-                // 空行の場合は、標準的な行の高さを追加
                 currentY += 20 + lineSpacing; // 20は標準的なフォント高さ
             }
         }
@@ -225,14 +216,12 @@ void StoryMessageBox::update(float deltaTime) {
 
 void StoryMessageBox::setMessage(const std::vector<std::string>& messageLines) {
     lines = messageLines;
-    // テクスチャを即座に作成せず、render時に遅延作成
     clearTextures();  // 既存のテクスチャをクリア
 }
 
 void StoryMessageBox::setMessage(const std::string& singleLineMessage) {
     lines.clear();
     lines.push_back(singleLineMessage);
-    // テクスチャを即座に作成せず、render時に遅延作成
     clearTextures();  // 既存のテクスチャをクリア
 }
 

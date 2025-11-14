@@ -25,7 +25,6 @@ bool SDL2Game::initialize() {
     loadResources();
     initializeGame();
     
-    // UI設定ファイルを読み込み（3DAttractionと同じ実装）
     UIConfig::UIConfigManager::getInstance().loadConfig("assets/config/ui_config.json");
     
     lastTime = std::chrono::high_resolution_clock::now();
@@ -61,18 +60,15 @@ void SDL2Game::handleEvents() {
         inputManager.handleEvent(event);
     }
     
-    // ESCキーでゲーム終了
     if (inputManager.isKeyJustPressed(InputKey::ESCAPE)) {
         isRunning = false;
         return;
     }
     
-    // 重要：イベントをゲームステートに渡す
     stateManager.handleInput(inputManager);
 }
 
 void SDL2Game::update(float deltaTime) {
-    // UI設定ファイルのホットリロードチェック
     uiConfigCheckTimer += deltaTime;
     if (uiConfigCheckTimer >= UI_CONFIG_CHECK_INTERVAL) {
         uiConfigCheckTimer = 0.0f;
@@ -91,14 +87,11 @@ void SDL2Game::setDebugStartState(const std::string& state) {
 }
 
 void SDL2Game::initializeGame() {
-    // プレイヤー名の入力（簡略化）
     std::string playerName;
     if (debugStartState.empty()) {
-        // 通常モード：プレイヤー名を入力
-        std::cout << "勇者の名前を入力してください: ";
-        std::getline(std::cin, playerName);
+    std::cout << "勇者の名前を入力してください: ";
+    std::getline(std::cin, playerName);
     } else {
-        // デバッグモード：デフォルト名を使用
         playerName = "デバッガー";
         std::cout << "デバッグモード: " << debugStartState << " から開始します" << std::endl;
     }
@@ -109,7 +102,6 @@ void SDL2Game::initializeGame() {
     
     player = std::make_shared<Player>(playerName);
     
-    // デバッグモードの場合は指定された状態から開始
     if (!debugStartState.empty()) {
         if (debugStartState == "room") {
             stateManager.changeState(std::make_unique<RoomState>(player));
@@ -127,13 +119,11 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<MainMenuState>(player));
         }
     } else {
-        // 通常モード：メインメニューから開始
-        stateManager.changeState(std::make_unique<MainMenuState>(player));
+    stateManager.changeState(std::make_unique<MainMenuState>(player));
     }
 }
 
 void SDL2Game::loadResources() {
-    // 確実に日本語をサポートするフォントを優先的に読み込み
     bool fontLoaded = false;
     
     // 1. ヒラギノ角ゴシック W3 - 確実な日本語フォント
@@ -149,14 +139,10 @@ void SDL2Game::loadResources() {
         fontLoaded = true;
     }
     
-    // 大きなフォント（タイトル用）を読み込み
     if (fontLoaded) {
-        // 同じフォントファイルで大きなサイズを読み込み
         if (graphics.loadFont("/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc", 32, "title")) {
-            // 成功
         }
     }
-    // 4. Hiragino Sans GB - 最後の手段
     else if (graphics.loadFont("/System/Library/Fonts/Hiragino Sans GB.ttc", 16, "default")) {
         fontLoaded = true;
     }
@@ -169,7 +155,6 @@ float SDL2Game::calculateDeltaTime() {
     float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
     lastTime = currentTime;
     
-    // デルタタイムの上限を設定（ゲームが一時停止した場合の対策）
     if (deltaTime > 0.1f) {
         deltaTime = 0.1f;
     }
@@ -178,7 +163,6 @@ float SDL2Game::calculateDeltaTime() {
 }
 
 void SDL2Game::loadGameImages() {
-    // キャラクター画像
     graphics.loadTexture("assets/textures/characters/player.png", "player");
     graphics.loadTexture("assets/textures/characters/player_field.png", "player_field");
     graphics.loadTexture("assets/textures/characters/king.png", "king");
@@ -193,7 +177,6 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/characters/resident_5.png", "resident_5");
     graphics.loadTexture("assets/textures/characters/resident_6.png", "resident_6");
     
-    // 敵画像
     graphics.loadTexture("assets/textures/enemies/slime.png", "enemy_スライム");
     graphics.loadTexture("assets/textures/enemies/goblin.png", "enemy_ゴブリン");
     graphics.loadTexture("assets/textures/enemies/orc.png", "enemy_オーク");
@@ -231,7 +214,6 @@ void SDL2Game::loadGameImages() {
     // 鳥居画像
     graphics.loadTexture("assets/textures/objects/torii.png", "torii");
     
-    // 住人の家画像
     graphics.loadTexture("assets/textures/buildings/resident_home.png", "resident_home");
     // オブジェクト画像
     graphics.loadTexture("assets/textures/objects/bed.png", "bed");

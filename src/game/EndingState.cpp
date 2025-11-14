@@ -31,12 +31,10 @@ void EndingState::update(float deltaTime) {
     phaseTimer += deltaTime;
     ui.update(deltaTime);
     
-    // ホットリロードチェック：設定が変更された場合はUIを再初期化
     static bool lastReloadState = false;
     auto& config = UIConfig::UIConfigManager::getInstance();
     bool currentReloadState = config.checkAndReloadConfig();
     
-    // リロードが発生した場合（前回falseで今回trueになった場合）
     if (!lastReloadState && currentReloadState) {
         setupUI();
     }
@@ -69,19 +67,16 @@ void EndingState::update(float deltaTime) {
             break;
             
         case EndingPhase::COMPLETE:
-            // 何もしない（入力待ち）
             break;
     }
 }
 
 void EndingState::render(Graphics& graphics) {
-    // 背景を黒で塗りつぶし
     graphics.setDrawColor(0, 0, 0, 255);
     graphics.drawRect(0, 0, 1100, 650, true);
     
     switch (currentPhase) {
         case EndingPhase::ENDING_MESSAGE:
-            // エンディングメッセージを表示（JSONから座標を取得）
             if (messageLabel) {
                 auto& config = UIConfig::UIConfigManager::getInstance();
                 auto endingConfig = config.getEndingConfig();
@@ -92,7 +87,6 @@ void EndingState::render(Graphics& graphics) {
             break;
             
         case EndingPhase::STAFF_ROLL:
-            // スタッフロールを表示（JSONから座標を取得）
             {
                 auto& config = UIConfig::UIConfigManager::getInstance();
                 auto endingConfig = config.getEndingConfig();
@@ -108,7 +102,6 @@ void EndingState::render(Graphics& graphics) {
             break;
             
         case EndingPhase::COMPLETE:
-            // 完了メッセージ（JSONから座標を取得）
             {
                 auto& config = UIConfig::UIConfigManager::getInstance();
                 auto endingConfig = config.getEndingConfig();
@@ -127,16 +120,13 @@ void EndingState::render(Graphics& graphics) {
 void EndingState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // スペースキーまたはAボタンでスキップ
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (currentPhase == EndingPhase::COMPLETE) {
-            // メインメニューに戻る
             if (stateManager) {
                 auto newPlayer = std::make_shared<Player>("勇者");
                 stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
             }
         } else {
-            // 次のフェーズにスキップ
             nextPhase();
         }
     }
@@ -146,7 +136,6 @@ void EndingState::setupUI() {
     auto& config = UIConfig::UIConfigManager::getInstance();
     auto endingConfig = config.getEndingConfig();
     
-    // メッセージ表示用のラベル（JSONから座標を取得）
     int msgX, msgY;
     config.calculatePosition(msgX, msgY, endingConfig.message.position, 1100, 650);
     auto messageLabelPtr = std::make_unique<Label>(msgX, msgY, "", "default");
@@ -154,7 +143,6 @@ void EndingState::setupUI() {
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
     
-    // スタッフロール用のラベル（JSONから座標を取得）
     int staffX, staffY;
     config.calculatePosition(staffX, staffY, endingConfig.staffRoll.position, 1100, 650);
     auto staffRollLabelPtr = std::make_unique<Label>(staffX, staffY, "", "default");
@@ -227,7 +215,6 @@ void EndingState::nextPhase() {
             break;
             
         case EndingPhase::COMPLETE:
-            // 既に完了状態
             break;
     }
 }

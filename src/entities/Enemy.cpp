@@ -256,7 +256,6 @@ std::string Enemy::getTypeName() const {
 int Enemy::performAction(Character& target) {
     if (!isAlive) return 0;
     
-    // 通常攻撃のダメージ計算のみ（ダメージ適用はBattleStateで行う）
     int damage = calculateDamage(target);
     return damage;
 }
@@ -265,7 +264,6 @@ Enemy Enemy::createRandomEnemy(int playerLevel) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
     
-    // プレイヤーのレベルに応じて敵の種類を決定
     std::vector<EnemyType> possibleEnemies;
     
     // 基本的な敵

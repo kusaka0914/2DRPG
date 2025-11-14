@@ -7,7 +7,6 @@
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
-// 静的変数（ファイル内で共有）
 static bool s_demonCastleFirstTime = true;
 
 DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCastleState)
@@ -17,16 +16,13 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
       playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState),
       pendingDialogue(false) {
     
-    // 魔王の会話を初期化
     if (fromCastleState) {
-        // CastleStateから来た場合（街を滅ぼした後）
         demonDialogues = {
             "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
             "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
             "誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！"
         };
     } else if (s_demonCastleFirstTime) {
-        // 初回の場合
         demonDialogues = {
             "天の声: ん？なにやら勇者と魔王が話しているみたいですよ。",
             "魔王: 王様に魔王討伐を頼まれただと？",
@@ -41,22 +37,18 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
             "天の声: それでは、街を滅ぼすために頑張っていきましょう。",
         };
     } else {
-        // 2回目以降の場合
         demonDialogues = {
             "魔王: また来たな、勇者。"
         };
     }
     
     setupDemonCastle();
-    // setupUI()はrender()でGraphicsが利用可能になってから呼ばれる
 }
 
 void DemonCastleState::enter() {
-    // プレイヤーを魔王の目の前に配置
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
-    // ダイアログはsetupUI()後に表示するため、フラグを設定
     if (s_demonCastleFirstTime || fromCastleState) {
         pendingDialogue = true;
     }
@@ -72,25 +64,21 @@ void DemonCastleState::update(float deltaTime) {
 }
 
 void DemonCastleState::render(Graphics& graphics) {
-    // 初回のみテクスチャを読み込み
     if (!playerTexture) {
         loadTextures(graphics);
     }
     
-    // UIが未初期化の場合は初期化
     bool uiJustInitialized = false;
     if (!messageBoard) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
     
-    // 初回のみ保留中のダイアログを開始
     if (uiJustInitialized && pendingDialogue) {
         startDialogue();
         pendingDialogue = false;
     }
     
-    // 背景色を設定（暗い魔王の城）
     graphics.setDrawColor(20, 0, 20, 255);
     graphics.clear();
     
@@ -98,7 +86,6 @@ void DemonCastleState::render(Graphics& graphics) {
     drawDemonCastleObjects(graphics);
     drawPlayer(graphics);
     
-    // メッセージがある時のみメッセージボードの黒背景を描画（JSONから座標を取得）
     if (messageBoard && !messageBoard->getText().empty()) {
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto demonCastleConfig = config.getDemonCastleConfig();
@@ -112,7 +99,6 @@ void DemonCastleState::render(Graphics& graphics) {
         graphics.drawRect(bgX, bgY, demonCastleConfig.messageBoard.background.width, demonCastleConfig.messageBoard.background.height);
     }
     
-    // UI描画
     ui.render(graphics);
     
     graphics.present();
@@ -121,7 +107,6 @@ void DemonCastleState::render(Graphics& graphics) {
 void DemonCastleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // メッセージ表示中の場合はスペースキーで次の会話に進む
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue(); // メッセージクリアではなく次の会話に進む
@@ -129,7 +114,6 @@ void DemonCastleState::handleInput(const InputManager& input) {
         return; // メッセージ表示中は他の操作を無効化
     }
     
-    // 会話中の処理
     if (isTalkingToDemon) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue();
@@ -137,7 +121,6 @@ void DemonCastleState::handleInput(const InputManager& input) {
         return;
     }
     
-    // 共通の入力処理テンプレートを使用
     GameState::handleInputTemplate(input, ui, isShowingMessage, moveTimer,
         [this, &input]() { handleMovement(input); },
         [this]() { checkInteraction(); },
@@ -154,7 +137,6 @@ void DemonCastleState::setupUI(Graphics& graphics) {
     auto& config = UIConfig::UIConfigManager::getInstance();
     auto demonCastleConfig = config.getDemonCastleConfig();
     
-    // メッセージボード（JSONから座標を取得）
     int textX, textY;
     config.calculatePosition(textX, textY, demonCastleConfig.messageBoard.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
@@ -165,13 +147,11 @@ void DemonCastleState::setupUI(Graphics& graphics) {
 }
 
 void DemonCastleState::setupDemonCastle() {
-    // 魔王の城のオブジェクト配置（9x11の部屋、画面中央に配置）
     demonX = 4; demonY = 2;        // 魔王（中央上部）
     doorX = 4; doorY = 10;          // ドア（下部中央）
 }
 
 void DemonCastleState::loadTextures(Graphics& graphics) {
-    // 画像を読み込み
     playerTexture = GameState::loadPlayerTexture(graphics);
     demonTexture = GameState::loadDemonTexture(graphics);
     demonCastleTileTexture = graphics.loadTexture("assets/textures/tiles/demoncastletile.png", "demon_castle_tile");
@@ -184,7 +164,6 @@ void DemonCastleState::handleMovement(const InputManager& input) {
 }
 
 void DemonCastleState::checkInteraction() {
-    // 魔王との相互作用
     if (isNearObject(demonX, demonY)) {
         interactWithDemon();
     }
@@ -200,7 +179,6 @@ void DemonCastleState::interactWithDemon() {
 
 void DemonCastleState::exitToTown() {
     if (stateManager) {
-        // TownStateにDemonCastleStateから来たことを通知
         TownState::s_fromDemonCastle = true;
         auto townState = std::make_unique<TownState>(player);
         stateManager->changeState(std::move(townState));
@@ -220,22 +198,16 @@ void DemonCastleState::nextDialogue() {
         isTalkingToDemon = false;
         hasReceivedEvilQuest = true;
         
-        // メッセージをクリア
         clearMessage();
         
         if (fromCastleState) {
-            // CastleStateから来た場合（街を滅ぼした後）は戦闘画面に移行
             if (stateManager) {
-                // 魔王とのバトル用のEnemyを作成
                 auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
                 
-                // BattleStateに移動
                 stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
             }
         } else {
-            // 通常の場合は街に移動
             if (stateManager) {
-                // TownStateにDemonCastleStateから来たことを通知
                 TownState::s_fromDemonCastle = true;
                 auto townState = std::make_unique<TownState>(player);
                 stateManager->changeState(std::move(townState));
@@ -261,45 +233,35 @@ void DemonCastleState::clearMessage() {
 }
 
 void DemonCastleState::drawDemonCastle(Graphics& graphics) {
-    // 画面サイズを取得（1100x650）
     const int SCREEN_WIDTH = 1100;
     const int SCREEN_HEIGHT = 650;
     
-    // 部屋のサイズを計算
     const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 9 * 38 = 342
     const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
     
-    // 部屋を画面中央に配置するためのオフセットを計算
     const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 342) / 2 = 379
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
-    // 背景を黒で塗りつぶし
     graphics.setDrawColor(0, 0, 0, 255); // 黒色
     graphics.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true);
     
-    // 魔王の城の建物タイル画像を描画（床のみ）
     SDL_Texture* demonCastleTileTexture = graphics.getTexture("demon_castle_tile");
     if (demonCastleTileTexture) {
-        // 建物タイル画像を部屋の床に敷き詰める（壁は除く）
         for (int y = 1; y < ROOM_HEIGHT - 1; y++) {
             for (int x = 1; x < ROOM_WIDTH - 1; x++) {
                 graphics.drawTexture(demonCastleTileTexture, ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
     } else {
-        // 画像がない場合は色で描画（フォールバック）
         graphics.setDrawColor(32, 32, 32, 255); // 暗いグレー
         graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y, ROOM_PIXEL_WIDTH, ROOM_PIXEL_HEIGHT, true);
     }
     
-    // 部屋の壁を描画（色で）
     graphics.setDrawColor(32, 32, 32, 255); // 暗いグレー
-    // 上下の壁
     for (int x = 0; x < ROOM_WIDTH; x++) {
         graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y, TILE_SIZE, TILE_SIZE, true);
         graphics.drawRect(ROOM_OFFSET_X + x * TILE_SIZE, ROOM_OFFSET_Y + (ROOM_HEIGHT - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     }
-    // 左右の壁
     for (int y = 0; y < ROOM_HEIGHT; y++) {
         graphics.drawRect(ROOM_OFFSET_X, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
         graphics.drawRect(ROOM_OFFSET_X + (ROOM_WIDTH - 1) * TILE_SIZE, ROOM_OFFSET_Y + y * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -307,29 +269,23 @@ void DemonCastleState::drawDemonCastle(Graphics& graphics) {
 }
 
 void DemonCastleState::drawDemonCastleObjects(Graphics& graphics) {
-    // 画面サイズを取得（1100x650）
     const int SCREEN_WIDTH = 1100;
     const int SCREEN_HEIGHT = 650;
     
-    // 部屋のサイズを計算
     const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 9 * 38 = 342
     const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
     
-    // 部屋を画面中央に配置するためのオフセットを計算
     const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 342) / 2 = 379
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
-    // 魔王の座を描画（暗い金色）
     graphics.setDrawColor(139, 69, 19, 255);
     graphics.drawRect(ROOM_OFFSET_X + demonX * TILE_SIZE, ROOM_OFFSET_Y + demonY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
     graphics.drawRect(ROOM_OFFSET_X + demonX * TILE_SIZE, ROOM_OFFSET_Y + demonY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     
-    // 魔王の座の装飾
     graphics.setDrawColor(105, 0, 0, 255);
     graphics.drawRect((ROOM_OFFSET_X + demonX + 0.25) * TILE_SIZE, (ROOM_OFFSET_Y + demonY + 0.25) * TILE_SIZE, TILE_SIZE * 0.5, TILE_SIZE * 0.5, true);
     
-    // 魔王を描画（画像または暗い赤色の四角）
     if (demonTexture) {
         graphics.drawTexture(demonTexture, ROOM_OFFSET_X + demonX * TILE_SIZE, ROOM_OFFSET_Y + demonY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     } else {
@@ -339,7 +295,6 @@ void DemonCastleState::drawDemonCastleObjects(Graphics& graphics) {
         graphics.drawRect(ROOM_OFFSET_X + demonX * TILE_SIZE, ROOM_OFFSET_Y + demonY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
     
-    // ドアを描画（暗い茶色）
     graphics.setDrawColor(101, 67, 33, 255);
     graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
@@ -347,23 +302,18 @@ void DemonCastleState::drawDemonCastleObjects(Graphics& graphics) {
 }
 
 void DemonCastleState::drawPlayer(Graphics& graphics) {
-    // 画面サイズを取得（1100x650）
     const int SCREEN_WIDTH = 1100;
     const int SCREEN_HEIGHT = 650;
     
-    // 部屋のサイズを計算
     const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 9 * 38 = 342
     const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
     
-    // 部屋を画面中央に配置するためのオフセットを計算
     const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 342) / 2 = 379
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
-    // プレイヤーを描画（画像または青色の四角）
     if (playerTexture) {
         graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     } else {
-        // フォールバック：青色の四角で描画
         graphics.setDrawColor(0, 0, 255, 255);
         graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
         graphics.setDrawColor(255, 255, 255, 255);

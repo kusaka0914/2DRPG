@@ -1,9 +1,19 @@
+/**
+ * @file ui_config_manager.h
+ * @brief UI設定管理の名前空間
+ * @details 各GameStateのUI要素（位置、サイズ、色など）の設定を管理する構造体と関数を定義する。
+ */
+
 #pragma once
 
 #include <SDL.h>
 #include <string>
 #include <ctime>
 
+/**
+ * @brief UI設定管理の名前空間
+ * @details 各GameStateのUI要素（位置、サイズ、色など）の設定を管理する構造体と関数を定義する。
+ */
 namespace UIConfig {
     struct UIPosition {
         float offsetX = 0.0f;      // 画面中央からのオフセットX（相対位置）
@@ -123,38 +133,149 @@ namespace UIConfig {
         UITextConfig monsterLevel;                 // モンスターレベル表示
     };
     
+    /**
+     * @brief UI設定管理を担当するクラス
+     * @details UI設定の読み込み、保存、取得を管理する。シングルトンパターンを使用。
+     */
     class UIConfigManager {
     public:
+        /**
+         * @brief インスタンスの取得（シングルトン）
+         * @return UIConfigManagerへの参照
+         */
         static UIConfigManager& getInstance();
         
+        /**
+         * @brief 設定の読み込み
+         * @param filepath 設定ファイルパス（デフォルト: "assets/config/ui_config.json"）
+         * @return 読み込みが成功したか
+         */
         bool loadConfig(const std::string& filepath = "assets/config/ui_config.json");
-        void reloadConfig();
-        bool checkAndReloadConfig();  // ファイル変更をチェックして再読み込み
         
-        // UI要素の設定を取得
+        /**
+         * @brief 設定の再読み込み
+         */
+        void reloadConfig();
+        
+        /**
+         * @brief ファイル変更をチェックして再読み込み
+         * @return 再読み込みが実行されたか
+         */
+        bool checkAndReloadConfig();
+        
+        /**
+         * @brief メッセージボード設定の取得
+         * @return メッセージボード設定
+         */
         UIMessageBoardConfig getMessageBoardConfig() const { return messageBoardConfig; }
+        
+        /**
+         * @brief 共通UI設定の取得
+         * @return 共通UI設定
+         */
         UICommonUIConfig getCommonUIConfig() const { return commonUIConfig; }
+        
+        /**
+         * @brief メインメニュー設定の取得
+         * @return メインメニュー設定
+         */
         UIMainMenuConfig getMainMenuConfig() const { return mainMenuConfig; }
+        
+        /**
+         * @brief 戦闘設定の取得
+         * @return 戦闘設定
+         */
         UIBattleConfig getBattleConfig() const { return battleConfig; }
+        
+        /**
+         * @brief 部屋設定の取得
+         * @return 部屋設定
+         */
         UIRoomConfig getRoomConfig() const { return roomConfig; }
+        
+        /**
+         * @brief 街設定の取得
+         * @return 街設定
+         */
         UITownConfig getTownConfig() const { return townConfig; }
+        
+        /**
+         * @brief 城設定の取得
+         * @return 城設定
+         */
         UICastleConfig getCastleConfig() const { return castleConfig; }
+        
+        /**
+         * @brief 魔王の城設定の取得
+         * @return 魔王の城設定
+         */
         UIDemonCastleConfig getDemonCastleConfig() const { return demonCastleConfig; }
+        
+        /**
+         * @brief ゲームオーバー設定の取得
+         * @return ゲームオーバー設定
+         */
         UIGameOverConfig getGameOverConfig() const { return gameOverConfig; }
+        
+        /**
+         * @brief エンディング設定の取得
+         * @return エンディング設定
+         */
         UIEndingConfig getEndingConfig() const { return endingConfig; }
+        
+        /**
+         * @brief 夜設定の取得
+         * @return 夜設定
+         */
         UINightConfig getNightConfig() const { return nightConfig; }
+        
+        /**
+         * @brief フィールド設定の取得
+         * @return フィールド設定
+         */
         UIFieldConfig getFieldConfig() const { return fieldConfig; }
         
-        // 位置を計算（ウィンドウサイズを考慮）
+        /**
+         * @brief 位置を計算（ウィンドウサイズを考慮）
+         * @param x X座標（参照渡し、計算結果が格納される）
+         * @param y Y座標（参照渡し、計算結果が格納される）
+         * @param pos UI位置設定
+         * @param windowWidth ウィンドウ幅
+         * @param windowHeight ウィンドウ高さ
+         */
         void calculatePosition(int& x, int& y, const UIPosition& pos, int windowWidth, int windowHeight) const;
         
     private:
+        /**
+         * @brief コンストラクタ（private、シングルトンパターン）
+         */
         UIConfigManager() = default;
+        
+        /**
+         * @brief デストラクタ（private、シングルトンパターン）
+         */
         ~UIConfigManager() = default;
+        
+        /**
+         * @brief コピーコンストラクタ（削除、シングルトンパターン）
+         */
         UIConfigManager(const UIConfigManager&) = delete;
+        
+        /**
+         * @brief 代入演算子（削除、シングルトンパターン）
+         */
         UIConfigManager& operator=(const UIConfigManager&) = delete;
         
+        /**
+         * @brief デフォルト値の設定
+         */
         void setDefaultValues();
+        
+        /**
+         * @brief ファイルの更新時刻の取得
+         * @param filepath ファイルパス
+         * @return ファイルの更新時刻
+         */
         time_t getFileModificationTime(const std::string& filepath) const;
         
         std::string configFilePath;

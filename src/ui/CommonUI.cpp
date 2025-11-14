@@ -9,7 +9,6 @@ void CommonUI::drawNightTimer(Graphics& graphics, float nightTimer, bool nightTi
         int remainingMinutes = static_cast<int>(nightTimer) / 60;
         int remainingSeconds = static_cast<int>(nightTimer) % 60;
         
-        // タイマー背景（JSONから座標を取得）
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, commonUIConfig.nightTimer.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         graphics.setDrawColor(0, 0, 0, 200);
@@ -17,7 +16,6 @@ void CommonUI::drawNightTimer(Graphics& graphics, float nightTimer, bool nightTi
         graphics.setDrawColor(255, 255, 255, 255);
         graphics.drawRect(bgX, bgY, commonUIConfig.nightTimer.width, commonUIConfig.nightTimer.height, false);
         
-        // タイマーテキスト（JSONから座標を取得）
         int textX, textY;
         config.calculatePosition(textX, textY, commonUIConfig.nightTimerText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         std::string timerText = "夜の街まで: " + std::to_string(remainingMinutes) + ":" + 
@@ -30,7 +28,6 @@ void CommonUI::drawTargetLevel(Graphics& graphics, int targetLevel, bool levelGo
     auto& config = UIConfig::UIConfigManager::getInstance();
     auto commonUIConfig = config.getCommonUIConfig();
     
-    // 目標レベル背景（JSONから座標を取得）
     int bgX, bgY;
     config.calculatePosition(bgX, bgY, commonUIConfig.targetLevel.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     graphics.setDrawColor(0, 0, 0, 200);
@@ -64,7 +61,6 @@ void CommonUI::drawTrustLevels(Graphics& graphics, std::shared_ptr<Player> playe
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto commonUIConfig = config.getCommonUIConfig();
         
-        // パラメータ背景（JSONから座標を取得）
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, commonUIConfig.trustLevels.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         graphics.setDrawColor(0, 0, 0, 200);
@@ -72,7 +68,6 @@ void CommonUI::drawTrustLevels(Graphics& graphics, std::shared_ptr<Player> playe
         graphics.setDrawColor(255, 255, 255, 255);
         graphics.drawRect(bgX, bgY, commonUIConfig.trustLevels.width, commonUIConfig.trustLevels.height, false);
         
-        // パラメータテキスト（JSONから座標を取得）
         int textX, textY;
         config.calculatePosition(textX, textY, commonUIConfig.trustLevelsText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         std::string mentalText = "メンタル: " + std::to_string(player->getMental());
@@ -90,7 +85,6 @@ void CommonUI::drawGameControllerStatus(Graphics& graphics, bool gameControllerC
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto commonUIConfig = config.getCommonUIConfig();
         
-        // ゲームコントローラー状態表示（JSONから座標を取得）
         int x, y;
         config.calculatePosition(x, y, commonUIConfig.gameControllerStatus.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         graphics.setDrawColor(0, 255, 0, 255); // 緑色

@@ -9,10 +9,8 @@ InputManager::InputManager() {
     gameController = nullptr;
     gameControllerConnected = false;
     
-    // ゲームパッドの自動検出を有効化
     SDL_GameControllerEventState(SDL_ENABLE);
     
-    // 接続済みのゲームパッドを検索
     std::cout << "ゲームパッド検索中..." << std::endl;
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
@@ -40,11 +38,9 @@ InputManager::~InputManager() {
 }
 
 void InputManager::update() {
-    // 前フレームの状態を保存
     previousKeys = currentKeys;
     previousMouse = mouse;
     
-    // マウスクリック状態をリセット
     mouse.leftClicked = false;
     mouse.rightClicked = false;
 }
@@ -134,9 +130,7 @@ void InputManager::handleEvent(const SDL_Event& event) {
             }
             break;
             
-        // アナログスティックイベント（必要に応じて）
         case SDL_CONTROLLERAXISMOTION:
-            // アナログスティックの値はgetLeftStickX/Y()で取得
             if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
                 float value = event.caxis.value / 32767.0f;
                 if (abs(value) > 0.1f) { // デッドゾーンより大きい時のみ表示

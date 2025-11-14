@@ -30,7 +30,6 @@ namespace UIConfig {
         messageBoardConfig.text.position.absoluteY = 500.0f;
         messageBoardConfig.text.color = {255, 255, 255, 255};
         
-        // CommonUI - 夜のタイマー
         commonUIConfig.nightTimer.position.useRelative = false;
         commonUIConfig.nightTimer.position.absoluteX = 10.0f;
         commonUIConfig.nightTimer.position.absoluteY = 10.0f;
@@ -115,7 +114,6 @@ namespace UIConfig {
         battleConfig.message.position.absoluteY = 450.0f;
         battleConfig.message.color = {255, 255, 255, 255};
         
-        // プレイヤーHP/MP表示
         battleConfig.playerHp.position.useRelative = false;
         battleConfig.playerHp.position.absoluteX = 500.0f;
         battleConfig.playerHp.position.absoluteY = 260.0f;
@@ -126,20 +124,17 @@ namespace UIConfig {
         battleConfig.playerMp.position.absoluteY = 280.0f;
         battleConfig.playerMp.color = {255, 255, 255, 255};
         
-        // 敵HP表示
         battleConfig.enemyHp.position.useRelative = false;
         battleConfig.enemyHp.position.absoluteX = 500.0f;
         battleConfig.enemyHp.position.absoluteY = 120.0f;
         battleConfig.enemyHp.color = {255, 255, 255, 255};
         
-        // 敵の画像位置
         battleConfig.enemyPosition.useRelative = false;
         battleConfig.enemyPosition.absoluteX = 500.0f;
         battleConfig.enemyPosition.absoluteY = 150.0f;
         battleConfig.enemyWidth = 100;
         battleConfig.enemyHeight = 100;
         
-        // プレイヤーの画像位置
         battleConfig.playerPosition.useRelative = false;
         battleConfig.playerPosition.absoluteX = 500.0f;
         battleConfig.playerPosition.absoluteY = 300.0f;
@@ -275,11 +270,9 @@ namespace UIConfig {
     bool UIConfigManager::loadConfig(const std::string& filepath) {
         setDefaultValues();  // デフォルト値を設定
         
-        // 複数のパスを試す（開発時とリリース時の両方に対応）
         std::vector<std::string> candidatePaths;
         candidatePaths.push_back(filepath);
         
-        // 相対パスの場合、代替パスを追加
         if (filepath.find("../") == 0) {
             candidatePaths.push_back(filepath.substr(3));  // "../"を削除
         } else if (filepath.find("assets/") == 0) {
@@ -363,7 +356,6 @@ namespace UIConfig {
             if (jsonData.contains("commonUI")) {
                 auto& cui = jsonData["commonUI"];
                 
-                // 夜のタイマー
                 if (cui.contains("nightTimer")) {
                     auto& nt = cui["nightTimer"];
                     if (nt.contains("position")) {
@@ -453,7 +445,6 @@ namespace UIConfig {
                     }
                 }
                 
-                // 信頼度表示
                 if (cui.contains("trustLevels")) {
                     auto& tr = cui["trustLevels"];
                     if (tr.contains("position")) {
@@ -514,7 +505,6 @@ namespace UIConfig {
                 }
             }
             
-            // ヘルパー関数: JSONから位置を読み込む
             auto loadPosition = [](nlohmann::json& pos, UIPosition& uiPos) {
                 if (pos.contains("absoluteX")) uiPos.absoluteX = pos["absoluteX"];
                 if (pos.contains("absoluteY")) uiPos.absoluteY = pos["absoluteY"];
@@ -523,7 +513,6 @@ namespace UIConfig {
                 if (pos.contains("useRelative")) uiPos.useRelative = pos["useRelative"];
             };
             
-            // ヘルパー関数: JSONから色を読み込む
             auto loadColor = [](nlohmann::json& col, SDL_Color& color) {
                 if (col.is_array() && col.size() >= 4) {
                     color = {
@@ -790,7 +779,6 @@ namespace UIConfig {
             
             configLoaded = true;
             
-            // ファイルの更新時刻を記録
             lastFileModificationTime = getFileModificationTime(configFilePath);
             
             printf("UI Config: Loaded successfully from %s\n", configFilePath.c_str());
@@ -804,15 +792,12 @@ namespace UIConfig {
     }
     
     void UIConfigManager::reloadConfig() {
-        // 現在監視しているパスでリロード
-        // ただし、両方のパスをチェックして、より新しい方を読み込む
         std::string originalPath = "../assets/config/ui_config.json";
         std::string buildPath = "assets/config/ui_config.json";
         
         time_t originalModTime = getFileModificationTime(originalPath);
         time_t buildModTime = getFileModificationTime(buildPath);
         
-        // より新しいファイルを読み込む（元のassetsディレクトリを優先）
         std::string pathToLoad;
         if (originalModTime > 0) {
             pathToLoad = originalPath;
@@ -822,14 +807,12 @@ namespace UIConfig {
         } else if (buildModTime > 0) {
             pathToLoad = buildPath;
         } else {
-            // どちらも見つからない場合は現在のパスを使用
             if (!configFilePath.empty()) {
                 loadConfig(configFilePath);
             }
             return;
         }
         
-        // パスを更新してリロード
         configFilePath = pathToLoad;
         loadConfig(pathToLoad);
     }
@@ -870,29 +853,23 @@ namespace UIConfig {
     }
     
     bool UIConfigManager::checkAndReloadConfig() {
-        // 両方のパスをチェック（開発時は元のassetsディレクトリを優先）
         std::string originalPath = "../assets/config/ui_config.json";
         std::string buildPath = "assets/config/ui_config.json";
         
-        // 両方のパスの更新時刻を取得
         time_t originalModTime = getFileModificationTime(originalPath);
         time_t buildModTime = getFileModificationTime(buildPath);
         
-        // より新しいファイルを監視する（元のassetsディレクトリを優先）
         time_t currentModTime = 0;
         std::string currentPath;
         
         if (originalModTime > 0) {
-            // 元のassetsディレクトリが存在する場合は優先
             currentModTime = originalModTime;
             currentPath = originalPath;
-            // buildディレクトリの方が新しい場合はそちらを使用
             if (buildModTime > 0 && buildModTime > originalModTime) {
                 currentModTime = buildModTime;
                 currentPath = buildPath;
             }
         } else if (buildModTime > 0) {
-            // 元のassetsディレクトリが存在しない場合はbuildディレクトリを使用
             currentModTime = buildModTime;
             currentPath = buildPath;
         } else {
@@ -906,7 +883,6 @@ namespace UIConfig {
             lastFileModificationTime = 0; // 強制的にリロード
         }
         
-        // 更新時刻が変わった場合はリロード
         if (currentModTime > 0 && currentModTime != lastFileModificationTime && lastFileModificationTime > 0) {
             printf("UI Config: File changed! Reloading from %s...\n", configFilePath.c_str());
             lastFileModificationTime = currentModTime;
@@ -914,7 +890,6 @@ namespace UIConfig {
             return true;
         }
         
-        // 初回の場合は更新時刻を記録
         if (lastFileModificationTime == 0 && currentModTime > 0) {
             lastFileModificationTime = currentModTime;
         }
@@ -924,7 +899,6 @@ namespace UIConfig {
     
     void UIConfigManager::calculatePosition(int& x, int& y, const UIPosition& pos, int windowWidth, int windowHeight) const {
         if (pos.useRelative) {
-            // 相対位置（画面中央からのオフセット）
             x = static_cast<int>(windowWidth / 2.0f + pos.offsetX);
             y = static_cast<int>(windowHeight / 2.0f + pos.offsetY);
         } else {

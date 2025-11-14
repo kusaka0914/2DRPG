@@ -1,3 +1,9 @@
+/**
+ * @file TownState.h
+ * @brief 街の状態を担当するクラス
+ * @details 街での移動、NPCとの会話、ショップ、宿屋などの機能を管理する。
+ */
+
 #pragma once
 #include "../core/GameState.h"
 #include "../ui/UI.h"
@@ -9,6 +15,9 @@
 #include <memory>
 #include <vector>
 
+/**
+ * @brief NPCの種類
+ */
 enum class NPCType {
     SHOPKEEPER,
     INNKEEPER,
@@ -136,6 +145,7 @@ public:
     // 初回メッセージ表示用フラグ
     bool pendingWelcomeMessage;
     std::string pendingMessage;
+    bool hasVisitedTown; // 街を訪れたことがあるか（静的変数の代わり）
     
 private:
     void setupUI(Graphics& graphics);

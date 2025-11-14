@@ -21,12 +21,10 @@ void MainMenuState::exit() {
 void MainMenuState::update(float deltaTime) {
     ui.update(deltaTime);
     
-    // ホットリロードチェック：設定が変更された場合はUIを再初期化
     static bool lastReloadState = false;
     auto& config = UIConfig::UIConfigManager::getInstance();
     bool currentReloadState = config.checkAndReloadConfig();
     
-    // リロードが発生した場合（前回falseで今回trueになった場合）
     if (!lastReloadState && currentReloadState) {
         setupUI();
     }
@@ -34,7 +32,6 @@ void MainMenuState::update(float deltaTime) {
 }
 
 void MainMenuState::render(Graphics& graphics) {
-    // 背景色を設定
     graphics.setDrawColor(0, 0, 0, 255);
     graphics.clear();
     
@@ -46,7 +43,6 @@ void MainMenuState::render(Graphics& graphics) {
 void MainMenuState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // ESCキーでゲーム終了（実装は後で）
     if (input.isKeyJustPressed(InputKey::ESCAPE)) {
         // ゲーム終了処理
     }
@@ -58,21 +54,18 @@ void MainMenuState::setupUI() {
     auto& config = UIConfig::UIConfigManager::getInstance();
     auto mainMenuConfig = config.getMainMenuConfig();
     
-    // タイトルラベル（JSONから座標を取得）
     int titleX, titleY;
     config.calculatePosition(titleX, titleY, mainMenuConfig.title.position, 1100, 650);
     titleLabel = std::make_unique<Label>(titleX, titleY, "勇者だって強者に逆らえない。", "title");
     titleLabel->setColor(mainMenuConfig.title.color);
     ui.addElement(std::move(titleLabel));
     
-    // プレイヤー情報ラベル（JSONから座標を取得）
     int playerInfoX, playerInfoY;
     config.calculatePosition(playerInfoX, playerInfoY, mainMenuConfig.playerInfo.position, 1100, 650);
     playerInfoLabel = std::make_unique<Label>(playerInfoX, playerInfoY, "", "default");
     playerInfoLabel->setColor(mainMenuConfig.playerInfo.color);
     ui.addElement(std::move(playerInfoLabel));
     
-    // 冒険に出るボタン（JSONから座標を取得）
     int btnX, btnY;
     config.calculatePosition(btnX, btnY, mainMenuConfig.adventureButton.position, 1100, 650);
     auto adventureBtn = std::make_unique<Button>(btnX, btnY, mainMenuConfig.adventureButton.width, mainMenuConfig.adventureButton.height, "冒険に出る");
@@ -92,8 +85,6 @@ void MainMenuState::setupUI() {
     // });
     // ui.addElement(std::move(statusBtn));
     
-    // 宿屋で休むボタン
-    // auto innBtn = std::make_unique<Button>(300, 340, 200, 50, "宿屋で休む (10G)");
     // innBtn->setColors({100, 0, 100, 255}, {150, 0, 150, 255}, {50, 0, 50, 255});
     // innBtn->setOnClick([this]() {
     //     const int innCost = 10;
@@ -120,7 +111,6 @@ void MainMenuState::setupUI() {
     // });
     // ui.addElement(std::move(skeletonLordBtn));
 
-    // 魔王と戦うボタン(プレイヤーレベル100にする)
     // auto demonLordBtn = std::make_unique<Button>(300, 480, 200, 50, "魔王と戦う");
     // demonLordBtn->setColors({100, 0, 0, 255}, {150, 0, 0, 255}, {50, 0, 0, 255});
     // demonLordBtn->setOnClick([this]() {
@@ -138,7 +128,6 @@ void MainMenuState::setupUI() {
     // auto quitBtn = std::make_unique<Button>(300, 410, 200, 50, "ゲーム終了");
     // quitBtn->setColors({100, 0, 0, 255}, {150, 0, 0, 255}, {50, 0, 0, 255});
     // quitBtn->setOnClick([this]() {
-    //     // ゲーム終了処理（後で実装）
     //     std::exit(0);
     // });
     // ui.addElement(std::move(quitBtn));
@@ -155,7 +144,6 @@ void MainMenuState::updatePlayerInfo() {
     info << "ゴールド: " << player->getGold() << "\n";
     info << "経験値: " << player->getExp();
     
-    // UIマネージャーからプレイヤー情報ラベルを取得して更新
     if (ui.getElements().size() > 1) {
         Label* playerInfoLabel = dynamic_cast<Label*>(ui.getElements()[1].get());
         if (playerInfoLabel) {

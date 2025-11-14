@@ -78,15 +78,12 @@ bool ConsumableItem::use(Player* player, Character* target) {
             return true;
             
         case ConsumableType::DOKUKESHI:
-            // 将来の状態異常システム用
             return true;
             
         case ConsumableType::CHIKARASUI:
-            // 戦闘中の一時的ステータス上昇（将来実装）
             return true;
             
         case ConsumableType::MAMORI_SEED:
-            // 戦闘中の一時的ステータス上昇（将来実装）
             return true;
     }
     

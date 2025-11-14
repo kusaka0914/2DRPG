@@ -10,7 +10,6 @@ Character::Character(const std::string& name, int hp, int mp, int attack, int de
 void Character::takeDamage(int damage) {
     if (!isAlive) return;
     
-    // ダメージは既にcalculateDamageで計算済みなので、そのまま適用
     int actualDamage = std::max(1, damage);
     hp -= actualDamage;
     
@@ -21,20 +20,16 @@ void Character::takeDamage(int damage) {
 }
 
 void Character::heal(int amount) {
-    // isAliveがfalseでもHP回復処理を実行
     hp = std::min(maxHp, hp + amount);
     
-    // HPが回復した場合は生存状態に戻す
     if (hp > 0) {
         isAlive = true;
     }
 }
 
 void Character::restoreMp(int amount) {
-    // isAliveがfalseでもMP回復処理を実行
     mp = std::min(maxMp, mp + amount);
     
-    // HPが0より大きい場合は生存状態に戻す
     if (hp > 0) {
         isAlive = true;
     }
@@ -49,16 +44,12 @@ void Character::displayStatus() const {
 }
 
 int Character::calculateDamage(const Character& target) const {
-    // 基本ダメージ計算（攻撃力 - 相手の防御力）
     int baseDamage = getEffectiveAttack() - target.getEffectiveDefense();
     
-    // プレイヤーの攻撃のみダメージを調整（敵の攻撃は調整しない）
     if (dynamic_cast<const Player*>(this) != nullptr) {
-        // プレイヤーの攻撃は0.8倍に調整
         int adjustedDamage = std::max(1, static_cast<int>(baseDamage));
         return adjustedDamage;
     } else {
-        // 敵の攻撃は調整なし
         return std::max(1, baseDamage);
     }
 }
@@ -92,14 +83,12 @@ int Character::getStatusEffectDuration(StatusEffect effect) const {
 }
 
 void Character::processStatusEffects() {
-    // 毒のダメージ処理
     if (hasStatusEffect(StatusEffect::POISON)) {
         int poisonDamage = maxHp / 8; // 最大HPの1/8のダメージ
         poisonDamage = std::max(1, poisonDamage); // 最低1ダメージ
         takeDamage(poisonDamage);
     }
     
-    // ターン数を減らす
     for (auto it = statusEffects.begin(); it != statusEffects.end();) {
         it->second--;
         if (it->second <= 0) {

@@ -4,12 +4,11 @@
 #include <fstream>
 
 Player::Player(const std::string& name)
-    : Character(name, 30, 20, 8, 3, 1), gold(0), inventory(20), equipmentManager(),
-      hasLevelUpStoryToShow(false), levelUpStoryLevel(0),
-      trustLevel(50), isEvil(true), evilActions(0), goodActions(0), isNightTime(false),
-      mental(100), demonTrust(50), kingTrust(50), currentNight(0),
-      hasCounterEffect(false), hasNextTurnBonus(false), nextTurnMultiplier(1.0f), nextTurnBonusTurns(0) {
-    // 初期アイテムを追加
+    : Character(name, 30, 20, 8, 3, 1), inventory(20), equipmentManager(),
+      playerStats(std::make_unique<PlayerStats>()),
+      playerStory(std::make_unique<PlayerStory>(name)),
+      playerTrust(std::make_unique<PlayerTrust>(50, true)),
+      isNightTime(false), currentNight(0) {
     addStartingItems();
 }
 
@@ -29,11 +28,9 @@ void Player::levelUp() {
     setAttack(getAttack() + attackIncrease);
     setDefense(getDefense() + defenseIncrease);
     
-    // HPとMPを全回復
     hp = maxHp;
     mp = maxMp;
     
-    // 新しい呪文を覚える
     if (level == 3) {
         learnSpell(SpellType::KIZUGAIAERU, 10); // キズガイエール
         learnSpell(SpellType::ATSUIATSUI, 4); // アツイアツーイ
@@ -51,22 +48,18 @@ void Player::levelUp() {
         learnSpell(SpellType::WANCHANTAOSERU, 15); // ワンチャンタオセール
     }
     
-    // レベルアップストーリーフラグを設定
-    levelUpStoryLevel = level;
-    hasLevelUpStoryToShow = true;
+    playerStory->setLevelUpStory(level);
 }
 
 void Player::displayInfo() const {
     displayStatus();
     
-    // 装備ボーナス込みの表示
     int totalAttack = getTotalAttack();
     int totalDefense = getTotalDefense();
     int equipAttackBonus = equipmentManager.getTotalAttackBonus();
     int equipDefenseBonus = equipmentManager.getTotalDefenseBonus();
     
     for (const auto& spell : spells) {
-        // 新しい呪文のMP消費を表示
         int mpCost = 0;
         switch (spell.first) {
             case SpellType::KIZUGAIAERU:
@@ -100,7 +93,6 @@ void Player::displayInfo() const {
 void Player::gainExp(int expGained) {
     exp += expGained;
     
-    // レベルアップ判定（必要経験値 = 10固定、最大レベル100）
     while (exp >= 10 && level < 100) {
         exp -= 10;
         levelUp();
@@ -111,15 +103,10 @@ void Player::gainExp(int expGained) {
     }
 }
 
-void Player::gainGold(int goldGained) {
-    gold += goldGained;
-}
-
 bool Player::canCastSpell(SpellType spell) const {
     auto it = spells.find(spell);
     if (it == spells.end()) return false;
     
-    // 呪文ごとに異なるMP消費を計算
     int requiredMp = 0;
     switch (spell) {
         case SpellType::KIZUGAIAERU:
@@ -155,7 +142,6 @@ int Player::castSpell(SpellType spell, Character* target) {
         return 0;
     }
     
-    // 呪文ごとに異なるMP消費を計算
     int mpCost = 0;
     switch (spell) {
         case SpellType::KIZUGAIAERU:
@@ -200,7 +186,7 @@ int Player::castSpell(SpellType spell, Character* target) {
             if (target) {
                 int baseAttack = getTotalAttack();
                 if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * nextTurnMultiplier);
+                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
                 }
                 int baseDamage = baseAttack * 1.25; // 低MP攻撃呪文
                 int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
@@ -212,7 +198,7 @@ int Player::castSpell(SpellType spell, Character* target) {
             if (target) {
                 int baseAttack = getTotalAttack();
                 if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * nextTurnMultiplier);
+                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
                 }
                 int baseDamage = baseAttack * 1.5; // 中MP攻撃呪文
                 int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
@@ -224,7 +210,7 @@ int Player::castSpell(SpellType spell, Character* target) {
             if (target) {
                 int baseAttack = getTotalAttack();
                 if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * nextTurnMultiplier);
+                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
                 }
                 int baseDamage = baseAttack * 2; // 高MP攻撃呪文
                 int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
@@ -234,10 +220,9 @@ int Player::castSpell(SpellType spell, Character* target) {
             break;
         case SpellType::ICHIKABACHIKA:
             {
-                // 50%の確率でカウンター効果を発動
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 if (dist(gen) < 0.5f) {
-                    hasCounterEffect = true;
+                    setCounterEffect(true);
                     return 1; // 成功を示す
                 } else {
                     return 0; // 失敗を示す
@@ -246,7 +231,6 @@ int Player::castSpell(SpellType spell, Character* target) {
             break;
         case SpellType::TSUGICHOTTOTSUYOI:
             {
-                // 80%の確率で次のターンの攻撃が2.5倍になる
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 if (dist(gen) < 0.8f) {
                     setNextTurnBonus(true, 1.8f, 1);
@@ -258,7 +242,6 @@ int Player::castSpell(SpellType spell, Character* target) {
             break;
         case SpellType::TSUGIMECHATSUYOI:
             {
-                // 50%の確率で次のターンの攻撃が3倍になる
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 if (dist(gen) < 0.5f) {
                     setNextTurnBonus(true, 2.5f, 1);
@@ -270,13 +253,11 @@ int Player::castSpell(SpellType spell, Character* target) {
             break;
         case SpellType::WANCHANTAOSERU:
             if (target) {
-                // 5%の確率で即死
                 std::uniform_real_distribution<float> dist(0.0f, 1.0f);
                 if (dist(gen) < 100.0f) {
                     target->takeDamage(target->getHp()); // 現在のHP分のダメージ
                     return target->getHp();
                 } else {
-                    // 失敗した場合は何もしない
                     return 0;
                 }
             }
@@ -290,14 +271,12 @@ void Player::learnSpell(SpellType spell, int mpCost) {
 }
 
 void Player::addStartingItems() {
-    // 初期アイテムを追加
     auto yakusou = std::make_unique<ConsumableItem>(ConsumableType::YAKUSOU);
     inventory.addItem(std::move(yakusou), 3);
     
     auto seisui = std::make_unique<ConsumableItem>(ConsumableType::SEISUI);
     inventory.addItem(std::move(seisui), 2);
     
-    // 初期装備を追加
     auto woodenStick = std::make_unique<Weapon>(WeaponType::WOODEN_STICK);
     equipmentManager.equipItem(std::move(woodenStick));
     
@@ -310,7 +289,6 @@ void Player::showInventory() const {
 }
 
 bool Player::useItem(int itemIndex, Character* target) {
-    // アイテムインデックスは1ベースなので0ベースに変換
     return inventory.useItem(itemIndex - 1, const_cast<Player*>(this), target);
 }
 
@@ -325,7 +303,6 @@ bool Player::equipItem(std::unique_ptr<Equipment> equipment) {
 bool Player::unequipItem(EquipmentSlot slot) {
     auto unequipped = equipmentManager.unequipItem(slot);
     if (unequipped) {
-        // 外した装備をインベントリに戻す
         return inventory.addItem(std::move(unequipped));
     }
     return false;
@@ -366,7 +343,6 @@ int Player::attack(Character& target) {
     int damage = baseDamage;
     bool isCritical = false;
     
-    // 会心の一撃判定（8%の確率）
     if (criticalDis(gen) <= 8) {
         damage = baseDamage * 2;
         isCritical = true;
@@ -379,10 +355,9 @@ int Player::attack(Character& target) {
 }
 
 int Player::calculateDamageWithBonus(const Character& target) const {
-    // 基本ダメージ計算（攻撃力 - 相手の防御力）
     int baseAttack = getTotalAttack();
     if (hasNextTurnBonusActive()) {
-        baseAttack = static_cast<int>(baseAttack * nextTurnMultiplier);
+        baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
     }
     
     int baseDamage = baseAttack - target.getEffectiveDefense();
@@ -392,7 +367,6 @@ int Player::calculateDamageWithBonus(const Character& target) const {
 
 void Player::defend() {
     
-    // 次のターンのダメージを半減（実装は戦闘システムで）
 }
 
 bool Player::tryToEscape() {
@@ -404,79 +378,6 @@ bool Player::tryToEscape() {
     return escaped;
 }
 
-// ストーリーシステム
-std::vector<std::string> Player::getOpeningStory() const {
-    std::vector<std::string> story;
-    story.push_back("王様からの緊急依頼");
-    story.push_back("");
-    story.push_back("勇者" + name + "よ、我が国に危機が...");
-    story.push_back("邪悪な魔王が復活し、モンスターが各地で暴れている！");
-    story.push_back("どうか魔王を倒し、平和を取り戻してくれないか！");
-    story.push_back("【目標】レベル3で森のボス戦！");
-    return story;
-}
-
-std::vector<std::string> Player::getLevelUpStory(int newLevel) const {
-    std::vector<std::string> story;
-    
-    switch (newLevel) {
-        case 2:
-            story.push_back("📜 ストーリー更新！");
-            story.push_back("");
-            story.push_back("まだまだ弱い...もっと強くなる必要がある。");
-            story.push_back("目標：レベル3で森のボスと戦えるようになる！");
-            break;
-            
-        case 3:
-            story.push_back("🌟 重要な節目に到達！");
-            story.push_back("");
-            story.push_back("ついに森のボス「ゴブリンキング」と戦う力がついた！");
-            story.push_back("次の目標：レベル5で山のボス「オークロード」討伐！");
-            break;
-            
-        case 5:
-            story.push_back("⚔️ 中級勇者の証！");
-            story.push_back("");
-            story.push_back("山のボス「オークロード」と戦う準備が整った！");
-            story.push_back("次の目標：レベル8で魔王城への挑戦権を得る！");
-            break;
-            
-        case 8:
-            story.push_back("👑 真の勇者への覚醒！");
-            story.push_back("");
-            story.push_back("ついに魔王「ドラゴンロード」と戦う力を得た！");
-            story.push_back("最終目標：魔王を倒して世界に平和を取り戻せ！");
-            break;
-            
-        default:
-            if (newLevel >= 10) {
-                story.push_back("🏆 伝説の勇者！");
-                story.push_back("");
-                story.push_back("もはや敵なし！魔王すら恐れる力を手に入れた！");
-            }
-            break;
-    }
-    
-    return story;
-}
-
-// 信頼度システムの実装
-void Player::changeTrustLevel(int amount) {
-    trustLevel += amount;
-    if (trustLevel > 100) trustLevel = 100;
-    if (trustLevel < 0) trustLevel = 0;
-}
-
-void Player::performEvilAction() {
-    evilActions++;
-    changeTrustLevel(-5); // 悪行で信頼度が下がる
-}
-
-void Player::performGoodAction() {
-    goodActions++;
-    changeTrustLevel(3); // 善行で信頼度が上がる
-}
-
 void Player::setNightTime(bool night) {
     isNightTime = night;
 }
@@ -486,45 +387,7 @@ void Player::toggleNightTime() {
 }
 
 // 新しいパラメータ変更メソッド
-void Player::changeMental(int amount) {
-    mental = std::max(0, std::min(100, mental + amount));
-}
 
-void Player::changeDemonTrust(int amount) {
-    demonTrust = std::max(0, std::min(100, demonTrust + amount));
-}
-
-void Player::changeKingTrust(int amount) {
-    kingTrust = std::max(0, std::min(100, kingTrust + amount));
-}
-
-void Player::setNextTurnBonus(bool active, float multiplier, int turns) {
-    hasNextTurnBonus = active;
-    if (active) {
-        nextTurnMultiplier = multiplier;
-        nextTurnBonusTurns = turns;
-    } else {
-        nextTurnMultiplier = 1.0f;
-        nextTurnBonusTurns = 0;
-    }
-}
-
-void Player::processNextTurnBonus() {
-    if (hasNextTurnBonus && nextTurnBonusTurns > 0) {
-        nextTurnBonusTurns--;
-        if (nextTurnBonusTurns <= 0) {
-            clearNextTurnBonus();
-        }
-    }
-}
-
-void Player::clearNextTurnBonus() {
-    hasNextTurnBonus = false;
-    nextTurnMultiplier = 1.0f;
-    nextTurnBonusTurns = 0;
-}
-
-// セーブ/ロード機能の実装
 void Player::saveGame(const std::string& filename, float nightTimer, bool nightTimerActive) {
     std::ofstream file(filename, std::ios::binary);
     if (!file.is_open()) {
@@ -543,16 +406,16 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     int defenseValue = getDefense();
     file.write(reinterpret_cast<const char*>(&defenseValue), sizeof(defenseValue));
     
-    // プレイヤー専用ステータス
-    file.write(reinterpret_cast<const char*>(&gold), sizeof(gold));
-    file.write(reinterpret_cast<const char*>(&mental), sizeof(mental));
-    file.write(reinterpret_cast<const char*>(&demonTrust), sizeof(demonTrust));
-    file.write(reinterpret_cast<const char*>(&kingTrust), sizeof(kingTrust));
-    file.write(reinterpret_cast<const char*>(&trustLevel), sizeof(trustLevel));
-    file.write(reinterpret_cast<const char*>(&evilActions), sizeof(evilActions));
-    file.write(reinterpret_cast<const char*>(&goodActions), sizeof(goodActions));
+    auto& extStats = playerStats->getExtendedStats();
+    file.write(reinterpret_cast<const char*>(&extStats.gold), sizeof(extStats.gold));
+    file.write(reinterpret_cast<const char*>(&extStats.mental), sizeof(extStats.mental));
+    file.write(reinterpret_cast<const char*>(&extStats.demonTrust), sizeof(extStats.demonTrust));
+    file.write(reinterpret_cast<const char*>(&extStats.kingTrust), sizeof(extStats.kingTrust));
+    auto trustData = playerTrust->getTrustData();
+    file.write(reinterpret_cast<const char*>(&trustData.trustLevel), sizeof(trustData.trustLevel));
+    file.write(reinterpret_cast<const char*>(&trustData.evilActions), sizeof(trustData.evilActions));
+    file.write(reinterpret_cast<const char*>(&trustData.goodActions), sizeof(trustData.goodActions));
     
-    // 夜の情報
     file.write(reinterpret_cast<const char*>(&currentNight), sizeof(currentNight));
     int killedResidentsSize = killedResidents.size();
     file.write(reinterpret_cast<const char*>(&killedResidentsSize), sizeof(killedResidentsSize));
@@ -561,16 +424,13 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
         file.write(reinterpret_cast<const char*>(&pos.second), sizeof(pos.second));
     }
     
-    // 名前の長さと名前
     int nameLength = name.length();
     file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
     file.write(name.c_str(), nameLength);
     
-    // インベントリと装備の保存
     inventory.saveToFile(file);
     equipmentManager.saveToFile(file);
 
-    // タイマー情報の保存
     file.write(reinterpret_cast<const char*>(&nightTimer), sizeof(nightTimer));
     file.write(reinterpret_cast<const char*>(&nightTimerActive), sizeof(nightTimerActive));
     
@@ -597,16 +457,17 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
     file.read(reinterpret_cast<char*>(&defenseValue), sizeof(defenseValue));
     setDefense(defenseValue);
     
-    // プレイヤー専用ステータス
-    file.read(reinterpret_cast<char*>(&gold), sizeof(gold));
-    file.read(reinterpret_cast<char*>(&mental), sizeof(mental));
-    file.read(reinterpret_cast<char*>(&demonTrust), sizeof(demonTrust));
-    file.read(reinterpret_cast<char*>(&kingTrust), sizeof(kingTrust));
-    file.read(reinterpret_cast<char*>(&trustLevel), sizeof(trustLevel));
-    file.read(reinterpret_cast<char*>(&evilActions), sizeof(evilActions));
-    file.read(reinterpret_cast<char*>(&goodActions), sizeof(goodActions));
+    auto& extStats = playerStats->getExtendedStats();
+    file.read(reinterpret_cast<char*>(&extStats.gold), sizeof(extStats.gold));
+    file.read(reinterpret_cast<char*>(&extStats.mental), sizeof(extStats.mental));
+    file.read(reinterpret_cast<char*>(&extStats.demonTrust), sizeof(extStats.demonTrust));
+    file.read(reinterpret_cast<char*>(&extStats.kingTrust), sizeof(extStats.kingTrust));
+    PlayerTrust::TrustData trustData;
+    file.read(reinterpret_cast<char*>(&trustData.trustLevel), sizeof(trustData.trustLevel));
+    file.read(reinterpret_cast<char*>(&trustData.evilActions), sizeof(trustData.evilActions));
+    file.read(reinterpret_cast<char*>(&trustData.goodActions), sizeof(trustData.goodActions));
+    playerTrust->setTrustData(trustData);
     
-    // 夜の情報
     file.read(reinterpret_cast<char*>(&currentNight), sizeof(currentNight));
     int killedResidentsSize;
     file.read(reinterpret_cast<char*>(&killedResidentsSize), sizeof(killedResidentsSize));
@@ -618,7 +479,6 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         killedResidents.push_back({x, y});
     }
     
-    // 名前の長さと名前
     int nameLength;
     file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
     char* nameBuffer = new char[nameLength + 1];
@@ -627,11 +487,9 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
     name = std::string(nameBuffer);
     delete[] nameBuffer;
     
-    // インベントリと装備の読み込み
     inventory.loadFromFile(file);
     equipmentManager.loadFromFile(file);
 
-    // タイマー情報の読み込み
     file.read(reinterpret_cast<char*>(&nightTimer), sizeof(nightTimer));
     file.read(reinterpret_cast<char*>(&nightTimerActive), sizeof(nightTimerActive));
     
@@ -648,7 +506,6 @@ bool Player::autoLoad(float& nightTimer, bool& nightTimerActive) {
     return loadGame("autosave.dat", nightTimer, nightTimerActive);
 }
 
-// 呪文名を取得する関数
 std::string Player::getSpellName(SpellType spell) {
     switch (spell) {
         case SpellType::KIZUGAIAERU:
@@ -672,7 +529,6 @@ std::string Player::getSpellName(SpellType spell) {
     }
 }
 
-// 指定レベルで覚える呪文を取得する関数
 std::vector<SpellType> Player::getSpellsLearnedAtLevel(int level) {
     std::vector<SpellType> spells;
     

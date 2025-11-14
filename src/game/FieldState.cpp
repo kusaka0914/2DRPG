@@ -12,7 +12,6 @@
 #include <iostream>
 #include <random>
 
-// 静的変数（ファイル内で共有）
 static int s_staticPlayerX = 25;  // 街の入り口の近く：25
 static int s_staticPlayerY = 8;   // 16の中央：8
 static bool s_positionInitialized = false;
@@ -24,22 +23,18 @@ FieldState::FieldState(std::shared_ptr<Player> player)
       moveTimer(0), nightTimerActive(false), nightTimer(0.0f),
       shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0) {
     
-    // 固定マップの作成（28x16）
     static std::vector<std::vector<MapTile>> staticTerrainMap;
     static bool mapGenerated = false;
 
     if (!mapGenerated) {
-        // 28x16の固定マップを作成
         staticTerrainMap.resize(16, std::vector<MapTile>(28));
         
-        // マップの初期化（すべて草原）
         for (int y = 0; y < 16; y++) {
             for (int x = 0; x < 28; x++) {
                 staticTerrainMap[y][x] = MapTile(TerrainType::GRASS);
             }
         }
         
-        // 川を配置（蛇行する川）
         for (int y = 3; y < 13; y++) {
             staticTerrainMap[y][12] = MapTile(TerrainType::WATER);
         }
@@ -50,32 +45,26 @@ FieldState::FieldState(std::shared_ptr<Player> player)
             staticTerrainMap[y][24] = MapTile(TerrainType::WATER);
         }
         
-        // 橋を配置（川を横切る）
         staticTerrainMap[8][12] = MapTile(TerrainType::BRIDGE);
         staticTerrainMap[8][18] = MapTile(TerrainType::BRIDGE);
         staticTerrainMap[8][24] = MapTile(TerrainType::BRIDGE);
         
-        // 森林を配置（分散した配置）
-        // 左上の森
         for (int y = 1; y < 6; y++) {
             for (int x = 1; x < 6; x++) {
                 staticTerrainMap[y][x] = MapTile(TerrainType::FOREST);
             }
         }
-        // 右上の森
         for (int y = 1; y < 5; y++) {
             for (int x = 22; x < 27; x++) {
                 staticTerrainMap[y][x] = MapTile(TerrainType::FOREST);
             }
         }
-        // 左下の森
         for (int y = 11; y < 15; y++) {
             for (int x = 2; x < 7; x++) {
                 staticTerrainMap[y][x] = MapTile(TerrainType::FOREST);
             }
         }
         
-        // 岩を配置（散らばった配置）
         staticTerrainMap[2][8] = MapTile(TerrainType::ROCK, true, 1);
         staticTerrainMap[5][15] = MapTile(TerrainType::ROCK, true, 1);
         staticTerrainMap[7][22] = MapTile(TerrainType::ROCK, true, 1);
@@ -85,7 +74,6 @@ FieldState::FieldState(std::shared_ptr<Player> player)
         
         // 建物は削除（街から直接アクセス）
         
-        // 街の入り口を追加（右端中央付近）
         staticTerrainMap[8][26] = MapTile(TerrainType::TOWN_ENTRANCE);
         mapGenerated = true;
     }
@@ -98,7 +86,6 @@ FieldState::FieldState(std::shared_ptr<Player> player)
     playerX = s_staticPlayerX;
     playerY = s_staticPlayerY;
     
-    // モンスター出現場所を生成
     generateMonsterSpawnPoints();
 }
 
@@ -106,7 +93,6 @@ void FieldState::enter() {
     setupUI();
     loadFieldImages();
 
-    // 静的変数からタイマー情報を読み込み
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
     
@@ -117,24 +103,20 @@ void FieldState::enter() {
     // タイマー情報も含めてautosave
     player->saveGame("autosave.dat", nightTimer, nightTimerActive);
     
-    // 戦闘終了時の処理
     if (shouldRelocateMonster) {
         relocateMonsterSpawnPoint(lastBattleX, lastBattleY);
         shouldRelocateMonster = false;
     }
     
-    // 目標レベルチェック：目標レベルに達している場合はタイマーを0にして夜の街に移動
     if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
         TownState::s_levelGoalAchieved = true;
     }
     
-    // 目標レベルに達している場合はタイマーを0にして夜の街に移動
     if (TownState::s_levelGoalAchieved && nightTimerActive) {
         nightTimer = 0.0f;
         TownState::s_nightTimer = 0.0f;
     }
     
-    // オープニングストーリーは王様の城で表示されるため、フィールドでは表示しない
     // static bool openingShown = false;
     // if (!openingShown) {
     //     showOpeningStory();
@@ -150,28 +132,23 @@ void FieldState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
     
-    // 夜のタイマーを更新
     if (nightTimerActive) {
         nightTimer -= deltaTime;
-        // 静的変数に状態を保存
         TownState::s_nightTimerActive = true;
         TownState::s_nightTimer = nightTimer;
         
         // 目標レベルチェック
         if (player->getLevel() >= TownState::s_targetLevel && !TownState::s_levelGoalAchieved) {
             TownState::s_levelGoalAchieved = true;
-            // メッセージ表示はTownStateで行うため、ここではコンソール出力のみ
         }
         
         if (nightTimer <= 0.0f) {
-            // 5分経過したら夜の街に移動
             nightTimerActive = false;
             TownState::s_nightTimerActive = false;
             TownState::s_nightTimer = 0.0f;
             
             // 目標達成していない場合はゲームオーバー
             if (!TownState::s_levelGoalAchieved) {
-                // ゲームオーバー処理（メイン画面に戻る）
                 if (stateManager) {
                     auto newPlayer = std::make_shared<Player>("勇者");
                     stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
@@ -191,11 +168,8 @@ void FieldState::update(float deltaTime) {
         TownState::s_nightTimer = 0.0f;
     }
     
-    // プレイヤーの移動処理
     
-    // UI情報を更新（値が変更された場合のみ）
     if (ui.getElements().size() >= 5) {
-        // プレイヤー情報（変更検出）
         static std::string lastPlayerInfo = "";
         std::string playerInfo = player->getName() + " Lv:" + std::to_string(player->getLevel()) + 
                                 " HP:" + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) +
@@ -224,7 +198,6 @@ void FieldState::update(float deltaTime) {
             lastTargetLevel = targetLevelInfo;
         }
         
-        // 現在の地形情報（変更検出）
         static std::string lastTerrainInfo = "";
         TerrainType currentTerrain = getCurrentTerrain();
         std::string terrainName;
@@ -249,17 +222,14 @@ void FieldState::update(float deltaTime) {
 }
 
 void FieldState::render(Graphics& graphics) {
-    // 背景色を設定（草原風）
     graphics.setDrawColor(34, 139, 34, 255);
     graphics.clear();
     
     drawMap(graphics);
     drawPlayer(graphics);
     
-    // UI描画
     ui.render(graphics);
     
-    // 共通UIを描画
     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
@@ -270,7 +240,6 @@ void FieldState::render(Graphics& graphics) {
 void FieldState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    // ESCキーでメインメニューに戻る
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
             stateManager->changeState(std::make_unique<MainMenuState>(player));
@@ -278,13 +247,11 @@ void FieldState::handleInput(const InputManager& input) {
         return;
     }
     
-    // スペースキーで街に入る
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         checkTownEntrance();
         return;
     }
     
-    // プレイヤー移動
     handleMovement(input);
 }
 
@@ -300,7 +267,6 @@ void FieldState::handleMovement(const InputManager& input) {
     int newX = playerX;
     int newY = playerY;
     
-    // キーボード入力
     if (input.isKeyPressed(InputKey::UP) || input.isKeyPressed(InputKey::W)) {
         newY--;
     } else if (input.isKeyPressed(InputKey::DOWN) || input.isKeyPressed(InputKey::S)) {
@@ -311,7 +277,6 @@ void FieldState::handleMovement(const InputManager& input) {
         newX++;
     }
     
-    // ゲームパッドのアナログスティック入力
     const float DEADZONE = 0.3f;
     float stickX = input.getLeftStickX();
     float stickY = input.getLeftStickY();
@@ -333,23 +298,19 @@ void FieldState::handleMovement(const InputManager& input) {
     }
     
     if (isValidPosition(newX, newY)) {
-        // 実際に移動したかチェック
         bool actuallyMoved = (newX != playerX || newY != playerY);
         
         if (actuallyMoved) {
             playerX = newX;
             playerY = newY;
             
-            // 静的位置変数も更新（位置を保持するため）
             s_staticPlayerX = newX;
             s_staticPlayerY = newY;
             
             moveTimer = MOVE_DELAY;
             hasMoved = true; // 移動フラグを設定 
-            // 移動した時のみエンカウントチェック
             checkEncounter();
             
-            // 街の入り口チェック
             checkTownEntrance();
         } else {
             
@@ -358,27 +319,22 @@ void FieldState::handleMovement(const InputManager& input) {
 }
 
 void FieldState::checkEncounter() {
-    // 移動していない場合は敵出現しない
     if (!hasMoved) {
         return;
     }
     
-    // 現在の地形に基づいてエンカウント率を決定
     TerrainType currentTerrain = getCurrentTerrain();
     TerrainData terrainData = TerrainRenderer::getTerrainData(currentTerrain);
     
-    // エンカウント率が0の地形では敵が出現しない
     if (terrainData.encounterRate <= 0) {
         return;
     }
     
-    // 建物タイルとモンスター専用タイルのチェック
     if (playerY >= 0 && playerY < 16 && playerX >= 0 && playerX < 28) {
         if (!terrainMap.empty() && playerY < static_cast<int>(terrainMap.size()) && 
             !terrainMap[0].empty() && playerX < static_cast<int>(terrainMap[0].size())) {
             const MapTile& currentTile = terrainMap[playerY][playerX];
             if (currentTile.objectType == 2) { // モンスター専用タイル
-                // この位置の敵の種類を取得
                 EnemyType enemyType = EnemyType::SLIME; // デフォルト
                 for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                     if (activeMonsterPoints[i].first == playerX && activeMonsterPoints[i].second == playerY) {
@@ -389,7 +345,6 @@ void FieldState::checkEncounter() {
                 
                 Enemy enemy(enemyType);
                 if (stateManager) {
-                    // 戦闘開始時の座標を保存
                     lastBattleX = playerX;
                     lastBattleY = playerY;
                     shouldRelocateMonster = true;
@@ -402,14 +357,11 @@ void FieldState::checkEncounter() {
         }
     }
     
-    // 通常のエンカウントは無効化（モンスター出現場所でのみエンカウント）
     
-    // 移動フラグをリセット
     hasMoved = false;
 }
 
 void FieldState::drawMap(Graphics& graphics) {
-    // 地形ベースのタイル描画（固定マップサイズ28x16に対応）
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 28; x++) {
             drawTerrain(graphics, terrainMap[y][x], x, y);
@@ -421,7 +373,6 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
     int drawX = x * TILE_SIZE;
     int drawY = y * TILE_SIZE;
     
-    // 地形に応じた画像を描画
     SDL_Texture* terrainTexture = nullptr;
     std::string textureName;
     
@@ -449,26 +400,21 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
             break;
     }
     
-    // 岩の場合は背景に草原タイルを描画（最初に描画）
     if (tile.terrain == TerrainType::ROCK) {
         SDL_Texture* grassTexture = graphics.getTexture("grass");
         if (grassTexture) {
-            // 草原タイルを背景として描画
             graphics.drawTexture(grassTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
         }
     }
     
     terrainTexture = graphics.getTexture(textureName);
     if (terrainTexture) {
-        // 画像がある場合は画像を描画
         graphics.drawTexture(terrainTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
     } else {
-        // 画像がない場合は色で描画（フォールバック）
         auto terrainColor = TerrainRenderer::getTerrainColor(tile.terrain);
         graphics.setDrawColor(terrainColor.r, terrainColor.g, terrainColor.b, terrainColor.a);
         graphics.drawRect(drawX, drawY, TILE_SIZE, TILE_SIZE, true);
         
-        // 地形の境界線
         if (tile.terrain == TerrainType::WATER) {
             graphics.setDrawColor(0, 50, 150, 255);  // 濃い青
         } else if (tile.terrain == TerrainType::FOREST) {
@@ -495,7 +441,6 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
         int objY = drawY + (TILE_SIZE - objSize) / 2;
         
         if (tile.objectType == 2) { // モンスター専用タイル
-            // この位置の敵の種類を取得
             EnemyType enemyType = EnemyType::SLIME; // デフォルト
             for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                 if (activeMonsterPoints[i].first == x && activeMonsterPoints[i].second == y) {
@@ -504,19 +449,16 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
                 }
             }
             
-            // 敵の種類に応じた画像を表示
             Enemy tempEnemy(enemyType);
             std::string enemyTextureName = "enemy_" + tempEnemy.getTypeName();
             SDL_Texture* enemyTexture = graphics.getTexture(enemyTextureName);
             
             if (enemyTexture) {
-                // 敵画像を表示（少し小さくして表示）
                 int enemySize = TILE_SIZE * 0.8;
                 int enemyX = drawX + (TILE_SIZE - enemySize) / 2;
                 int enemyY = drawY + (TILE_SIZE - enemySize) / 2;
                 graphics.drawTexture(enemyTexture, enemyX, enemyY, enemySize, enemySize);
                 
-                // 敵のレベルを表示（JSONから座標を取得）
                 auto& config = UIConfig::UIConfigManager::getInstance();
                 auto fieldConfig = config.getFieldConfig();
                 Enemy tempEnemy(enemyType);
@@ -525,11 +467,9 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
                 int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
                 graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
             } else {
-                // 画像がない場合は赤色で表示
                 graphics.setDrawColor(255, 0, 0, 255);
                 graphics.drawRect(objX, objY, objSize, objSize, true);
                 
-                // 敵のレベルを表示（JSONから座標を取得）
                 auto& config = UIConfig::UIConfigManager::getInstance();
                 auto fieldConfig = config.getFieldConfig();
                 Enemy tempEnemy(enemyType);
@@ -544,7 +484,6 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
         }
     }
     
-    // 街の入り口の場合は鳥居を描画
     if (tile.terrain == TerrainType::TOWN_ENTRANCE) {
         drawFieldGate(graphics);
     }
@@ -555,12 +494,10 @@ void FieldState::drawPlayer(Graphics& graphics) {
     int drawY = playerY * TILE_SIZE + 4;
     int size = TILE_SIZE - 8;
     
-    // プレイヤー画像を描画（存在しない場合は四角形）
     SDL_Texture* playerTexture = graphics.getTexture("player_field");
     if (playerTexture) {
         graphics.drawTexture(playerTexture, drawX, drawY, size, size);
     } else {
-        // フォールバック：青い四角で描画（境界線付き）
         graphics.setDrawColor(0, 0, 255, 255);
         graphics.drawRect(drawX, drawY, size, size, true);
         graphics.setDrawColor(255, 255, 255, 255);
@@ -569,7 +506,6 @@ void FieldState::drawPlayer(Graphics& graphics) {
 }
 
 void FieldState::checkTownEntrance() {
-    // プレイヤーが街の入り口の上にいる場合のみ遷移
     TerrainType currentTerrain = getCurrentTerrain();
     if (currentTerrain == TerrainType::TOWN_ENTRANCE) {
         if (stateManager) {
@@ -579,24 +515,20 @@ void FieldState::checkTownEntrance() {
 }
 
 bool FieldState::isValidPosition(int x, int y) const {
-    // 新しいマップサイズ（28x16）に対応
     if (x < 0 || x >= 28 || y < 0 || y >= 16) {
         return false;
     }
     
-    // terrainMapの境界チェックを追加（空配列チェックも含む）
     if (terrainMap.empty() || y >= static_cast<int>(terrainMap.size()) || 
         terrainMap[0].empty() || x >= static_cast<int>(terrainMap[0].size())) {
         return false;
     }
     
-    // 地形データに基づいて移動可能性をチェック（正しい順序でアクセス）
     TerrainData terrainData = TerrainRenderer::getTerrainData(terrainMap[y][x].terrain);
     if (!terrainData.walkable) {
         return false;
     }
     
-    // オブジェクトがある場合の移動制限（正しい順序でアクセス）
     if (terrainMap[y][x].hasObject && terrainMap[y][x].objectType == 1) { // 岩は通れない
         return false;
     }
@@ -605,9 +537,7 @@ bool FieldState::isValidPosition(int x, int y) const {
 }
 
 TerrainType FieldState::getCurrentTerrain() const {
-    // 新しいマップサイズ（28x16）での境界チェック
     if (playerY >= 0 && playerY < 16 && playerX >= 0 && playerX < 28) {
-        // terrainMapの境界チェックを追加（空配列チェックも含む）
         if (!terrainMap.empty() && playerY < static_cast<int>(terrainMap.size()) && 
             !terrainMap[0].empty() && playerX < static_cast<int>(terrainMap[0].size())) {
             return terrainMap[playerY][playerX].terrain; // 正しい順序でアクセス
@@ -618,9 +548,6 @@ TerrainType FieldState::getCurrentTerrain() const {
 }
 
 void FieldState::loadFieldImages() {
-    // フィールド用の画像を読み込み
-    // 注意: 実際の画像読み込みはSDL2Game::loadResourcesで行われる
-    // ここでは画像名の定義のみ
 }
 
 void FieldState::generateMonsterSpawnPoints() {
@@ -633,7 +560,6 @@ void FieldState::generateMonsterSpawnPoints() {
     activeMonsterPoints.clear();
     activeMonsterTypes.clear();
     
-    // 5箇所のモンスター出現場所を生成
     for (int i = 0; i < 5; i++) {
         int x, y;
         bool validPosition;
@@ -646,14 +572,12 @@ void FieldState::generateMonsterSpawnPoints() {
                           !terrainMap[y][x].hasObject;
         } while (!validPosition);
         
-        // 敵の種類をランダムに決定
         EnemyType enemyType = Enemy::createRandomEnemy(player->getLevel()).getType();
         
         monsterSpawnPoints.push_back({x, y});
         activeMonsterPoints.push_back({x, y});
         activeMonsterTypes.push_back(enemyType);
         
-        // 地形マップにモンスター出現場所をマーク
         terrainMap[y][x].hasObject = true;
         terrainMap[y][x].objectType = 2; // モンスター専用タイル
     }
@@ -665,11 +589,9 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
     std::uniform_int_distribution<> disX(1, 26);
     std::uniform_int_distribution<> disY(1, 14);
     
-    // 古い場所をクリア
     terrainMap[oldY][oldX].hasObject = false;
     terrainMap[oldY][oldX].objectType = 0;
     
-    // 新しい場所を探す
     int newX, newY;
     bool validPosition;
     
@@ -681,16 +603,13 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
                       !terrainMap[newY][newX].hasObject;
     } while (!validPosition);
     
-    // 新しい場所をマーク
     terrainMap[newY][newX].hasObject = true;
     terrainMap[newY][newX].objectType = 2;
     
-    // アクティブリストを更新
     for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
         if (activeMonsterPoints[i].first == oldX && activeMonsterPoints[i].second == oldY) {
             activeMonsterPoints[i].first = newX;
             activeMonsterPoints[i].second = newY;
-            // 敵の種類も新しいものに更新
             activeMonsterTypes[i] = Enemy::createRandomEnemy(player->getLevel()).getType();
             break;
         }
@@ -707,18 +626,15 @@ void FieldState::showOpeningStory() {
 }
 
 void FieldState::showLevelUpStory(int newLevel) {
-    // レベルアップメッセージ（Labelで表示）
     if (ui.getElements().size() >= 3) {
         static_cast<Label*>(ui.getElements()[2].get())->setText("レベルアップ！新しい力が目覚めた！");
     }
 }
 
 void FieldState::drawFieldGate(Graphics& graphics) {
-    // フィールドの鳥居描画（街の入り口: 26, 8）
     int gateX = 26;
     int gateY = 8;
     
-    // 草原タイルを背景として描画
     SDL_Texture* grassTexture = graphics.getTexture("grass");
     if (grassTexture) {
         int drawX = gateX * TILE_SIZE;
@@ -726,7 +642,6 @@ void FieldState::drawFieldGate(Graphics& graphics) {
         graphics.drawTexture(grassTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
     }
     
-    // 鳥居画像を描画（前景）
     SDL_Texture* toriiTexture = graphics.getTexture("torii");
     if (toriiTexture) {
         int drawX = gateX * TILE_SIZE;
@@ -735,7 +650,6 @@ void FieldState::drawFieldGate(Graphics& graphics) {
         graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
                            TILE_SIZE * 2, TILE_SIZE * 2);
     } else {
-        // フォールバック：鳥居の代わりに赤い四角を描画
         int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
         int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
         graphics.setDrawColor(255, 0, 0, 255); // 赤色

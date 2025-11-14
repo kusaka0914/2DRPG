@@ -1,7 +1,18 @@
+/**
+ * @file Enemy.h
+ * @brief 敵キャラクターを担当するクラス
+ * @details 敵キャラクターの種類、報酬、行動AIなどを管理する。
+ * Characterクラスを継承し、敵固有の機能を提供する。
+ */
+
 #pragma once
 #include "Character.h"
 #include <vector>
 
+/**
+ * @brief 敵の種類
+ * @details スライムから魔王まで、様々な敵の種類を定義する。
+ */
 enum class EnemyType {
     SLIME,
     GOBLIN,
@@ -28,9 +39,14 @@ enum class EnemyType {
     ANCIENT_DRAGON, // レベル100以降
     CHAOS_BEAST,    // レベル150以降
     ELDER_GOD,      // レベル200以降
-    DEMON_LORD      // 魔王（最終ボス）
+    DEMON_LORD      /**< @brief 魔王（最終ボス） */
 };
 
+/**
+ * @brief 敵キャラクターを担当するクラス
+ * @details 敵キャラクターの種類、報酬、行動AIなどを管理する。
+ * Characterクラスを継承し、敵固有の機能を提供する。
+ */
 class Enemy : public Character {
 private:
     EnemyType type;
@@ -40,24 +56,84 @@ private:
     int magicDamage;
 
 public:
+    /**
+     * @brief コンストラクタ
+     * @param type 敵の種類
+     */
     Enemy(EnemyType type);
     
-    // オーバーライド
+    /**
+     * @brief レベルアップ
+     * @details Characterクラスの純粋仮想関数を実装。
+     */
     void levelUp() override;
+    
+    /**
+     * @brief 情報表示
+     * @details Characterクラスの純粋仮想関数を実装。
+     */
     void displayInfo() const override;
     
-    // 敵専用メソッド
+    /**
+     * @brief 行動を実行
+     * @details 敵のAIに基づいて行動（攻撃または呪文）を実行する。
+     * 
+     * @param target ターゲット（通常はプレイヤー）
+     * @return 与えたダメージ
+     */
     int performAction(Character& target);
+    
+    /**
+     * @brief 呪文を唱える
+     * @param target ターゲット（通常はプレイヤー）
+     */
     void castMagic(Character& target);
     
-    // ゲッター
+    /**
+     * @brief ゴールド報酬の取得
+     * @return ゴールド報酬
+     */
     int getGoldReward() const { return goldReward; }
-    int getExpReward() const { return expReward; }
-    EnemyType getType() const { return type; }
-    std::string getTypeName() const;
-    bool isBoss() const;  // ボス判定用メソッド追加
     
-    // 静的メソッド
+    /**
+     * @brief 経験値報酬の取得
+     * @return 経験値報酬
+     */
+    int getExpReward() const { return expReward; }
+    
+    /**
+     * @brief 敵の種類の取得
+     * @return 敵の種類
+     */
+    EnemyType getType() const { return type; }
+    
+    /**
+     * @brief 敵の種類名の取得
+     * @return 敵の種類名の文字列
+     */
+    std::string getTypeName() const;
+    
+    /**
+     * @brief ボス敵かどうかの判定
+     * @return ボス敵かどうか
+     */
+    bool isBoss() const;
+    
+    /**
+     * @brief ランダムな敵を生成
+     * @details プレイヤーのレベルに応じたランダムな敵を生成する。
+     * 
+     * @param playerLevel プレイヤーのレベル
+     * @return 生成された敵
+     */
     static Enemy createRandomEnemy(int playerLevel);
-    static Enemy createBossEnemy(int playerLevel);  // ボス敵生成用追加
+    
+    /**
+     * @brief ボス敵を生成
+     * @details プレイヤーのレベルに応じたボス敵を生成する。
+     * 
+     * @param playerLevel プレイヤーのレベル
+     * @return 生成されたボス敵
+     */
+    static Enemy createBossEnemy(int playerLevel);
 }; 

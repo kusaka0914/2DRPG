@@ -2,15 +2,12 @@
 #include <iostream>
 #include <limits>
 
-// バトルクラスのコンストラクタ
 Battle::Battle(Player* player, Enemy* enemy) 
     : player(player), enemy(enemy) {
 }
 
-// バトルを開始し、結果を返す       
 BattleResult Battle::startBattle() {
     while (!isBattleOver()) {
-        // プレイヤーのターン
         PlayerAction action = getPlayerChoice();
         executePlayerAction(action);
         
@@ -22,7 +19,6 @@ BattleResult Battle::startBattle() {
             return BattleResult::PLAYER_VICTORY;
         }
         
-        // 敵のターン
         executeEnemyAction();
         
         if (!player->getIsAlive()) {
@@ -33,7 +29,6 @@ BattleResult Battle::startBattle() {
     return BattleResult::PLAYER_DEFEAT;
 }
 
-// 入力検証の共通関数
 int Battle::getValidInput(int min, int max) const {
     int choice;
     while (!(std::cin >> choice) || choice < min || choice > max) {
@@ -44,7 +39,6 @@ int Battle::getValidInput(int min, int max) const {
     return choice;
 }
 
-// プレイヤーの行動選択を取得
 PlayerAction Battle::getPlayerChoice() const {
     std::cout << "1: 攻撃, 2: 魔法, 3: アイテム, 4: 防御, 5: 逃走\n";
     std::cout << "選択してください: ";
@@ -61,7 +55,6 @@ PlayerAction Battle::getPlayerChoice() const {
     }
 }
 
-// プレイヤーの行動を実行
 void Battle::executePlayerAction(PlayerAction action) {
     switch (action) {
         case PlayerAction::ATTACK:
@@ -99,18 +92,15 @@ void Battle::executePlayerAction(PlayerAction action) {
     }
 }
 
-// 敵の行動を実行
 void Battle::executeEnemyAction() {
     if (!enemy->getIsAlive()) return;
     enemy->performAction(*player);
 }
 
-// バトルが終了したかどうかを判定
 bool Battle::isBattleOver() const {
     return !player->getIsAlive() || !enemy->getIsAlive();
 }
 
-// 魔法を選択する
 SpellType Battle::chooseMagic() const {
     int choice = getValidInput(1, 8);
     
@@ -127,12 +117,10 @@ SpellType Battle::chooseMagic() const {
     }
 }
 
-// アイテムメニューを表示
 void Battle::showItemMenu() const {
     player->showInventory();
 }
 
-// アイテムを選択する
 int Battle::chooseItem() const {
     std::cout << "アイテムを選択してください (0: キャンセル): ";
     int choice;
@@ -155,7 +143,6 @@ int Battle::chooseItem() const {
     return choice;
 }
 
-// バトル終了時の処理
 void Battle::handleBattleEnd(BattleResult result) { 
     switch (result) {
         case BattleResult::PLAYER_VICTORY:
@@ -168,7 +155,6 @@ void Battle::handleBattleEnd(BattleResult result) {
             break;
             
         case BattleResult::PLAYER_ESCAPED:
-            // 逃走時の処理
             break;
     }
 } 

@@ -58,7 +58,6 @@ void GameStateManager::performStateChange() {
     shouldChangeState = false;
 }
 
-// GameState共通機能の実装
 void GameState::showMessage(const std::string& message, Label* messageBoard, bool& isShowingMessage) {
     if (messageBoard) {
         messageBoard->setText(message);
@@ -83,7 +82,6 @@ void GameState::handleMovement(const InputManager& input, int& playerX, int& pla
     int newY = playerY;
     bool moved = false;
     
-    // キーボード入力
     if (input.isKeyPressed(InputKey::UP) || input.isKeyPressed(InputKey::W)) {
         newY--;
         moved = true;
@@ -126,7 +124,6 @@ void GameState::handleMovement(const InputManager& input, int& playerX, int& pla
         }
     }
     
-    // 移動処理
     if (moved && isValidPosition(newX, newY)) {
         playerX = newX;
         playerY = newY;
@@ -151,7 +148,6 @@ void GameState::drawPlayer(Graphics& graphics, int playerX, int playerY, int til
     int drawY = playerY * tileSize + 4;
     int size = tileSize - 8;
     
-    // プレイヤーを描画
     graphics.setDrawColor(r, g, b, a);
     graphics.drawRect(drawX, drawY, size, size, true);
     graphics.setDrawColor(0, 0, 0, 255);
@@ -164,7 +160,6 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
                                    std::function<bool()> isNearExit, std::function<void()> clearMessage) {
     ui.handleInput(input);
     
-    // メッセージ表示中の場合はスペースキーでクリア
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
@@ -172,12 +167,10 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
         return; // メッセージ表示中は他の操作を無効化
     }
     
-    // プレイヤー移動
     if (moveTimer <= 0) {
         handleMovement();
     }
     
-    // スペースキーで相互作用または出口から出る
     if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (isNearExit()) {
             onExit();
@@ -187,7 +180,6 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
     }
 }
 
-// 共通の画像管理機能の実装
 SDL_Texture* GameState::loadPlayerTexture(Graphics& graphics) {
     return graphics.loadTexture("assets/textures/characters/player.png", "player");
 }
@@ -209,7 +201,6 @@ void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTex
     if (playerTexture) {
         graphics.drawTexture(playerTexture, playerX * tileSize, playerY * tileSize, tileSize, tileSize);
     } else {
-        // フォールバック：緑色の四角
         int drawX = playerX * tileSize + 4;
         int drawY = playerY * tileSize + 4;
         int size = tileSize - 8;
@@ -226,7 +217,6 @@ void GameState::drawCharacterWithTexture(Graphics& graphics, SDL_Texture* textur
     if (texture) {
         graphics.drawTexture(texture, x * tileSize, y * tileSize, tileSize, tileSize);
     } else {
-        // フォールバック：赤色の四角
         graphics.setDrawColor(255, 0, 0, 255);
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, true);
         graphics.setDrawColor(0, 0, 0, 255);

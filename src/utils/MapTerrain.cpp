@@ -4,35 +4,26 @@
 #include <cmath>
 
 std::vector<std::vector<MapTile>> MapGenerator::generateRealisticMap(int width, int height) {
-    // 基本の草原マップを作成（正しい順序：width x height）
     std::vector<std::vector<MapTile>> map(width, std::vector<MapTile>(height));
     
-    // 基本地形を草原で初期化
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
             map[x][y] = MapTile(TerrainType::GRASS);
         }
     }
     
-    // 川を追加
     addRiver(map, width, height);
     
-    // 森を追加
     addForest(map, width, height);
     
-    // 山を追加
     addMountains(map, width, height);
     
-    // 道路を追加
     addRoads(map, width, height);
     
-    // ランダムオブジェクトを追加
     addRandomObjects(map, width, height);
     
-    // 地形を滑らかにする
     smoothTerrain(map, width, height);
     
-    // 街の入り口を設定
     if (width > 26 && height > 8) {
         map[26][8].terrain = TerrainType::TOWN_ENTRANCE;
     }
@@ -44,7 +35,6 @@ void MapGenerator::addRiver(std::vector<std::vector<MapTile>>& map, int width, i
     static std::random_device rd;
     static std::mt19937 gen(rd());
     
-    // 川を蛇行させながら描画
     int riverY = height / 3;
     for (int x = 0; x < width; x++) {
         // 蛇行パターン
@@ -54,14 +44,12 @@ void MapGenerator::addRiver(std::vector<std::vector<MapTile>>& map, int width, i
         if (currentY >= 0 && currentY < height) {
             map[x][currentY].terrain = TerrainType::WATER;
             
-            // 川幅を広げる
             if (currentY + 1 < height) {
                 map[x][currentY + 1].terrain = TerrainType::WATER;
             }
         }
     }
     
-    // 橋を数箇所に設置
     std::uniform_int_distribution<> bridgeDist(5, width - 5);
     for (int i = 0; i < 2; i++) {
         int bridgeX = bridgeDist(gen);
@@ -77,7 +65,6 @@ void MapGenerator::addForest(std::vector<std::vector<MapTile>>& map, int width, 
     static std::random_device rd;
     static std::mt19937 gen(rd());
     
-    // 森エリアを複数作成
     std::uniform_int_distribution<> forestCount(2, 4);
     int numForests = forestCount(gen);
     
@@ -90,7 +77,6 @@ void MapGenerator::addForest(std::vector<std::vector<MapTile>>& map, int width, 
         int centerY = yDist(gen);
         int forestSize = sizeDist(gen);
         
-        // 円形の森を作成
         for (int y = centerY - forestSize; y <= centerY + forestSize; y++) {
             for (int x = centerX - forestSize; x <= centerX + forestSize; x++) {
                 if (x >= 0 && x < width && y >= 0 && y < height) {
@@ -111,7 +97,6 @@ void MapGenerator::addMountains(std::vector<std::vector<MapTile>>& map, int widt
     static std::random_device rd;
     static std::mt19937 gen(rd());
     
-    // 山脈を上部に配置
     std::uniform_int_distribution<> mountainChance(1, 100);
     
     for (int y = 0; y < height / 4; y++) {
@@ -140,7 +125,6 @@ void MapGenerator::addMountains(std::vector<std::vector<MapTile>>& map, int widt
 }
 
 void MapGenerator::addRoads(std::vector<std::vector<MapTile>>& map, int width, int height) {
-    // 横道：中央付近に水平道路
     int roadY = height * 2 / 3;
     for (int x = 0; x < width; x++) {
         if (map[x][roadY].terrain != TerrainType::WATER && 
@@ -149,7 +133,6 @@ void MapGenerator::addRoads(std::vector<std::vector<MapTile>>& map, int width, i
         }
     }
     
-    // 縦道：街への道
     int roadX = width - 5;
     for (int y = roadY; y < height; y++) {
         if (map[roadX][y].terrain != TerrainType::WATER && 
@@ -176,11 +159,9 @@ void MapGenerator::addRandomObjects(std::vector<std::vector<MapTile>>& map, int 
 }
 
 void MapGenerator::smoothTerrain(std::vector<std::vector<MapTile>>& map, int width, int height) {
-    // 孤立した地形を隣接する地形に合わせる簡単なスムージング
     for (int y = 1; y < height - 1; y++) {
         for (int x = 1; x < width - 1; x++) {
             if (map[x][y].terrain == TerrainType::GRASS) {
-                // 周囲8マスの地形をチェック
                 int forestCount = 0;
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dx = -1; dx <= 1; dx++) {
@@ -191,7 +172,6 @@ void MapGenerator::smoothTerrain(std::vector<std::vector<MapTile>>& map, int wid
                     }
                 }
                 
-                // 周囲に森が多ければ花畑にする
                 if (forestCount >= 3) {
                     static std::random_device rd;
                     static std::mt19937 gen(rd());

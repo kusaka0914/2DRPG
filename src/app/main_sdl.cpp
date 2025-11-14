@@ -21,7 +21,6 @@ void printUsage(const char* programName) {
 int main(int argc, char* argv[]) {
     std::string debugStartState = "";
     
-    // コマンドライン引数の処理
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printUsage(argv[0]);
@@ -44,7 +43,6 @@ int main(int argc, char* argv[]) {
     try {
         SDL2Game game;
         
-        // デバッグモードの設定
         if (!debugStartState.empty()) {
             game.setDebugStartState(debugStartState);
         }

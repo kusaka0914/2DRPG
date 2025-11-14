@@ -32,6 +32,14 @@ set(SOURCES
     src/game/MainMenuState.cpp
     src/game/FieldState.cpp
     src/game/BattleState.cpp
+    src/game/BattleLogic.cpp
+    src/game/BattleAnimationController.cpp
+    src/game/BattleEffectManager.cpp
+    src/game/BattleUI.cpp
+    src/game/BattlePhaseManager.cpp
+    src/entities/PlayerStats.cpp
+    src/entities/PlayerStory.cpp
+    src/entities/PlayerTrust.cpp
     src/game/TownState.cpp
     src/game/CastleState.cpp
     src/game/RoomState.cpp
@@ -64,6 +72,14 @@ set(HEADERS
     src/game/MainMenuState.h
     src/game/FieldState.h
     src/game/BattleState.h
+    src/game/BattleLogic.h
+    src/game/BattleAnimationController.h
+    src/game/BattleEffectManager.h
+    src/game/BattleUI.h
+    src/game/BattleConstants.h
+    src/entities/PlayerStats.h
+    src/entities/PlayerStory.h
+    src/entities/PlayerTrust.h
     src/game/TownState.h
     src/game/CastleState.h
     src/game/RoomState.h

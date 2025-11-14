@@ -1,3 +1,9 @@
+/**
+ * @file NightState.h
+ * @brief 夜の街の状態を担当するクラス
+ * @details 夜間の街での移動、住民の襲撃、衛兵との戦闘、城への侵入などの機能を管理する。
+ */
+
 #pragma once
 #include "../core/GameState.h"
 #include "../ui/UI.h"
@@ -6,6 +12,10 @@
 #include "../utils/TownLayout.h"
 #include <memory>
 
+/**
+ * @brief 夜の街の状態を担当するクラス
+ * @details 夜間の街での移動、住民の襲撃、衛兵との戦闘、城への侵入などの機能を管理する。
+ */
 class NightState : public GameState {
 private:
     std::shared_ptr<Player> player;
@@ -90,53 +100,247 @@ private:
 
     
 public:
+    /**
+     * @brief コンストラクタ
+     * @param player プレイヤーへの共有ポインタ
+     */
     NightState(std::shared_ptr<Player> player);
+    
+    /**
+     * @brief デストラクタ
+     */
     ~NightState();
     
+    /**
+     * @brief 状態に入る
+     */
     void enter() override;
+    
+    /**
+     * @brief 状態から出る
+     */
     void exit() override;
+    
+    /**
+     * @brief 更新処理
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
     void update(float deltaTime) override;
+    
+    /**
+     * @brief 描画処理
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void render(Graphics& graphics) override;
+    
+    /**
+     * @brief 入力処理
+     * @param input 入力マネージャーへの参照
+     */
     void handleInput(const InputManager& input) override;
     
+    /**
+     * @brief 状態タイプの取得
+     * @return 状態タイプ（NIGHT）
+     */
     StateType getType() const override { return StateType::NIGHT; }
     
-    // 倒した住民の位置を取得するpublic関数
+    /**
+     * @brief 倒した住民の位置を取得
+     * @return 倒した住民の位置のリスト
+     */
     static const std::vector<std::pair<int, int>>& getKilledResidentPositions() { return killedResidentPositions; }
     
 private:
+    /**
+     * @brief UIのセットアップ
+     */
     void setupUI();
+    
+    /**
+     * @brief 移動処理
+     * @param input 入力マネージャーへの参照
+     */
     void handleMovement(const InputManager& input);
+    
+    /**
+     * @brief 住民との相互作用チェック
+     */
     void checkResidentInteraction();
+    
+    /**
+     * @brief 住民への攻撃
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     */
     void attackResident(int x, int y);
+    
+    /**
+     * @brief 証拠隠滅
+     */
     void hideEvidence();
+    
+    /**
+     * @brief メッセージの表示
+     * @param message 表示するメッセージ
+     */
     void showMessage(const std::string& message);
+    
+    /**
+     * @brief メッセージのクリア
+     */
     void clearMessage();
+    
+    /**
+     * @brief 夜の街の描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawNightTown(Graphics& graphics);
+    
+    /**
+     * @brief プレイヤーの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawPlayer(Graphics& graphics);
+    
+    /**
+     * @brief テクスチャの読み込み
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void loadTextures(Graphics& graphics);
+    
+    /**
+     * @brief マップの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawMap(Graphics& graphics);
+    
+    /**
+     * @brief 建物の描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawBuildings(Graphics& graphics);
+    
+    /**
+     * @brief ゲートの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawGate(Graphics& graphics);
+    
+    /**
+     * @brief 有効な位置かどうかの判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 有効な位置かどうか
+     */
     bool isValidPosition(int x, int y) const;
+    
+    /**
+     * @brief 建物との衝突判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 建物と衝突しているか
+     */
     bool isCollidingWithBuilding(int x, int y) const;
+    
+    /**
+     * @brief 住民との衝突判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 住民と衝突しているか
+     */
     bool isCollidingWithResident(int x, int y) const;
+    
+    /**
+     * @brief 衛兵との衝突判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 衛兵と衝突しているか
+     */
     bool isCollidingWithGuard(int x, int y) const;
+    
+    /**
+     * @brief 住民のテクスチャインデックスの取得
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     * @return テクスチャインデックス
+     */
     int getResidentTextureIndex(int x, int y) const;
+    
+    /**
+     * @brief UIの更新
+     */
     void updateUI();
+    
+    /**
+     * @brief 信頼度レベルのチェック
+     */
     void checkTrustLevels();
+    
+    /**
+     * @brief 衛兵の更新
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
     void updateGuards(float deltaTime);
+    
+    /**
+     * @brief 衛兵の近くにいるかどうかの判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 衛兵の近くにいるか
+     */
     bool isNearGuard(int x, int y) const;
+    
+    /**
+     * @brief ゲーム進行のチェック
+     */
     void checkGameProgress();
+    
+    /**
+     * @brief 衛兵との相互作用チェック
+     */
     void checkGuardInteraction();
+    
+    /**
+     * @brief 衛兵への攻撃
+     * @param x 衛兵のX座標
+     * @param y 衛兵のY座標
+     */
     void attackGuard(int x, int y);
+    
+    /**
+     * @brief 城の入り口チェック
+     */
     void checkCastleEntrance();
+    
+    /**
+     * @brief 城への入場
+     */
     void enterCastle();
+    
+    /**
+     * @brief 王様の撃破
+     */
     void defeatKing();
+    
+    /**
+     * @brief 魔王の撃破
+     */
     void defeatDemon();
     
-    // 住民襲撃時の選択肢処理
+    /**
+     * @brief 住民襲撃時の選択肢処理
+     */
     void handleResidentChoice();
+    
+    /**
+     * @brief 住民襲撃時の選択肢実行
+     * @param choice 選択された選択肢のインデックス
+     */
     void executeResidentChoice(int choice);
+    
+    /**
+     * @brief 選択肢表示の更新
+     */
     void updateChoiceDisplay();
 }; 

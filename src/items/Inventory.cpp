@@ -11,7 +11,6 @@ Inventory::Inventory(int maxSlots) : maxSlots(maxSlots) {
 bool Inventory::addItem(std::unique_ptr<Item> item, int quantity) {
     if (!item || quantity <= 0) return false;
     
-    // スタック可能な既存アイテムを探す
     if (item->isStackable()) {
         int stackableSlot = findStackableSlot(item.get());
         if (stackableSlot != -1) {
@@ -27,7 +26,6 @@ bool Inventory::addItem(std::unique_ptr<Item> item, int quantity) {
         }
     }
     
-    // 新しいスロットに追加
     while (quantity > 0) {
         int emptySlot = findEmptySlot();
         if (emptySlot == -1) {
@@ -123,7 +121,6 @@ int Inventory::getUsedSlots() const {
 }
 
 void Inventory::sortInventory() {
-    // アイテムをタイプ別、名前順でソート
     compactInventory();
     
     std::vector<InventorySlot> tempSlots;
@@ -148,7 +145,6 @@ void Inventory::sortInventory() {
 }
 
 void Inventory::compactInventory() {
-    // 空のスロットを詰める
     std::vector<InventorySlot> tempSlots;
     for (int i = 0; i < maxSlots; ++i) {
         if (slots[i].item) {
@@ -189,49 +185,39 @@ bool Inventory::canStackWith(const Item* item1, const Item* item2) const {
            item1->getType() == item2->getType();
 }
 
-// セーブ/ロード機能の実装
 void Inventory::saveToFile(std::ofstream& file) {
-    // スロット数を保存
     file.write(reinterpret_cast<const char*>(&maxSlots), sizeof(maxSlots));
     
-    // 各スロットの情報を保存
     for (int i = 0; i < maxSlots; ++i) {
         bool hasItem = (slots[i].item != nullptr);
         file.write(reinterpret_cast<const char*>(&hasItem), sizeof(hasItem));
         
         if (hasItem) {
-            // アイテムの種類を保存
             ItemType itemType = slots[i].item->getType();
             file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
             
-            // アイテム名の長さと名前を保存
             std::string itemName = slots[i].item->getName();
             int nameLength = itemName.length();
             file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
             file.write(itemName.c_str(), nameLength);
             
-            // 数量を保存
             file.write(reinterpret_cast<const char*>(&slots[i].quantity), sizeof(slots[i].quantity));
         }
     }
 }
 
 void Inventory::loadFromFile(std::ifstream& file) {
-    // スロット数を読み込み
     file.read(reinterpret_cast<char*>(&maxSlots), sizeof(maxSlots));
     slots.resize(maxSlots);
     
-    // 各スロットの情報を読み込み
     for (int i = 0; i < maxSlots; ++i) {
         bool hasItem;
         file.read(reinterpret_cast<char*>(&hasItem), sizeof(hasItem));
         
         if (hasItem) {
-            // アイテムの種類を読み込み
             ItemType itemType;
             file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
             
-            // アイテム名の長さと名前を読み込み
             int nameLength;
             file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
             char* nameBuffer = new char[nameLength + 1];
@@ -240,10 +226,8 @@ void Inventory::loadFromFile(std::ifstream& file) {
             std::string itemName(nameBuffer);
             delete[] nameBuffer;
             
-            // 数量を読み込み
             file.read(reinterpret_cast<char*>(&slots[i].quantity), sizeof(slots[i].quantity));
             
-            // アイテムを再作成（簡易版）
             switch (itemType) {
                 case ItemType::CONSUMABLE:
                     slots[i].item = std::make_unique<ConsumableItem>(ConsumableType::YAKUSOU);

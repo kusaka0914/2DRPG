@@ -1,6 +1,5 @@
 #include "TownLayout.h"
 
-// 建物の位置とタイプ
 const std::vector<std::pair<int, int>> TownLayout::BUILDINGS = {
     {8, 10},   // 道具屋（2x2）
     {18, 10},  // 武器屋（2x2）
@@ -12,12 +11,10 @@ const std::vector<std::string> TownLayout::BUILDING_TYPES = {
     "shop", "weapon_shop", "house", "castle"
 };
 
-// 住人の家の位置
 const std::vector<std::pair<int, int>> TownLayout::RESIDENT_HOMES = {
     {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6}, {4, 12}, {22, 12},{1,13},{17,13},{18,3}
 };
 
-// 住民の位置
 const std::vector<std::pair<int, int>> TownLayout::RESIDENTS = {
     {3, 7},   // 町の住人1
     {7, 6},   // 町の住人2
@@ -33,7 +30,6 @@ const std::vector<std::pair<int, int>> TownLayout::RESIDENTS = {
     {20, 4}  // 町の住人12
 };
 
-// 衛兵の位置（家の前の定点）
 const std::vector<std::pair<int, int>> TownLayout::GUARDS = {
     {12, 2},  // 衛兵1
     {12, 3},  // 衛兵2

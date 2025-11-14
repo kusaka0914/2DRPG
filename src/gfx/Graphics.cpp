@@ -31,7 +31,6 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
         return false;
     }
     
-    // フルスクリーンモードでウィンドウ作成
     window = SDL_CreateWindow(title.c_str(), 
                               SDL_WINDOWPOS_CENTERED, 
                               SDL_WINDOWPOS_CENTERED,
@@ -50,10 +49,8 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
         return false;
     }
     
-    // 論理的な解像度を設定（ゲームは1100x650で描画し、自動的にフルスクリーンにスケール）
     SDL_RenderSetLogicalSize(renderer, width, height);
     
-    // 論理サイズをscreenWidth/screenHeightに設定（ゲームコードは論理サイズを使用）
     screenWidth = width;
     screenHeight = height;
     
@@ -188,7 +185,6 @@ void Graphics::drawText(const std::string& text, int x, int y, const std::string
         return;
     }
     
-    // UTF-8エンコーディングでテキストをレンダリング（日本語対応）
     SDL_Surface* textSurface = TTF_RenderUTF8_Blended(font, text.c_str(), color);
     if (!textSurface) {
         std::cerr << "テキストサーフェス作成エラー: " << TTF_GetError() << std::endl;
@@ -216,7 +212,6 @@ SDL_Texture* Graphics::createTextTexture(const std::string& text, const std::str
     TTF_Font* font = getFont(fontName);
     if (!font) return nullptr;
     
-    // UTF-8エンコーディングでテキストをレンダリング（日本語対応、高品質）
     SDL_Surface* textSurface = TTF_RenderUTF8_Blended(font, text.c_str(), color);
     if (!textSurface) return nullptr;
     

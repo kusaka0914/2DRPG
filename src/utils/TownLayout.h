@@ -1,9 +1,18 @@
+/**
+ * @file TownLayout.h
+ * @brief 街のレイアウトデータを定義する構造体
+ * @details 街の建物、住民、衛兵、城などの位置情報を定数として定義する。
+ */
+
 #pragma once
 #include <vector>
 #include <string>
 #include <utility>
 
-// 街の共通配置データ
+/**
+ * @brief 街の共通配置データ
+ * @details 街の建物、住民、衛兵、城などの位置情報を定数として定義する。
+ */
 struct TownLayout {
     // 建物の位置とタイプ
     static const std::vector<std::pair<int, int>> BUILDINGS;

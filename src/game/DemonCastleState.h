@@ -1,3 +1,9 @@
+/**
+ * @file DemonCastleState.h
+ * @brief 魔王の城の状態を担当するクラス
+ * @details 魔王の城での移動、魔王との会話、クエスト受領などの機能を管理する。
+ */
+
 #pragma once
 #include "../core/GameState.h"
 #include "../ui/UI.h"
@@ -5,6 +11,10 @@
 #include "../core/GameUtils.h"
 #include <memory>
 
+/**
+ * @brief 魔王の城の状態を担当するクラス
+ * @details 魔王の城での移動、魔王との会話、クエスト受領などの機能を管理する。
+ */
 class DemonCastleState : public GameState {
 private:
     std::shared_ptr<Player> player;
@@ -46,32 +56,143 @@ private:
     bool pendingDialogue;
     
 public:
+    /**
+     * @brief コンストラクタ
+     * @param player プレイヤーへの共有ポインタ
+     * @param fromCastleState CastleStateから来たかどうか（デフォルト: false）
+     */
     DemonCastleState(std::shared_ptr<Player> player, bool fromCastleState = false);
     
+    /**
+     * @brief 状態に入る
+     */
     void enter() override;
+    
+    /**
+     * @brief 状態から出る
+     */
     void exit() override;
+    
+    /**
+     * @brief 更新処理
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
     void update(float deltaTime) override;
+    
+    /**
+     * @brief 描画処理
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void render(Graphics& graphics) override;
+    
+    /**
+     * @brief 入力処理
+     * @param input 入力マネージャーへの参照
+     */
     void handleInput(const InputManager& input) override;
     
+    /**
+     * @brief 状態タイプの取得
+     * @return 状態タイプ（DEMON_CASTLE）
+     */
     StateType getType() const override { return StateType::DEMON_CASTLE; }
     
 private:
+    /**
+     * @brief UIのセットアップ
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void setupUI(Graphics& graphics);
+    
+    /**
+     * @brief 魔王の城のセットアップ
+     */
     void setupDemonCastle();
+    
+    /**
+     * @brief テクスチャの読み込み
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void loadTextures(Graphics& graphics);
+    
+    /**
+     * @brief 移動処理
+     * @param input 入力マネージャーへの参照
+     */
     void handleMovement(const InputManager& input);
+    
+    /**
+     * @brief 相互作用チェック
+     */
     void checkInteraction();
+    
+    /**
+     * @brief ダイアログの開始
+     */
     void startDialogue();
+    
+    /**
+     * @brief 次のダイアログへ進む
+     */
     void nextDialogue();
+    
+    /**
+     * @brief 現在のダイアログの表示
+     */
     void showCurrentDialogue();
+    
+    /**
+     * @brief メッセージの表示
+     * @param message 表示するメッセージ
+     */
     void showMessage(const std::string& message);
+    
+    /**
+     * @brief メッセージのクリア
+     */
     void clearMessage();
+    
+    /**
+     * @brief 魔王の城の描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawDemonCastle(Graphics& graphics);
+    
+    /**
+     * @brief 魔王の城のオブジェクトの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawDemonCastleObjects(Graphics& graphics);
+    
+    /**
+     * @brief プレイヤーの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
     void drawPlayer(Graphics& graphics);
+    
+    /**
+     * @brief 有効な位置かどうかの判定
+     * @param x X座標
+     * @param y Y座標
+     * @return 有効な位置かどうか
+     */
     bool isValidPosition(int x, int y) const;
+    
+    /**
+     * @brief オブジェクトの近くにいるかどうかの判定
+     * @param x X座標
+     * @param y Y座標
+     * @return オブジェクトの近くにいるか
+     */
     bool isNearObject(int x, int y) const;
+    
+    /**
+     * @brief 魔王との相互作用
+     */
     void interactWithDemon();
+    
+    /**
+     * @brief 街への退出
+     */
     void exitToTown();
 }; 

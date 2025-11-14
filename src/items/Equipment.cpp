@@ -10,7 +10,6 @@ Equipment::Equipment(const std::string& name, const std::string& description, in
       attackBonus(attackBonus), defenseBonus(defenseBonus), 
       hpBonus(hpBonus), mpBonus(mpBonus), slot(slot) {
     
-    // 装備タイプによってItemTypeを調整
     if (slot == EquipmentSlot::ARMOR || slot == EquipmentSlot::SHIELD) {
         type = ItemType::ARMOR;
     } else if (slot == EquipmentSlot::ACCESSORY) {
@@ -24,7 +23,6 @@ bool Equipment::use(Player* player, Character* /*target*/) {
 }
 
 std::unique_ptr<Item> Equipment::clone() const {
-    // 基底クラスのcloneは派生クラスで実装
     return nullptr;
 }
 
@@ -282,9 +280,7 @@ void EquipmentManager::displayEquipment() const {
     int totalMp = getTotalMpBonus();
 }
 
-// セーブ/ロード機能の実装
 void EquipmentManager::saveToFile(std::ofstream& file) {
-    // 各スロットの装備情報を保存
     for (int slot = 0; slot < 4; ++slot) {
         EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
         const Equipment* equipped = getEquippedItem(equipmentSlot);
@@ -293,11 +289,9 @@ void EquipmentManager::saveToFile(std::ofstream& file) {
         file.write(reinterpret_cast<const char*>(&hasEquipment), sizeof(hasEquipment));
         
         if (hasEquipment) {
-            // 装備の種類を保存
             ItemType itemType = equipped->getType();
             file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
             
-            // 装備名の長さと名前を保存
             std::string equipmentName = equipped->getName();
             int nameLength = equipmentName.length();
             file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
@@ -307,7 +301,6 @@ void EquipmentManager::saveToFile(std::ofstream& file) {
 }
 
 void EquipmentManager::loadFromFile(std::ifstream& file) {
-    // 各スロットの装備情報を読み込み
     for (int slot = 0; slot < 4; ++slot) {
         EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
         
@@ -315,11 +308,9 @@ void EquipmentManager::loadFromFile(std::ifstream& file) {
         file.read(reinterpret_cast<char*>(&hasEquipment), sizeof(hasEquipment));
         
         if (hasEquipment) {
-            // 装備の種類を読み込み
             ItemType itemType;
             file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
             
-            // 装備名の長さと名前を読み込み
             int nameLength;
             file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
             char* nameBuffer = new char[nameLength + 1];
@@ -328,7 +319,6 @@ void EquipmentManager::loadFromFile(std::ifstream& file) {
             std::string equipmentName(nameBuffer);
             delete[] nameBuffer;
             
-            // 装備を再作成（簡易版）
             std::unique_ptr<Equipment> equipment = nullptr;
             if (itemType == ItemType::WEAPON) {
                 equipment = std::make_unique<Weapon>(WeaponType::COPPER_SWORD);
