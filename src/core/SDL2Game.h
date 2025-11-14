@@ -5,6 +5,7 @@
 #include "../entities/Player.h"
 #include <memory>
 #include <chrono>
+#include <string>
 
 class SDL2Game {
 private:
@@ -22,6 +23,9 @@ private:
     
     const int SCREEN_WIDTH = 1100;
     const int SCREEN_HEIGHT = 650;
+    
+    // デバッグモード用
+    std::string debugStartState;
 
 public:
     SDL2Game();
@@ -30,6 +34,9 @@ public:
     bool initialize();
     void run();
     void cleanup();
+    
+    // デバッグモード設定
+    void setDebugStartState(const std::string& state);
     
 private:
     void handleEvents();

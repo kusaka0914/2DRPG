@@ -53,6 +53,7 @@ public:
     virtual void takeDamage(int damage);
     virtual void heal(int amount);
     virtual void restoreMp(int amount);
+    virtual void useMp(int amount);
     virtual void displayStatus() const;
     virtual int calculateDamage(const Character& target) const;
     

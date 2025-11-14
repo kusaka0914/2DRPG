@@ -83,7 +83,7 @@ void RoomState::render(Graphics& graphics) {
     // UIが未初期化の場合は初期化
     bool uiJustInitialized = false;
     if (!messageBoard) {
-        setupUI(graphics);
+    setupUI(graphics);
         uiJustInitialized = true;
     }
     

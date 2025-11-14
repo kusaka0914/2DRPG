@@ -2,11 +2,14 @@
 #include "../game/MainMenuState.h"
 #include "../game/RoomState.h"
 #include "../game/CastleState.h"
+#include "../game/TownState.h"
+#include "../game/DemonCastleState.h"
+#include "../game/FieldState.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <string>
 
-SDL2Game::SDL2Game() : isRunning(false), uiConfigCheckTimer(0.0f) {
+SDL2Game::SDL2Game() : isRunning(false), uiConfigCheckTimer(0.0f), debugStartState("") {
 }
 
 SDL2Game::~SDL2Game() {
@@ -83,11 +86,22 @@ void SDL2Game::render() {
     stateManager.render(graphics);
 }
 
+void SDL2Game::setDebugStartState(const std::string& state) {
+    debugStartState = state;
+}
+
 void SDL2Game::initializeGame() {
     // プレイヤー名の入力（簡略化）
     std::string playerName;
-    std::cout << "勇者の名前を入力してください: ";
-    std::getline(std::cin, playerName);
+    if (debugStartState.empty()) {
+        // 通常モード：プレイヤー名を入力
+        std::cout << "勇者の名前を入力してください: ";
+        std::getline(std::cin, playerName);
+    } else {
+        // デバッグモード：デフォルト名を使用
+        playerName = "デバッガー";
+        std::cout << "デバッグモード: " << debugStartState << " から開始します" << std::endl;
+    }
     
     if (playerName.empty()) {
         playerName = "勇者";
@@ -95,8 +109,27 @@ void SDL2Game::initializeGame() {
     
     player = std::make_shared<Player>(playerName);
     
-    // 自室から冒険開始（RoomStateから開始）
-    stateManager.changeState(std::make_unique<MainMenuState>(player));
+    // デバッグモードの場合は指定された状態から開始
+    if (!debugStartState.empty()) {
+        if (debugStartState == "room") {
+            stateManager.changeState(std::make_unique<RoomState>(player));
+        } else if (debugStartState == "town") {
+            stateManager.changeState(std::make_unique<TownState>(player));
+        } else if (debugStartState == "castle") {
+            stateManager.changeState(std::make_unique<CastleState>(player, false));
+        } else if (debugStartState == "demon") {
+            stateManager.changeState(std::make_unique<DemonCastleState>(player, false));
+        } else if (debugStartState == "field") {
+            stateManager.changeState(std::make_unique<FieldState>(player));
+        } else {
+            std::cerr << "警告: 不明なデバッグ状態 '" << debugStartState << "'。メインメニューから開始します。" << std::endl;
+            std::cerr << "利用可能な状態: room, town, castle, demon, field" << std::endl;
+            stateManager.changeState(std::make_unique<MainMenuState>(player));
+        }
+    } else {
+        // 通常モード：メインメニューから開始
+        stateManager.changeState(std::make_unique<MainMenuState>(player));
+    }
 }
 
 void SDL2Game::loadResources() {

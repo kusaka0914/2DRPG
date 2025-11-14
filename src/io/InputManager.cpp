@@ -164,6 +164,11 @@ InputKey InputManager::sdlKeyToInputKey(SDL_Keycode key) {
             return InputKey::ESCAPE;
         case SDLK_SPACE:
             return InputKey::SPACE;
+        case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+            return InputKey::ENTER;
+        case SDLK_q:
+            return InputKey::Q;
         case SDLK_n: 
             return InputKey::N;
         default:

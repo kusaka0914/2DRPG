@@ -5,7 +5,7 @@
 enum class InputKey {
     UP, DOWN, LEFT, RIGHT,
     W, A, S, D,
-    SPACE, ESCAPE,
+    SPACE, ESCAPE, ENTER, Q,
     GAMEPAD_A, GAMEPAD_B, GAMEPAD_X, GAMEPAD_Y,
     N
 };

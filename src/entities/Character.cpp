@@ -40,6 +40,10 @@ void Character::restoreMp(int amount) {
     }
 }
 
+void Character::useMp(int amount) {
+    mp = std::max(0, mp - amount);
+}
+
 void Character::displayStatus() const {
     
 }
