@@ -36,6 +36,11 @@ public:
     struct DamageInfo {
         int damage;
         bool isPlayerHit;  /**< @brief true=プレイヤーがダメージを受けた, false=敵がダメージを受けた */
+        bool isDraw;       /**< @brief true=引き分け（両方がダメージを受ける） */
+        int playerDamage;  /**< @brief 引き分け時のプレイヤーのダメージ */
+        int enemyDamage;   /**< @brief 引き分け時の敵のダメージ */
+        int commandType;   /**< @brief コマンドタイプ（0=攻撃, 1=防御, 2=呪文）-1=未設定 */
+        bool isCounterRush; /**< @brief true=カウンターラッシュ（防御で勝利した場合） */
     };
     
     /**
@@ -48,6 +53,16 @@ public:
         bool hasThreeWinStreak;
     };
 
+    /**
+     * @brief 敵の行動タイプ
+     * @details 敵の行動パターンを表す（攻撃型、防御型、呪文型）
+     */
+    enum class EnemyBehaviorType {
+        ATTACK_TYPE,   /**< @brief 攻撃型：攻撃50%、防御30%、呪文20% */
+        DEFEND_TYPE,   /**< @brief 防御型：防御50%、攻撃30%、呪文20% */
+        SPELL_TYPE     /**< @brief 呪文型：呪文50%、攻撃30%、防御20% */
+    };
+
 private:
     std::shared_ptr<Player> player;
     Enemy* enemy;
@@ -58,6 +73,9 @@ private:
     bool isDesperateMode;
     
     BattleStats stats;
+    EnemyBehaviorType enemyBehaviorType;  /**< @brief 敵の行動タイプ（ランダムに決定） */
+    bool behaviorTypeDetermined;  /**< @brief 行動タイプが確定したか（HP7割以下で確定） */
+    EnemyBehaviorType excludedBehaviorType;  /**< @brief 除外する行動タイプ（ヒント表示用、戦闘開始時に一度だけ決定） */
 
 public:
     /**
@@ -91,11 +109,11 @@ public:
     /**
      * @brief 戦闘統計の計算
      * @details 全ラウンドの判定結果から、プレイヤーと敵の勝利数を集計し、
-     * 3連勝フラグを設定する。
+     * 3連勝フラグを設定する。計算結果はメンバ変数のstatsに保存される。
      * 
      * @return 戦闘統計（勝利数、3連勝フラグなど）
      */
-    BattleStats calculateBattleStats() const;
+    BattleStats calculateBattleStats();
     
     /**
      * @brief ダメージリストの準備
@@ -105,7 +123,7 @@ public:
      * @param damageMultiplier ダメージ倍率（デフォルト: 1.0f）
      * @return ダメージ情報のベクター（ダメージ値と対象の情報を含む）
      */
-    std::vector<DamageInfo> prepareDamageList(float damageMultiplier = 1.0f) const;
+    std::vector<DamageInfo> prepareDamageList(float damageMultiplier = 1.0f);
     
     /**
      * @brief プレイヤーの攻撃ダメージ計算
@@ -207,5 +225,56 @@ public:
      * @return 3連勝しているか
      */
     bool checkThreeWinStreak() const;
+    
+    /**
+     * @brief 敵の行動タイプをランダムに決定
+     * @details 戦闘開始時に敵の行動タイプ（攻撃型、防御型、呪文型）をランダムに決定する。
+     */
+    void determineEnemyBehaviorType();
+    
+    /**
+     * @brief 敵の行動タイプの取得
+     * @return 敵の行動タイプ
+     */
+    EnemyBehaviorType getEnemyBehaviorType() const { return enemyBehaviorType; }
+    
+    /**
+     * @brief 行動タイプが確定したかの取得
+     * @return 行動タイプが確定したか
+     */
+    bool isBehaviorTypeDetermined() const { return behaviorTypeDetermined; }
+    
+    /**
+     * @brief 行動タイプを確定する
+     * @details プレイヤーのHPが7割を切った時に呼ばれる
+     */
+    void confirmBehaviorType();
+    
+    /**
+     * @brief 行動タイプ名の取得
+     * @param type 行動タイプ
+     * @return 行動タイプ名の文字列（"攻撃型", "防御型", "呪文型"）
+     */
+    static std::string getBehaviorTypeName(EnemyBehaviorType type);
+    
+    /**
+     * @brief 行動タイプのヒントテキストの取得
+     * @param type 行動タイプ
+     * @return ヒントテキスト（"気性が荒いみたいだ", "臆病みたいだ", "近づきたくないようだ"）
+     */
+    static std::string getBehaviorTypeHint(EnemyBehaviorType type);
+    
+    /**
+     * @brief 行動タイプでない場合のヒントテキストの取得
+     * @param type 行動タイプ
+     * @return ヒントテキスト（"気性は荒くなさそうだ", "臆病ではなさそうだ", "距離を取るタイプではなさそうだ"）
+     */
+    static std::string getNegativeBehaviorTypeHint(EnemyBehaviorType type);
+    
+    /**
+     * @brief 除外する行動タイプの取得
+     * @return 除外する行動タイプ（ヒント表示用）
+     */
+    EnemyBehaviorType getExcludedBehaviorType() const { return excludedBehaviorType; }
 };
 

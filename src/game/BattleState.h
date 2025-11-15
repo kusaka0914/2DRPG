@@ -97,6 +97,11 @@ private:
     int oldLevel;
     int oldMaxHp, oldMaxMp, oldAttack, oldDefense;
     
+    // VICTORY_DISPLAY用
+    int victoryExpGained;      /**< @brief 獲得経験値 */
+    int victoryGoldGained;      /**< @brief 獲得ゴールド */
+    std::string victoryEnemyName;  /**< @brief 倒した敵の名前 */
+    
     // 防御状態
     bool playerDefending;
 
@@ -130,6 +135,8 @@ private:
     std::vector<BattleLogic::DamageInfo> pendingDamages; // 処理待ちのダメージ
     float executeDelayTimer;           // 各ダメージ処理間の待機タイマー
     bool damageAppliedInAnimation;     // アニメーション中にダメージが適用されたか（ピーク時検出用）
+    std::vector<int> spellWinTurns;    // 呪文で勝利したターンのインデックス（結果フェーズで呪文選択用）
+    bool waitingForSpellSelection;     // 呪文選択待ちフラグ
     
     // 段階的な結果表示用
     int currentJudgingTurn;            // 現在表示中のターン（0から開始）
@@ -139,6 +146,11 @@ private:
     JudgeSubPhase judgeSubPhase;       // 現在のサブフェーズ
     float judgeDisplayTimer;           // 表示タイマー
     int currentJudgingTurnIndex;       // 現在判定中のターン（0から開始）
+    
+    // INTROフェーズ用
+    float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
+    float introTextScale;              /**< @brief テキスト出現演出のスケール（0.0から1.0へ） */
+    float introTimer;                  /**< @brief INTROフェーズのタイマー（秒） */
 
 public:
     BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy);
@@ -190,6 +202,5 @@ private:
     
     // 重複コードの共通化（DRY原則）
     void updateJudgePhase(float deltaTime, bool isDesperateMode);
-    void updateExecutePhase(float deltaTime, bool isDesperateMode);
     void updateJudgeResultPhase(float deltaTime, bool isDesperateMode);
 };

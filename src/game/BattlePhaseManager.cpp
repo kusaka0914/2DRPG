@@ -36,19 +36,8 @@ BattlePhaseManager::PhaseTransitionResult BattlePhaseManager::updatePhase(
             break;
             
         case BattlePhase::JUDGE_RESULT:
-            if (context.phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION) {
-                result.shouldTransition = true;
-                result.nextPhase = BattlePhase::EXECUTE;
-                result.resetTimer = true;
-            }
-            break;
-            
-        case BattlePhase::EXECUTE:
-            if (context.currentExecutingTurn >= static_cast<int>(context.pendingDamagesSize)) {
-                result.shouldTransition = true;
-                result.nextPhase = BattlePhase::END;
-                result.resetTimer = true;
-            }
+            // JUDGE_RESULTフェーズ内で全処理を完結するため、自動遷移は行わない
+            // ダメージ適用完了後、BattleState側で直接COMMAND_SELECTまたはENDへ遷移
             break;
             
         case BattlePhase::DESPERATE_COMMAND_SELECT:
@@ -63,19 +52,8 @@ BattlePhaseManager::PhaseTransitionResult BattlePhaseManager::updatePhase(
             break;
             
         case BattlePhase::DESPERATE_JUDGE_RESULT:
-            if (context.phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION) {
-                result.shouldTransition = true;
-                result.nextPhase = BattlePhase::DESPERATE_EXECUTE;
-                result.resetTimer = true;
-            }
-            break;
-            
-        case BattlePhase::DESPERATE_EXECUTE:
-            if (context.currentExecutingTurn >= static_cast<int>(context.pendingDamagesSize)) {
-                result.shouldTransition = true;
-                result.nextPhase = BattlePhase::END;
-                result.resetTimer = true;
-            }
+            // DESPERATE_JUDGE_RESULTフェーズ内で全処理を完結するため、自動遷移は行わない
+            // ダメージ適用完了後、BattleState側で直接COMMAND_SELECTまたはENDへ遷移
             break;
             
         default:
@@ -95,20 +73,8 @@ bool BattlePhaseManager::shouldTransitionToNextPhase(
         case BattlePhase::COMMAND_SELECT:
             return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
             
-        case BattlePhase::JUDGE_RESULT:
-            return context.phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION;
-            
-        case BattlePhase::EXECUTE:
-            return context.currentExecutingTurn >= static_cast<int>(context.pendingDamagesSize);
-            
         case BattlePhase::DESPERATE_COMMAND_SELECT:
             return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
-            
-        case BattlePhase::DESPERATE_JUDGE_RESULT:
-            return context.phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION;
-            
-        case BattlePhase::DESPERATE_EXECUTE:
-            return context.currentExecutingTurn >= static_cast<int>(context.pendingDamagesSize);
             
         default:
             return false;
@@ -125,20 +91,8 @@ BattlePhase BattlePhaseManager::getNextPhase(
         case BattlePhase::COMMAND_SELECT:
             return BattlePhase::JUDGE;
             
-        case BattlePhase::JUDGE_RESULT:
-            return BattlePhase::EXECUTE;
-            
-        case BattlePhase::EXECUTE:
-            return BattlePhase::END;
-            
         case BattlePhase::DESPERATE_COMMAND_SELECT:
             return BattlePhase::DESPERATE_JUDGE;
-            
-        case BattlePhase::DESPERATE_JUDGE_RESULT:
-            return BattlePhase::DESPERATE_EXECUTE;
-            
-        case BattlePhase::DESPERATE_EXECUTE:
-            return BattlePhase::END;
             
         default:
             return currentPhase;

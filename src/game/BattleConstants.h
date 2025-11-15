@@ -22,15 +22,34 @@ enum class JudgeSubPhase {
  */
 namespace BattleConstants {
     /** @brief タイミング定数 */
-    constexpr float INTRO_DURATION = 1.0f;
-    constexpr float JUDGE_PLAYER_COMMAND_DISPLAY_TIME = 1.0f;
-    constexpr float JUDGE_ENEMY_COMMAND_DISPLAY_TIME = 1.0f;
-    constexpr float JUDGE_RESULT_DISPLAY_TIME = 1.5f;
+    constexpr float INTRO_DURATION = 2.0f;
+    constexpr float JUDGE_PLAYER_COMMAND_DISPLAY_TIME = 0.5f; // テンポ向上のため0.5秒に短縮
+    constexpr float JUDGE_ENEMY_COMMAND_DISPLAY_TIME = 1.0f; // VS表示0.5秒 + 敵コマンド表示0.5秒（テンポ向上のため短縮）
+    constexpr float JUDGE_VS_DISPLAY_TIME = 0.5f; // テンポ向上のため0.5秒に短縮
+    constexpr float JUDGE_RESULT_DISPLAY_TIME = 0.8f; // テンポ向上のため0.8秒に短縮
     constexpr float JUDGE_RESULT_ANNOUNCEMENT_DURATION = 3.0f;
     constexpr float EXECUTE_DAMAGE_DELAY = 0.5f;
     constexpr float COMMAND_SELECT_ANIMATION_DURATION = 0.3f;
     constexpr float RESULT_SCALE_ANIMATION_DURATION = 0.5f;
     constexpr float RESULT_ROTATION_ANIMATION_DURATION = 1.0f;
+    
+    /** @brief UIアニメーション定数 */
+    constexpr float JUDGE_COMMAND_SLIDE_ANIMATION_DURATION = 0.3f;
+    constexpr float JUDGE_COMMAND_SLIDE_OFFSET = 300.0f;
+    constexpr float JUDGE_VS_ANIMATION_DURATION = 0.3f;
+    constexpr float JUDGE_VS_BASE_SCALE = 3.0f;
+    constexpr float JUDGE_COMMAND_TEXT_SCALE = 2.0f;
+    constexpr float JUDGE_RESULT_SCALE_ANIMATION_DURATION = 0.5f;
+    constexpr float JUDGE_RESULT_MIN_SCALE = 0.3f;
+    constexpr float JUDGE_RESULT_SCALE_RANGE = 0.7f;
+    
+    /** @brief UI位置・サイズ定数 */
+    constexpr int JUDGE_COMMAND_TEXT_PADDING_LARGE = 12;
+    constexpr int JUDGE_COMMAND_TEXT_PADDING_SMALL = 8;
+    constexpr int JUDGE_COMMAND_Y_OFFSET = 180;
+    constexpr int JUDGE_COMMAND_X_OFFSET = 100;
+    constexpr int BATTLE_CHARACTER_SIZE = 300;
+    constexpr int BATTLE_BACKGROUND_ALPHA = 200;
     constexpr float RESULT_SHAKE_DURATION = 0.3f;
     constexpr float DESPERATE_RESULT_SHAKE_DURATION = 0.5f;
     

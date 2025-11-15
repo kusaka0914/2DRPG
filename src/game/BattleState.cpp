@@ -16,11 +16,13 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
     : player(player), enemy(std::move(enemy)), currentPhase(BattlePhase::INTRO),
       selectedOption(0), messageLabel(nullptr), isShowingMessage(false),
       phaseTimer(0), oldLevel(0), oldMaxHp(0), oldMaxMp(0), oldAttack(0), oldDefense(0),
+      victoryExpGained(0), victoryGoldGained(0), victoryEnemyName(""),
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       currentSelectingTurn(0), isFirstCommandSelection(true),
       currentJudgingTurn(0), currentExecutingTurn(0), executeDelayTimer(0.0f),
-      damageAppliedInAnimation(false),
-      judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0) {
+      damageAppliedInAnimation(false), waitingForSpellSelection(false),
+      judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
+      introScale(0.0f), introTimer(0.0f) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -42,9 +44,11 @@ void BattleState::enter() {
     std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
     battleLog = enemyAppearMessage; // battleLogLabelがまだ初期化されていないので、直接battleLogに保存
     
-    // INTROフェーズから開始
     currentPhase = BattlePhase::INTRO;
     phaseTimer = 0;
+    introScale = 0.0f;
+    introTextScale = 0.0f;
+    introTimer = 0.0f;
     updateStatus();
 }
 
@@ -62,6 +66,14 @@ void BattleState::update(float deltaTime) {
         animationController->updateCommandSelectAnimation(deltaTime);
     } else {
         animationController->resetCommandSelectAnimation();
+    }
+    
+    // プレイヤーのHPが7割を切った時に敵の型を確定
+    if (!battleLogic->isBehaviorTypeDetermined()) {
+        float hpRatio = static_cast<float>(player->getHp()) / static_cast<float>(player->getMaxHp());
+        if (hpRatio < 0.7f) {
+            battleLogic->confirmBehaviorType();
+        }
     }
     
     if (nightTimerActive) {
@@ -115,39 +127,87 @@ void BattleState::update(float deltaTime) {
     context.damageAppliedInAnimation = damageAppliedInAnimation;
     context.pendingDamagesSize = pendingDamages.size();
     
-    BattlePhaseManager::PhaseTransitionResult transitionResult = phaseManager->updatePhase(context, deltaTime);
-    
-    if (transitionResult.shouldTransition) {
-        currentPhase = transitionResult.nextPhase;
-        if (transitionResult.resetTimer) {
-            phaseTimer = 0;
-        }
+    // INTROフェーズの場合はBattlePhaseManagerをスキップ（独自のタイマー管理のため）
+    if (currentPhase != BattlePhase::INTRO) {
+        BattlePhaseManager::PhaseTransitionResult transitionResult = phaseManager->updatePhase(context, deltaTime);
         
-        switch (transitionResult.nextPhase) {
-            case BattlePhase::COMMAND_SELECT:
-                if (transitionResult.nextPhase == BattlePhase::COMMAND_SELECT) {
-                    battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
-                    battleLogic->setDesperateMode(false);
-                    isFirstCommandSelection = true;
-                    initializeCommandSelection();
-                }
-                break;
-            case BattlePhase::JUDGE:
-            case BattlePhase::DESPERATE_JUDGE:
-                prepareJudgeResults();
-                currentJudgingTurn = 0;
-                currentJudgingTurnIndex = 0;
-                judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
-                judgeDisplayTimer = 0.0f;
-                break;
-            default:
-                break;
+        if (transitionResult.shouldTransition) {
+            currentPhase = transitionResult.nextPhase;
+            if (transitionResult.resetTimer) {
+                phaseTimer = 0;
+            }
+            
+            switch (transitionResult.nextPhase) {
+                case BattlePhase::COMMAND_SELECT:
+                    if (transitionResult.nextPhase == BattlePhase::COMMAND_SELECT) {
+                        battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                        battleLogic->setDesperateMode(false);
+                        isFirstCommandSelection = true;
+                        initializeCommandSelection();
+                    }
+                    break;
+                case BattlePhase::JUDGE:
+                case BattlePhase::DESPERATE_JUDGE:
+                    // フェーズ遷移時に必ず敵コマンドを生成する（確実に生成されるように）
+                    battleLogic->generateEnemyCommands();
+                    prepareJudgeResults();
+                    currentJudgingTurn = 0;
+                    currentJudgingTurnIndex = 0;
+                    judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
+                    judgeDisplayTimer = 0.0f;
+                    break;
+                default:
+                    break;
+            }
         }
     }
     
     switch (currentPhase) {
-        case BattlePhase::INTRO:
+        case BattlePhase::INTRO: {
+            introTimer += deltaTime;
+            
+            constexpr float SCALE_ANIMATION_DURATION = 0.3f;
+            constexpr float TEXT_DELAY = 0.1f; // テキストは敵より0.1秒遅れて登場
+            constexpr float TEXT_SCALE_DURATION = 0.25f; // テキストのスケールアニメーション時間
+            
+            // 敵のスケールアニメーション
+            if (introTimer < SCALE_ANIMATION_DURATION) {
+                // スケールアニメーション（0.0から1.0へ、イージング付き）
+                float progress = introTimer / SCALE_ANIMATION_DURATION;
+                float eased = progress * progress * (3.0f - 2.0f * progress); // smoothstep
+                introScale = eased;
+            } else {
+                // スケールアニメーション完了後、パルス効果（大きい小さいを繰り返す）
+                float pulseTime = introTimer - SCALE_ANIMATION_DURATION;
+                float pulse = std::sin(pulseTime * 3.14159f * 4.0f) * 0.08f; // ±8%のパルス
+                introScale = 1.0f + pulse;
+            }
+            
+            // テキストのスケールアニメーション（敵より少し遅れて登場）
+            float textTimer = introTimer - TEXT_DELAY;
+            if (textTimer < 0.0f) {
+                introTextScale = 0.0f;
+            } else if (textTimer < TEXT_SCALE_DURATION) {
+                float progress = textTimer / TEXT_SCALE_DURATION;
+                float eased = progress * progress * (3.0f - 2.0f * progress); // smoothstep
+                introTextScale = eased;
+            } else {
+                introTextScale = 1.0f; // アニメーション完了後は固定
+            }
+            
+            // INTRO_DURATION秒後にコマンド選択画面へ遷移
+            if (introTimer >= BattleConstants::INTRO_DURATION) {
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                phaseTimer = 0;
+                introScale = 1.0f;
+                introTextScale = 1.0f;
+                battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                battleLogic->setDesperateMode(false);
+                isFirstCommandSelection = true;
+                initializeCommandSelection();
+            }
             break;
+        }
             
         case BattlePhase::COMMAND_SELECT:
             if (isFirstCommandSelection && checkDesperateModeCondition()) {
@@ -172,12 +232,15 @@ void BattleState::update(float deltaTime) {
             break;
             
         case BattlePhase::JUDGE_RESULT: {
+            // フェーズが既に変更されている場合は処理をスキップ
+            if (currentPhase != BattlePhase::JUDGE_RESULT) {
+                break;
+            }
             updateJudgeResultPhase(deltaTime, false);
-            break;
-        }
-            
-        case BattlePhase::EXECUTE: {
-            updateExecutePhase(deltaTime, false);
+            // フェーズが変更された場合は処理を終了
+            if (currentPhase != BattlePhase::JUDGE_RESULT) {
+                break;
+            }
             break;
         }
             
@@ -199,12 +262,15 @@ void BattleState::update(float deltaTime) {
             break;
             
         case BattlePhase::DESPERATE_JUDGE_RESULT: {
+            // フェーズが既に変更されている場合は処理をスキップ
+            if (currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                break;
+            }
             updateJudgeResultPhase(deltaTime, true);
-            break;
-        }
-            
-        case BattlePhase::DESPERATE_EXECUTE: {
-            updateExecutePhase(deltaTime, true);
+            // フェーズが変更された場合は処理を終了
+            if (currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                break;
+            }
             break;
         }
             
@@ -243,46 +309,16 @@ void BattleState::update(float deltaTime) {
                 if (player->getLevel() > oldLevel) {
                     hasLeveledUp = true;
                     currentPhase = BattlePhase::LEVEL_UP_DISPLAY;
-                    
-                    int hpGain = player->getMaxHp() - oldMaxHp;
-                    int mpGain = player->getMaxMp() - oldMaxMp;
-                    int attackGain = player->getAttack() - oldAttack;
-                    int defenseGain = player->getDefense() - oldDefense;
-                    
-                    std::string levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
-                    levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain) + "\n";
-                    
-                    int levelGained = player->getLevel() - oldLevel;
-                    if (levelGained > 1) {
-                        levelUpMessage = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
-                        levelUpMessage += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain) + "\n";
-                    }
-                    
-                    std::vector<SpellType> learnedSpells;
-                    for (int level = oldLevel + 1; level <= player->getLevel(); level++) {
-                        auto spellsAtLevel = Player::getSpellsLearnedAtLevel(level);
-                        learnedSpells.insert(learnedSpells.end(), spellsAtLevel.begin(), spellsAtLevel.end());
-                    }
-                    
-                    if (!learnedSpells.empty()) {
-                        for (const auto& spell : learnedSpells) {
-                            levelUpMessage += Player::getSpellName(spell) + " ";
-                        }
-                        levelUpMessage += "を覚えた！";
-                    }
-                    
-                    addBattleLog(levelUpMessage);
+                    phaseTimer = 0;
                 } else {
-                    currentPhase = BattlePhase::RESULT;
+                    endBattle();
                 }
-                phaseTimer = 0;
             }
             break;
             
         case BattlePhase::LEVEL_UP_DISPLAY:
             if (phaseTimer > 3.0f) {
-                currentPhase = BattlePhase::RESULT;
-                phaseTimer = 0;
+                endBattle();
             }
             break;
             
@@ -309,8 +345,119 @@ void BattleState::render(Graphics& graphics) {
         battleLogLabel->setText(battleLog);
     }
     
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.clear();
+    // JUDGE_RESULTフェーズではrenderResultAnnouncement()内で背景画像を描画するため、ここでは処理しない
+    if (currentPhase == BattlePhase::JUDGE_RESULT || 
+        currentPhase == BattlePhase::DESPERATE_JUDGE_RESULT) {
+        // renderResultAnnouncement()内で背景画像を描画するため、ここでは何もしない
+    } else {
+        // 画面をクリア（背景画像で覆う前に）
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.clear();
+        
+        // 背景画像を描画
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            // 背景画像が読み込まれていない場合は読み込む
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        
+        if (bgTexture) {
+            // 背景画像を画面全体に描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        }
+    }
+    
+    // INTROフェーズの特別な描画
+    if (currentPhase == BattlePhase::INTRO) {
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        
+        // 中央に敵を配置
+        int enemyX = screenWidth / 2;
+        int enemyY = screenHeight / 2;
+        constexpr int BASE_ENEMY_SIZE = 300;
+        int enemyWidth = static_cast<int>(BASE_ENEMY_SIZE * introScale);
+        int enemyHeight = static_cast<int>(BASE_ENEMY_SIZE * introScale);
+    
+    SDL_Texture* enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    if (enemyTexture) {
+            graphics.drawTexture(enemyTexture, enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight);
+    } else {
+            graphics.setDrawColor(255, 100, 100, 255);
+            graphics.drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+        graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, false);
+        }
+        
+        // 敵の下にテキストを表示（スケールアニメーション付き）
+        std::string appearText = enemy->getTypeName() + "があらわれた！";
+        SDL_Color textColor = {255, 255, 255, 255};
+        
+        // テキストをテクスチャとして取得
+        SDL_Texture* textTexture = graphics.createTextTexture(appearText, "default", textColor);
+        if (textTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            // スケールに応じてサイズを調整
+            int scaledWidth = static_cast<int>(textWidth * introTextScale);
+            int scaledHeight = static_cast<int>(textHeight * introTextScale);
+            
+            // テキストの中心位置を計算（位置は固定、敵のスケールに依存しない）
+            int textX = enemyX - scaledWidth / 2;
+            int textY = enemyY + BASE_ENEMY_SIZE / 2 + 40 - scaledHeight / 2 - 20; // 固定サイズを基準に位置を計算
+            
+            // 背景を描画（元のサイズに合わせて、パディング付き）
+            constexpr int padding = 8;
+            int bgX = enemyX - textWidth / 2 - padding;
+            int bgY = enemyY + BASE_ENEMY_SIZE / 2 + 40 - textHeight / 2 - 20 - padding;
+            int bgWidth = textWidth + padding * 2;
+            int bgHeight = textHeight + padding * 2;
+            
+            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+            
+            // スケールしたテキストを描画
+            graphics.drawTexture(textTexture, textX, textY, scaledWidth, scaledHeight);
+            
+            SDL_DestroyTexture(textTexture);
+        }
+        
+        // フォールバック：通常のテキスト描画（textTextureがnullの場合）
+        if (!textTexture) {
+            int textX = enemyX;
+            int textY = enemyY + BASE_ENEMY_SIZE / 2 + 40;
+            
+            // 背景を描画（テキストサイズを取得してから）
+            SDL_Texture* fallbackTexture = graphics.createTextTexture(appearText, "default", textColor);
+            if (fallbackTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(fallbackTexture, nullptr, nullptr, &textWidth, &textHeight);
+                
+                constexpr int padding = 8;
+                int bgX = textX - padding;
+                int bgY = textY - padding;
+                int bgWidth = textWidth + padding * 2;
+                int bgHeight = textHeight + padding * 2;
+                
+                graphics.setDrawColor(0, 0, 0, 200);
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                graphics.setDrawColor(255, 255, 255, 255);
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                
+                SDL_DestroyTexture(fallbackTexture);
+            }
+            
+            graphics.drawText(appearText, textX, textY, "default", textColor);
+        }
+        
+        graphics.present();
+        return;
+    }
     
     if (currentPhase == BattlePhase::JUDGE || currentPhase == BattlePhase::DESPERATE_JUDGE) {
         BattleUI::JudgeRenderParams params;
@@ -319,13 +466,13 @@ void BattleState::render(Graphics& graphics) {
         params.judgeSubPhase = judgeSubPhase;
         params.judgeDisplayTimer = judgeDisplayTimer;
         battleUI->renderJudgeAnimation(params);
-        ui.render(graphics);
+        // ui.render(graphics); // バトルログなどの下部UIを非表示
         
-        if (nightTimerActive) {
-            CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
-            CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-            CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
-        }
+        // if (nightTimerActive) {
+        //     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+        //     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
+        //     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+        // }
         
         graphics.present();
         return;
@@ -342,16 +489,256 @@ void BattleState::render(Graphics& graphics) {
         params.currentOptions = &currentOptions;
         battleUI->renderCommandSelectionUI(params);
         
-        if (nightTimerActive) {
-            CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
-            CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-            CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+        // if (nightTimerActive) {
+        //     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+        //     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
+        //     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+        // }
+        
+        graphics.present();
+        return;
+    }
+    
+    if (currentPhase == BattlePhase::VICTORY_DISPLAY) {
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        int centerX = screenWidth / 2;
+        int centerY = screenHeight / 2;
+        
+        // 画面をクリア（背景画像で覆う前に）
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.clear();
+        
+        // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
+        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        }
+        
+        // プレイヤーと敵のキャラクター描画（renderResultAnnouncementと同じ構成）
+        auto& charState = animationController->getCharacterState();
+        int playerBaseX = screenWidth / 4;
+        int playerBaseY = screenHeight / 2;
+        int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
+        int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
+        
+        int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
+        int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+        
+        // HP表示（プレイヤーのみ表示）
+        SDL_Color whiteColor = {255, 255, 255, 255};
+        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
+        
+        // プレイヤーの名前とレベル（HPの上に表示）
+        std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
+        SDL_Texture* playerNameTexture = graphics.createTextTexture(playerNameText, "default", whiteColor);
+        if (playerNameTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(playerNameTexture, nullptr, nullptr, &textWidth, &textHeight);
+            int bgX = playerX - 100 - padding;
+            int bgY = playerY - playerHeight / 2 - 80 - padding;
+            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+            SDL_DestroyTexture(playerNameTexture);
+        }
+        graphics.drawText(playerNameText, playerX - 100, playerY - playerHeight / 2 - 80, "default", whiteColor);
+        
+        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
+        SDL_Texture* playerHpTexture = graphics.createTextTexture(playerHpText, "default", whiteColor);
+        if (playerHpTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
+            int bgX = playerX - 100 - padding;
+            int bgY = playerY - playerHeight / 2 - 40 - padding;
+            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+            SDL_DestroyTexture(playerHpTexture);
+        }
+        graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+        
+        // プレイヤーのみ描画（敵は描画しない）
+        SDL_Texture* playerTex = graphics.getTexture("player");
+        if (playerTex) {
+            graphics.drawTexture(playerTex, playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight);
+        } else {
+            graphics.setDrawColor(100, 200, 255, 255);
+            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
+        }
+        
+        // 勝利メッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
+        std::string victoryText = victoryEnemyName + "を倒した。経験値が" + std::to_string(victoryExpGained);
+        SDL_Color textColor = {255, 255, 255, 255};
+        
+        SDL_Texture* textTexture = graphics.createTextTexture(victoryText, "default", textColor);
+        if (textTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            int textX = centerX - textWidth / 2;
+            int textY = centerY - textHeight / 2 - 100;
+            int padding = 12;
+            
+            // 背景を描画
+            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.drawRect(textX - padding, textY - padding,
+                             textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(textX - padding, textY - padding,
+                             textWidth + padding * 2, textHeight + padding * 2, false);
+            
+            // テキストを描画
+            graphics.drawText(victoryText, textX, textY, "default", textColor);
+            
+            SDL_DestroyTexture(textTexture);
         }
         
         graphics.present();
         return;
     }
     
+    if (currentPhase == BattlePhase::LEVEL_UP_DISPLAY) {
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        int centerX = screenWidth / 2;
+        int centerY = screenHeight / 2;
+        
+        // 画面をクリア（背景画像で覆う前に）
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.clear();
+        
+        // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
+        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        }
+        
+        // プレイヤーと敵のキャラクター描画（renderResultAnnouncementと同じ構成）
+        auto& charState = animationController->getCharacterState();
+        int playerBaseX = screenWidth / 4;
+        int playerBaseY = screenHeight / 2;
+        int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
+        int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
+        
+        int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
+        int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+        
+        // HP表示（プレイヤーのみ表示）
+        SDL_Color whiteColor = {255, 255, 255, 255};
+        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
+        
+        // プレイヤーの名前とレベル（HPの上に表示）
+        std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
+        SDL_Texture* playerNameTexture = graphics.createTextTexture(playerNameText, "default", whiteColor);
+        if (playerNameTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(playerNameTexture, nullptr, nullptr, &textWidth, &textHeight);
+            int bgX = playerX - 100 - padding;
+            int bgY = playerY - playerHeight / 2 - 80 - padding;
+            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+            SDL_DestroyTexture(playerNameTexture);
+        }
+        graphics.drawText(playerNameText, playerX - 100, playerY - playerHeight / 2 - 80, "default", whiteColor);
+        
+        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
+        SDL_Texture* playerHpTexture = graphics.createTextTexture(playerHpText, "default", whiteColor);
+        if (playerHpTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
+            int bgX = playerX - 100 - padding;
+            int bgY = playerY - playerHeight / 2 - 40 - padding;
+            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+            SDL_DestroyTexture(playerHpTexture);
+        }
+        graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+        
+        // プレイヤーのみ描画（敵は描画しない）
+        SDL_Texture* playerTex = graphics.getTexture("player");
+        if (playerTex) {
+            graphics.drawTexture(playerTex, playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight);
+        } else {
+            graphics.setDrawColor(100, 200, 255, 255);
+            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
+        }
+        
+        // レベルアップメッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
+        int hpGain = player->getMaxHp() - oldMaxHp;
+        int mpGain = player->getMaxMp() - oldMaxMp;
+        int attackGain = player->getAttack() - oldAttack;
+        int defenseGain = player->getDefense() - oldDefense;
+        
+        std::string levelUpText = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
+        levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+        
+        int levelGained = player->getLevel() - oldLevel;
+        if (levelGained > 1) {
+            levelUpText = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
+            levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+        }
+        
+        std::vector<SpellType> learnedSpells;
+        for (int level = oldLevel + 1; level <= player->getLevel(); level++) {
+            auto spellsAtLevel = Player::getSpellsLearnedAtLevel(level);
+            learnedSpells.insert(learnedSpells.end(), spellsAtLevel.begin(), spellsAtLevel.end());
+        }
+        
+        if (!learnedSpells.empty()) {
+            levelUpText += "\n";
+            for (const auto& spell : learnedSpells) {
+                levelUpText += Player::getSpellName(spell) + " ";
+            }
+            levelUpText += "を覚えた！";
+        }
+        
+        SDL_Color textColor = {255, 255, 255, 255};
+        
+        SDL_Texture* textTexture = graphics.createTextTexture(levelUpText, "default", textColor);
+        if (textTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            int textX = centerX - textWidth / 2;
+            int textY = centerY - textHeight / 2 - 100;
+            int padding = 12;
+            
+            // 背景を描画
+            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.drawRect(textX - padding, textY - padding,
+                             textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.drawRect(textX - padding, textY - padding,
+                             textWidth + padding * 2, textHeight + padding * 2, false);
+            
+            // テキストを描画
+            graphics.drawText(levelUpText, textX, textY, "default", textColor);
+            
+            SDL_DestroyTexture(textTexture);
+        }
+        
+        graphics.present();
+        return;
+    }
+    
+    // JUDGE_RESULTフェーズの描画（VICTORY_DISPLAYやLEVEL_UP_DISPLAYに遷移していない場合のみ）
     if (currentPhase == BattlePhase::JUDGE_RESULT || 
         currentPhase == BattlePhase::DESPERATE_JUDGE_RESULT) {
         auto stats = battleLogic->getStats();
@@ -363,22 +750,18 @@ void BattleState::render(Graphics& graphics) {
         params.playerWins = stats.playerWins;
         params.enemyWins = stats.enemyWins;
         battleUI->renderResultAnnouncement(params);
-        ui.render(graphics);
         
-        if (nightTimerActive) {
-            CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
-            CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-            CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
-        }
+        // ヒットエフェクトを描画
+        effectManager->renderHitEffects(graphics);
         
         graphics.present();
         return;
     }
     
+    auto& shakeState = effectManager->getShakeState();
+    
     int screenWidth = graphics.getScreenWidth();
     int screenHeight = graphics.getScreenHeight();
-    
-    auto& shakeState = effectManager->getShakeState();
     
     int playerBaseX = screenWidth / 4;
     int playerBaseY = screenHeight / 2;
@@ -448,13 +831,13 @@ void BattleState::render(Graphics& graphics) {
     
     effectManager->renderHitEffects(graphics);
     
-    ui.render(graphics);
+    // ui.render(graphics); // バトルログなどの下部UIを非表示
     
-    if (nightTimerActive) {
-        CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
-        CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-        CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
-    }
+    // if (nightTimerActive) {
+    //     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+    //     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
+    //     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+    // }
     
     graphics.present();
 }
@@ -564,6 +947,7 @@ void BattleState::hideMessage() {
 }
 
 void BattleState::loadBattleImages() {
+    // 背景画像はrender()で必要に応じて読み込む
 }
 
 void BattleState::showSpellMenu() {
@@ -625,8 +1009,148 @@ void BattleState::handleSpellSelection(int spellChoice) {
     }
     
     if (validSelection) {
+        // 結果フェーズで呪文を選択した場合の処理
+        bool isResultPhase = waitingForSpellSelection;
+        
         int result = player->castSpell(selectedSpell, enemy.get());
         
+        // 攻撃呪文かどうかを判定
+        bool isAttackSpell = (selectedSpell == SpellType::ATSUIATSUI || 
+                              selectedSpell == SpellType::BIRIBIRIDOKKAN || 
+                              selectedSpell == SpellType::DARKNESSIMPACT ||
+                              (selectedSpell == SpellType::WANCHANTAOSERU && result > 0 && result < enemy->getHp()));
+        
+        if (isResultPhase && isAttackSpell && result > 0) {
+            // 結果フェーズで攻撃呪文を選択した場合、ダメージエントリを追加
+            auto stats = battleLogic->getStats();
+            float multiplier = battleLogic->getIsDesperateMode() ? 1.5f : (stats.hasThreeWinStreak ? BattleConstants::THREE_WIN_STREAK_MULTIPLIER : 1.0f);
+            BattleLogic::DamageInfo spellDamage;
+            spellDamage.damage = result;
+            spellDamage.isPlayerHit = false;
+            spellDamage.isDraw = false;
+            spellDamage.playerDamage = 0;
+            spellDamage.enemyDamage = 0;
+            spellDamage.commandType = BattleConstants::COMMAND_SPELL;
+            spellDamage.isCounterRush = false;
+            pendingDamages.push_back(spellDamage);
+            
+            // 呪文で勝利したターンを1つ処理済みにする
+            if (!spellWinTurns.empty()) {
+                spellWinTurns.erase(spellWinTurns.begin());
+            }
+            
+            // まだ呪文で勝利したターンがある場合、再度呪文選択フェーズに移行
+            if (!spellWinTurns.empty()) {
+                waitingForSpellSelection = true;
+                currentPhase = BattlePhase::SPELL_SELECTION;
+                isShowingOptions = false;
+                hideMessage();
+                return;
+            } else {
+                // 全ての呪文を処理した場合、結果フェーズに戻る
+                waitingForSpellSelection = false;
+                // アニメーションをリセットして開始（既存のダメージエントリの後に追加された呪文のダメージエントリを処理するため）
+                animationController->resetResultAnimation();
+                damageAppliedInAnimation = false;
+                // currentExecutingTurnは既に処理済みのダメージエントリの数になっているはずなので、そのままにする
+                if (battleLogic->getIsDesperateMode()) {
+                    currentPhase = BattlePhase::DESPERATE_JUDGE_RESULT;
+                } else {
+                    currentPhase = BattlePhase::JUDGE_RESULT;
+                }
+                hideMessage();
+                return;
+            }
+        } else if (isResultPhase && !isAttackSpell) {
+            // 結果フェーズで攻撃以外の呪文を選択した場合、効果を適用して結果フェーズに戻る
+            switch (selectedSpell) {
+                case SpellType::KIZUGAIAERU:
+                    {
+                        std::string healMessage = player->getName() + "はキズガイエールを唱えた！\nHP" + std::to_string(result) + "回復！";
+                        addBattleLog(healMessage);
+                    }
+                    break;
+                case SpellType::ICHIKABACHIKA:
+                    {
+                        if (result > 0) {
+                            std::string successMessage = player->getName() + "はイチカバチーカを唱えた！\nカウンター効果が発動した！";
+                            addBattleLog(successMessage);
+                        } else {
+                            std::string failMessage = player->getName() + "はイチカバチーカを唱えた！\nしかし効果が発動しなかった...";
+                            addBattleLog(failMessage);
+                        }
+                    }
+                    break;
+                case SpellType::TSUGICHOTTOTSUYOI:
+                    {
+                        if (result > 0) {
+                            std::string successMessage = player->getName() + "はツギチョットツヨーイを唱えた！\n次のターンの攻撃が2.5倍になる！";
+                            addBattleLog(successMessage);
+                        } else {
+                            std::string failMessage = player->getName() + "はツギチョットツヨーイを唱えた！\nしかし効果が発動しなかった...";
+                            addBattleLog(failMessage);
+                        }
+                    }
+                    break;
+                case SpellType::TSUGIMECHATSUYOI:
+                    {
+                        if (result > 0) {
+                            std::string successMessage = player->getName() + "はツギメッチャツヨーイを唱えた！\n次のターンの攻撃が4倍になる！";
+                            addBattleLog(successMessage);
+                        } else {
+                            std::string failMessage = player->getName() + "はツギメッチャツヨーイを唱えた！\nしかし効果が発動しなかった...";
+                            addBattleLog(failMessage);
+                        }
+                    }
+                    break;
+                case SpellType::WANCHANTAOSERU:
+                    {
+                        if (result >= enemy->getHp()) {
+                            std::string instantKillMessage = player->getName() + "はワンチャンタオセールを唱えた！\n" + enemy->getTypeName() + "を即死させた！";
+                            addBattleLog(instantKillMessage);
+                            checkBattleEnd();
+                            hideMessage();
+                            return;
+                        } else {
+                            std::string failMessage = player->getName() + "はワンチャンタオセールを唱えた！\nしかし効果が発動しなかった...";
+                            addBattleLog(failMessage);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+            
+            // 呪文で勝利したターンを1つ処理済みにする
+            if (!spellWinTurns.empty()) {
+                spellWinTurns.erase(spellWinTurns.begin());
+            }
+            
+            // まだ呪文で勝利したターンがある場合、再度呪文選択フェーズに移行
+            if (!spellWinTurns.empty()) {
+                waitingForSpellSelection = true;
+                currentPhase = BattlePhase::SPELL_SELECTION;
+                isShowingOptions = false;
+                hideMessage();
+                return;
+            } else {
+                // 全ての呪文を処理した場合、結果フェーズに戻る
+                waitingForSpellSelection = false;
+                // アニメーションをリセットして開始（既存のダメージエントリの後に追加された呪文のダメージエントリを処理するため）
+                animationController->resetResultAnimation();
+                damageAppliedInAnimation = false;
+                // currentExecutingTurnは既に処理済みのダメージエントリの数になっているはずなので、そのままにする
+                if (battleLogic->getIsDesperateMode()) {
+                    currentPhase = BattlePhase::DESPERATE_JUDGE_RESULT;
+                } else {
+                    currentPhase = BattlePhase::JUDGE_RESULT;
+                }
+                hideMessage();
+                return;
+            }
+        }
+        
+        // 古いシステム用の処理（PLAYER_TURNフェーズ）
         switch (selectedSpell) {
             case SpellType::KIZUGAIAERU:
                 {
@@ -731,6 +1255,10 @@ void BattleState::handleSpellSelection(int spellChoice) {
         }
     } else {
         addBattleLog("その呪文は使用できません！");
+        if (currentPhase == BattlePhase::SPELL_SELECTION && waitingForSpellSelection) {
+            // 結果フェーズで呪文選択中の場合は、再度呪文選択フェーズに戻る
+            return;
+        }
         returnToPlayerTurn();
     }
     
@@ -912,6 +1440,10 @@ void BattleState::checkBattleEnd() {
             player->gainExp(2000); // 通常の2倍
             player->gainGold(10000); // 通常の2倍
             
+            victoryExpGained = 2000;
+            victoryGoldGained = 10000;
+            victoryEnemyName = enemy->getTypeName();
+            
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
         } else {
@@ -921,6 +1453,10 @@ void BattleState::checkBattleEnd() {
             player->gainGold(goldGained);
             
             player->changeKingTrust(3);
+            
+            victoryExpGained = expGained;
+            victoryGoldGained = goldGained;
+            victoryEnemyName = enemy->getTypeName();
             
             std::string victoryMessage = enemy->getTypeName() + "は倒れた...\n" + std::to_string(expGained) + "の経験値を得た！\n王様からの信頼度が3上昇した！";
             addBattleLog(victoryMessage);
@@ -1294,7 +1830,19 @@ void BattleState::executeSelectedOption() {
         }
     } else if (currentPhase == BattlePhase::SPELL_SELECTION) {
         if (selected == "やめる") {
-            returnToPlayerTurn();
+            if (waitingForSpellSelection) {
+                // 結果フェーズで呪文選択中の場合は、結果フェーズに戻る
+                waitingForSpellSelection = false;
+                if (battleLogic->getIsDesperateMode()) {
+                    currentPhase = BattlePhase::DESPERATE_JUDGE_RESULT;
+                } else {
+                    currentPhase = BattlePhase::JUDGE_RESULT;
+                }
+                isShowingOptions = false;
+                return;
+            } else {
+                returnToPlayerTurn();
+            }
         } else {
             int spellIndex = 0;
             if (player->canCastSpell(SpellType::KIZUGAIAERU)) {
@@ -1425,6 +1973,7 @@ void BattleState::prepareJudgeResults() {
     turnResults.clear();
     
     auto judgeResults = battleLogic->judgeAllRounds();
+    // calculateBattleStats()を呼んでstatsを更新する（メンバ変数のstatsが更新される）
     auto stats = battleLogic->calculateBattleStats();
     
     for (size_t i = 0; i < judgeResults.size(); i++) {
@@ -1494,7 +2043,28 @@ void BattleState::judgeBattle() {
 }
 
 void BattleState::prepareDamageList(float damageMultiplier) {
+    // 呪文で勝利したターンを記録
+    spellWinTurns.clear();
+    auto playerCmds = battleLogic->getPlayerCommands();
+    auto enemyCmds = battleLogic->getEnemyCommands();
+    auto stats = battleLogic->getStats();
+    
+    if (stats.playerWins > stats.enemyWins) {
+        for (int i = 0; i < battleLogic->getCommandTurnCount(); i++) {
+            if (battleLogic->judgeRound(playerCmds[i], enemyCmds[i]) == BattleConstants::JUDGE_RESULT_PLAYER_WIN) {
+                if (playerCmds[i] == BattleConstants::COMMAND_SPELL) {
+                    spellWinTurns.push_back(i);
+                }
+            }
+        }
+    }
+    
     pendingDamages = battleLogic->prepareDamageList(damageMultiplier);
+    
+    // 呪文で勝利したターンのダメージエントリを削除（後でプレイヤーが選択した呪文を実行するため）
+    // ただし、攻撃呪文の場合はダメージエントリを残す（既に追加されている）
+    // ここでは、呪文で勝利したターンは記録だけして、ダメージエントリは削除しない
+    // （攻撃呪文の場合は既にダメージエントリが追加されているため）
 }
 
 void BattleState::executeWinningTurns(float damageMultiplier) {
@@ -1663,22 +2233,132 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
 }
 
 void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) {
+    // フェーズが既に変更されている場合は処理をスキップ
+    if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+        return;
+    }
+    
     animationController->updateResultAnimation(deltaTime, isDesperateMode);
     auto& resultState = animationController->getResultState();
     
-    {
-        auto stats = battleLogic->getStats();
-        bool isVictory = (stats.playerWins > stats.enemyWins);
-        bool isDefeat = (stats.enemyWins > stats.playerWins);
-        animationController->updateResultCharacterAnimation(
-            deltaTime, isVictory, isDefeat, resultState.resultAnimationTimer,
-            damageAppliedInAnimation, stats.hasThreeWinStreak);
+    auto stats = battleLogic->getStats();
+    bool isVictory = (stats.playerWins > stats.enemyWins);
+    bool isDefeat = (stats.enemyWins > stats.playerWins);
+    
+    // ダメージリストの準備（初回のみ）
+    if (pendingDamages.empty()) {
+        float multiplier = isDesperateMode ? 1.5f : (stats.hasThreeWinStreak ? BattleConstants::THREE_WIN_STREAK_MULTIPLIER : 1.0f);
+        prepareDamageList(multiplier);
+        damageAppliedInAnimation = false;
+        currentExecutingTurn = 0;
+        executeDelayTimer = 0.0f;
+        
+        // 呪文で勝利したターンがある場合、呪文選択フェーズに移行
+        if (!spellWinTurns.empty() && !waitingForSpellSelection) {
+            waitingForSpellSelection = true;
+            currentPhase = BattlePhase::SPELL_SELECTION;
+            isShowingOptions = false;
+            return;
+        }
+        
+        // 最初のアニメーションを開始
+        animationController->resetResultAnimation();
     }
     
+    // 現在のダメージに対してアニメーションを実行
+    if (currentExecutingTurn < pendingDamages.size()) {
+        auto& damageInfo = pendingDamages[currentExecutingTurn];
+        
+        // カウンターラッシュの場合はアニメーション時間を短縮
+        bool isCounterRush = damageInfo.isCounterRush;
+        float animStartTime = isCounterRush ? 0.1f : 0.5f;
+        float animDuration = isCounterRush ? 0.3f : 1.0f;
+        
+        // アニメーション更新（現在のダメージ用）
+        animationController->updateResultCharacterAnimation(
+            deltaTime, isVictory, isDefeat, resultState.resultAnimationTimer,
+            damageAppliedInAnimation, stats.hasThreeWinStreak,
+            animStartTime, animDuration);
+        
+        // アニメーションのピーク時（攻撃が当たる瞬間）にダメージを適用
+        float animTime = resultState.resultAnimationTimer - animStartTime;
+        
+        if (animTime >= 0.0f && animTime <= animDuration) {
+            float progress = animTime / animDuration;
+            // ピーク時（progress = 0.2f付近）にダメージを適用
+            if (progress >= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT - BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                progress <= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT + BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                !damageAppliedInAnimation) {
+                
+                // 現在のダメージを適用
+                auto& damageInfo = pendingDamages[currentExecutingTurn];
+                
+                if (damageInfo.isDraw) {
+                    // 引き分けの場合、両方にダメージを適用
+                    if (damageInfo.playerDamage > 0) {
+                        player->takeDamage(damageInfo.playerDamage);
+                        int playerX = BattleConstants::PLAYER_POSITION_X;
+                        int playerY = BattleConstants::PLAYER_POSITION_Y;
+                        effectManager->triggerHitEffect(damageInfo.playerDamage, playerX, playerY, true);
+                    }
+                    if (damageInfo.enemyDamage > 0) {
+                        enemy->takeDamage(damageInfo.enemyDamage);
+                        int enemyX = BattleConstants::ENEMY_POSITION_X;
+                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
+                        effectManager->triggerHitEffect(damageInfo.enemyDamage, enemyX, enemyY, false);
+                    }
+                    // 引き分け時のスクリーンシェイク
+                    float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
+                    float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
+                    effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                } else {
+                    int damage = damageInfo.damage;
+                    bool isPlayerHit = damageInfo.isPlayerHit;
+                    
+                    if (isPlayerHit) {
+                        player->takeDamage(damage);
+                        int playerX = BattleConstants::PLAYER_POSITION_X;
+                        int playerY = BattleConstants::PLAYER_POSITION_Y;
+                        effectManager->triggerHitEffect(damage, playerX, playerY, true);
+                        // 引き分けと同じスクリーンシェイク
+                        float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
+                        float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
+                        effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                    } else {
+                        enemy->takeDamage(damage);
+                        int enemyX = BattleConstants::ENEMY_POSITION_X;
+                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
+                        effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
+                        // 引き分けと同じスクリーンシェイク
+                        float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
+                        float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
+                        effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                    }
+                }
+                
+                damageAppliedInAnimation = true;
+            }
+        }
+        
+        // アニメーション完了後、次のダメージへ進む
+        float animTotalDuration = animStartTime + animDuration;
+        if (resultState.resultAnimationTimer >= animTotalDuration) {
+            // 現在のアニメーション完了
+            currentExecutingTurn++;
+            damageAppliedInAnimation = false;
+            // 次のダメージのアニメーションを開始
+            if (currentExecutingTurn < pendingDamages.size()) {
+                animationController->resetResultAnimation();
+            }
+            // 最後のダメージ完了時は、タイマーをリセットせず、そのまま継続させる
+            // （最後のダメージ完了後、一定時間待ってからフェーズ遷移するため）
+        }
+    }
+    
+    // 最初のアニメーション開始時のスクリーンシェイク（勝利/敗北/引き分け）
     float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
-    if (resultState.resultAnimationTimer < shakeDuration && !resultState.resultShakeActive) {
+    if (resultState.resultAnimationTimer < shakeDuration && !resultState.resultShakeActive && currentExecutingTurn == 0) {
         resultState.resultShakeActive = true;
-        auto stats = battleLogic->getStats();
         if (stats.playerWins > stats.enemyWins) {
             float intensity = isDesperateMode ? BattleConstants::DESPERATE_VICTORY_SHAKE_INTENSITY : BattleConstants::VICTORY_SHAKE_INTENSITY;
             effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
@@ -1691,54 +2371,41 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         }
     }
     
-    if (pendingDamages.empty()) {
-        auto stats = battleLogic->getStats();
-        float multiplier = isDesperateMode ? 1.5f : (stats.hasThreeWinStreak ? BattleConstants::THREE_WIN_STREAK_MULTIPLIER : 1.0f);
-        prepareDamageList(multiplier);
-        damageAppliedInAnimation = false;
-    }
-    
-    if (phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION) {
-        currentPhase = isDesperateMode ? BattlePhase::DESPERATE_EXECUTE : BattlePhase::EXECUTE;
-        phaseTimer = 0;
-        animationController->resetResultAnimation();
-        currentExecutingTurn = damageAppliedInAnimation ? 1 : 0;
-        executeDelayTimer = 0.0f;
-    }
-}
-
-void BattleState::updateExecutePhase(float deltaTime, bool isDesperateMode) {
-    executeDelayTimer += deltaTime;
-    
-    if (executeDelayTimer >= BattleConstants::EXECUTE_DAMAGE_DELAY && currentExecutingTurn < pendingDamages.size()) {
-        auto& damageInfo = pendingDamages[currentExecutingTurn];
-        int damage = damageInfo.damage;
-        bool isPlayerHit = damageInfo.isPlayerHit;
-        
-        if (isPlayerHit) {
-            player->takeDamage(damage);
-            int playerX = BattleConstants::PLAYER_POSITION_X;
-            int playerY = BattleConstants::PLAYER_POSITION_Y;
-            effectManager->triggerHitEffect(damage, playerX, playerY, true);
-            effectManager->triggerScreenShake(BattleConstants::DAMAGE_SHAKE_INTENSITY, BattleConstants::DAMAGE_SHAKE_DURATION, false, true);
-        } else {
-            enemy->takeDamage(damage);
-            int enemyX = BattleConstants::ENEMY_POSITION_X;
-            int enemyY = BattleConstants::ENEMY_POSITION_Y;
-            effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
-            auto stats = battleLogic->getStats();
-            float shakeIntensity = isDesperateMode ? 
-                (stats.hasThreeWinStreak ? BattleConstants::DESPERATE_ATTACK_SHAKE_INTENSITY_STREAK : BattleConstants::DESPERATE_ATTACK_SHAKE_INTENSITY_NORMAL) :
-                (stats.hasThreeWinStreak ? BattleConstants::ATTACK_SHAKE_INTENSITY_STREAK : BattleConstants::ATTACK_SHAKE_INTENSITY_NORMAL);
-            float shakeDuration = isDesperateMode ? BattleConstants::DESPERATE_ATTACK_SHAKE_DURATION : BattleConstants::ATTACK_SHAKE_DURATION;
-            effectManager->triggerScreenShake(shakeIntensity, shakeDuration, true, false);
+    // 全ダメージ適用完了後、戦闘終了判定
+    if (currentExecutingTurn >= pendingDamages.size()) {
+        constexpr float animTotalDuration = 0.5f + 1.0f; // 1.5秒
+        // 最後のダメージ完了時点から、さらに1.5秒待機（合計3秒）
+        constexpr float finalWaitDuration = animTotalDuration * 2.0f; // 3.0秒
+        // タイマーが一定時間経過したらフェーズ遷移（フォールバック：最大4秒待機）
+        constexpr float maxWaitTime = 4.0f;
+        if (resultState.resultAnimationTimer >= finalWaitDuration || phaseTimer >= maxWaitTime) {
+            updateStatus();
+            
+            if (enemy->getIsAlive() && player->getIsAlive()) {
+                if (isDesperateMode) {
+                    battleLogic->setDesperateMode(false);
+                    battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                }
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                initializeCommandSelection();
+            } else {
+                checkBattleEnd();
+                // checkBattleEnd()でフェーズが変更された場合は、ここで処理を終了（リセット処理は行わない）
+                if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                    return;
+                }
+            }
+            
+            // リセット（フェーズが変更されていない場合のみ）
+            animationController->resetResultAnimation();
+            currentExecutingTurn = 0;
+            executeDelayTimer = 0.0f;
+            damageAppliedInAnimation = false;
+            pendingDamages.clear();
+            phaseTimer = 0;
         }
-        
-        currentExecutingTurn++;
-        executeDelayTimer = 0.0f;
-    }
-    
-    if (currentExecutingTurn >= pendingDamages.size() && executeDelayTimer >= BattleConstants::EXECUTE_DAMAGE_DELAY) {
+    } else if (pendingDamages.empty() && phaseTimer > BattleConstants::JUDGE_RESULT_ANNOUNCEMENT_DURATION) {
+        // ダメージが1つもない場合（引き分けなど）は即座に終了
         updateStatus();
         
         if (enemy->getIsAlive() && player->getIsAlive()) {
@@ -1750,7 +2417,18 @@ void BattleState::updateExecutePhase(float deltaTime, bool isDesperateMode) {
             initializeCommandSelection();
         } else {
             checkBattleEnd();
+            // checkBattleEnd()でフェーズが変更された場合は、ここで処理を終了（リセット処理は行わない）
+            if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                return;
+            }
         }
+        
+        // リセット（フェーズが変更されていない場合のみ）
+        animationController->resetResultAnimation();
+        currentExecutingTurn = 0;
+        executeDelayTimer = 0.0f;
+        damageAppliedInAnimation = false;
+        pendingDamages.clear();
         phaseTimer = 0;
     }
-} 
+}

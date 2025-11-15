@@ -7,9 +7,8 @@ BattleAnimationController::BattleAnimationController() {
 
 void BattleAnimationController::updateResultCharacterAnimation(float deltaTime, bool isVictory, bool isDefeat,
                                                                 float resultTimer, bool& damageAppliedInAnimation,
-                                                                bool hasThreeWinStreak) {
-    constexpr float animStartTime = 0.5f;
-    constexpr float animDuration = 1.0f;
+                                                                bool hasThreeWinStreak,
+                                                                float animStartTime, float animDuration) {
     float animTime = resultTimer - animStartTime;
     
     if (animTime < 0.0f) {

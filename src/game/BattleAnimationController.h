@@ -80,10 +80,13 @@ public:
      * @param resultTimer 結果発表タイマー
      * @param damageAppliedInAnimation アニメーション中にダメージが適用されたか（参照渡し）
      * @param hasThreeWinStreak 3連勝フラグ（アニメーションの強度に影響）
+     * @param animStartTime アニメーション開始時間（デフォルト: 0.5f）
+     * @param animDuration アニメーション継続時間（デフォルト: 1.0f）
      */
     void updateResultCharacterAnimation(float deltaTime, bool isVictory, bool isDefeat, 
                                         float resultTimer, bool& damageAppliedInAnimation,
-                                        bool hasThreeWinStreak);
+                                        bool hasThreeWinStreak,
+                                        float animStartTime = 0.5f, float animDuration = 1.0f);
     CharacterAnimationState& getCharacterState() { return characterState; }
     const CharacterAnimationState& getCharacterState() const { return characterState; }
     

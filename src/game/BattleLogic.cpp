@@ -4,10 +4,11 @@
 
 BattleLogic::BattleLogic(std::shared_ptr<Player> player, Enemy* enemy)
     : player(player), enemy(enemy), commandTurnCount(BattleConstants::NORMAL_TURN_COUNT),
-      isDesperateMode(false) {
+      isDesperateMode(false), behaviorTypeDetermined(false) {
     playerCommands.resize(commandTurnCount);
     enemyCommands.resize(commandTurnCount);
     stats = {0, 0, false};
+    determineEnemyBehaviorType();
 }
 
 int BattleLogic::judgeRound(int playerCmd, int enemyCmd) const {
@@ -57,8 +58,8 @@ std::vector<BattleLogic::JudgeResult> BattleLogic::judgeAllRounds() const {
     return results;
 }
 
-BattleLogic::BattleStats BattleLogic::calculateBattleStats() const {
-    BattleStats stats = {0, 0, false};
+BattleLogic::BattleStats BattleLogic::calculateBattleStats() {
+    stats = {0, 0, false};
     
     for (int i = 0; i < commandTurnCount; i++) {
         int result = judgeRound(playerCommands[i], enemyCommands[i]);
@@ -83,7 +84,7 @@ BattleLogic::BattleStats BattleLogic::calculateBattleStats() const {
     return stats;
 }
 
-std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damageMultiplier) const {
+std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damageMultiplier) {
     std::vector<DamageInfo> damages;
     BattleStats currentStats = calculateBattleStats();
     
@@ -94,12 +95,18 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                 if (cmd == BattleConstants::COMMAND_ATTACK) {
                     int baseDamage = calculatePlayerAttackDamage();
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
-                    damages.push_back({damage, false}); // false = 敵がダメージを受ける
+                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false});
                 } else if (cmd == BattleConstants::COMMAND_SPELL) {
-                    if (player->getMp() > 0) {
-                        int baseDamage = calculateSpellDamage(cmd);
-                        int damage = static_cast<int>(baseDamage * damageMultiplier);
-                        damages.push_back({damage, false}); // false = 敵がダメージを受ける
+                    // 呪文で勝利した場合、ダメージエントリを追加しない
+                    // （後でプレイヤーが選択した呪文を実行するため）
+                    // ダメージエントリは追加せず、記録だけする
+                } else if (cmd == BattleConstants::COMMAND_DEFEND) {
+                    // 防御で勝利した場合：カウンターラッシュ（攻撃/5のダメージ*5回）
+                    int baseDamage = calculatePlayerAttackDamage();
+                    int counterDamage = static_cast<int>(baseDamage / 5.0f * damageMultiplier);
+                    // 5回のダメージエントリを追加
+                    for (int j = 0; j < 5; j++) {
+                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true});
                     }
                 }
             }
@@ -108,21 +115,21 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
         for (int i = 0; i < commandTurnCount; i++) {
             if (judgeRound(playerCommands[i], enemyCommands[i]) == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
                 int damage = calculateEnemyAttackDamage();
-                damages.push_back({damage, true}); // true = プレイヤーがダメージを受ける
+                damages.push_back({damage, true, false, 0, 0, -1, false}); // true = プレイヤーがダメージを受ける
             }
         }
     } else {
+        // 引き分けの場合、全ての引き分けターンのダメージを合計して1つのエントリとして作成
+        int totalPlayerDamage = 0;
+        int totalEnemyDamage = 0;
         for (int i = 0; i < commandTurnCount; i++) {
             if (judgeRound(playerCommands[i], enemyCommands[i]) == BattleConstants::JUDGE_RESULT_DRAW) {
-                int playerDamage = calculateEnemyAttackDamage() / 2;
-                int enemyDamage = calculatePlayerAttackDamage() / 2;
-                if (playerDamage > 0) {
-                    damages.push_back({playerDamage, true}); // true = プレイヤーがダメージを受ける
-                }
-                if (enemyDamage > 0) {
-                    damages.push_back({enemyDamage, false}); // false = 敵がダメージを受ける
-                }
+                totalPlayerDamage += calculateEnemyAttackDamage() / 2;
+                totalEnemyDamage += calculatePlayerAttackDamage() / 2;
             }
+        }
+        if (totalPlayerDamage > 0 || totalEnemyDamage > 0) {
+            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false}); // isDraw = true
         }
     }
     
@@ -174,7 +181,31 @@ bool BattleLogic::checkDesperateModeCondition() const {
 }
 
 void BattleLogic::generateEnemyCommands() {
-    float playerHpRatio = static_cast<float>(player->getHp()) / static_cast<float>(player->getMaxHp());
+    // サイズを確実に合わせる
+    if (static_cast<int>(enemyCommands.size()) != commandTurnCount) {
+        enemyCommands.resize(commandTurnCount);
+    }
+    
+    // ランダムに決定した行動タイプを使用
+    // 固定の確率分布を設定（多い方から50%、30%、20%）
+    int attackProb, defendProb, spellProb;
+    switch (enemyBehaviorType) {
+        case EnemyBehaviorType::ATTACK_TYPE:
+            attackProb = 55;
+            defendProb = 10;
+            spellProb = 35;
+            break;
+        case EnemyBehaviorType::DEFEND_TYPE:
+            attackProb = 35;
+            defendProb = 55;
+            spellProb = 10;
+            break;
+        case EnemyBehaviorType::SPELL_TYPE:
+            attackProb = 10;
+            defendProb = 35;
+            spellProb = 55;
+            break;
+    }
     
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -184,30 +215,12 @@ void BattleLogic::generateEnemyCommands() {
         int cmd;
         int randVal = dis(gen);
         
-        if (playerHpRatio < 0.3f) {
-            if (randVal < 60) {
-                cmd = BattleConstants::COMMAND_ATTACK;
-            } else if (randVal < 90) {
-                cmd = BattleConstants::COMMAND_DEFEND;
-            } else {
-                cmd = BattleConstants::COMMAND_SPELL;
-            }
-        } else if (playerHpRatio < 0.6f) {
-            if (randVal < 40) {
-                cmd = BattleConstants::COMMAND_ATTACK;
-            } else if (randVal < 80) {
-                cmd = BattleConstants::COMMAND_DEFEND;
-            } else {
-                cmd = BattleConstants::COMMAND_SPELL;
-            }
+        if (randVal < attackProb) {
+            cmd = BattleConstants::COMMAND_ATTACK;
+        } else if (randVal < attackProb + defendProb) {
+            cmd = BattleConstants::COMMAND_DEFEND;
         } else {
-            if (randVal < 30) {
-                cmd = BattleConstants::COMMAND_ATTACK;
-            } else if (randVal < 80) {
-                cmd = BattleConstants::COMMAND_DEFEND;
-            } else {
-                cmd = BattleConstants::COMMAND_SPELL;
-            }
+            cmd = BattleConstants::COMMAND_SPELL;
         }
         
         enemyCommands[i] = cmd;
@@ -239,5 +252,80 @@ bool BattleLogic::checkThreeWinStreak() const {
     }
     
     return true;
+}
+
+void BattleLogic::determineEnemyBehaviorType() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 2);
+    
+    int typeIndex = dis(gen);
+    switch (typeIndex) {
+        case 0:
+            enemyBehaviorType = EnemyBehaviorType::ATTACK_TYPE;
+            break;
+        case 1:
+            enemyBehaviorType = EnemyBehaviorType::DEFEND_TYPE;
+            break;
+        case 2:
+            enemyBehaviorType = EnemyBehaviorType::SPELL_TYPE;
+            break;
+    }
+    
+    // 除外する型を決定（実際の型以外の2つからランダムに1つ選ぶ）
+    std::vector<EnemyBehaviorType> allTypes = {
+        EnemyBehaviorType::ATTACK_TYPE,
+        EnemyBehaviorType::DEFEND_TYPE,
+        EnemyBehaviorType::SPELL_TYPE
+    };
+    std::vector<EnemyBehaviorType> options;
+    for (auto type : allTypes) {
+        if (type != enemyBehaviorType) {
+            options.push_back(type);
+        }
+    }
+    
+    std::uniform_int_distribution<> excludeDis(0, static_cast<int>(options.size()) - 1);
+    excludedBehaviorType = options[excludeDis(gen)];
+}
+
+void BattleLogic::confirmBehaviorType() {
+    behaviorTypeDetermined = true;
+}
+
+std::string BattleLogic::getBehaviorTypeName(EnemyBehaviorType type) {
+    switch (type) {
+        case EnemyBehaviorType::ATTACK_TYPE:
+            return "攻撃型";
+        case EnemyBehaviorType::DEFEND_TYPE:
+            return "防御型";
+        case EnemyBehaviorType::SPELL_TYPE:
+            return "呪文型";
+    }
+    return "不明";
+}
+
+std::string BattleLogic::getBehaviorTypeHint(EnemyBehaviorType type) {
+    switch (type) {
+        case EnemyBehaviorType::ATTACK_TYPE:
+            return "気性が荒いみたいだ";
+        case EnemyBehaviorType::DEFEND_TYPE:
+            return "臆病みたいだ";
+        case EnemyBehaviorType::SPELL_TYPE:
+            return "近づきたくないようだ";
+    }
+    return "";
+}
+
+std::string BattleLogic::getNegativeBehaviorTypeHint(EnemyBehaviorType type) {
+    switch (type) {
+        case EnemyBehaviorType::ATTACK_TYPE:
+            return "気性は荒くなさそうだ";
+        case EnemyBehaviorType::DEFEND_TYPE:
+            return "臆病ではなさそうだ";
+        case EnemyBehaviorType::SPELL_TYPE:
+            return "距離を取るタイプではなさそうだ";
+    }
+    return "";
 }
 
