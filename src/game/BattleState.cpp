@@ -2486,6 +2486,20 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
             }
         }
         
+        // 呪文で勝利したターンが全て処理され、かつpendingDamagesが空の場合、
+        // ダミーのダメージエントリを追加してアニメーションを実行できるようにする
+        if (pendingDamages.empty() && spellWinTurns.empty() && isVictory) {
+            BattleLogic::DamageInfo dummyDamage;
+            dummyDamage.damage = 0;  // ダメージは適用しない（アニメーションのみ実行）
+            dummyDamage.isPlayerHit = false;
+            dummyDamage.isDraw = false;
+            dummyDamage.playerDamage = 0;
+            dummyDamage.enemyDamage = 0;
+            dummyDamage.commandType = BattleConstants::COMMAND_SPELL;
+            dummyDamage.isCounterRush = false;
+            pendingDamages.push_back(dummyDamage);
+        }
+        
         // 最初のアニメーションを開始（pendingDamagesに追加された後）
         if (!pendingDamages.empty()) {
             animationController->resetResultAnimation();
@@ -2548,24 +2562,28 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     int damage = damageInfo.damage;
                     bool isPlayerHit = damageInfo.isPlayerHit;
                     
-                    if (isPlayerHit) {
-                        player->takeDamage(damage);
-                        int playerX = BattleConstants::PLAYER_POSITION_X;
-                        int playerY = BattleConstants::PLAYER_POSITION_Y;
-                        effectManager->triggerHitEffect(damage, playerX, playerY, true);
-                        // 引き分けと同じスクリーンシェイク
-                        float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
-                        float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
-                        effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
-                    } else {
-                        enemy->takeDamage(damage);
-                        int enemyX = BattleConstants::ENEMY_POSITION_X;
-                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
-                        effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
-                        // 引き分けと同じスクリーンシェイク
-                        float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
-                        float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
-                        effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                    // ダミーのダメージエントリ（damage == 0）の場合はダメージ適用をスキップ
+                    // アニメーションは実行するが、実際のダメージは適用しない
+                    if (damage > 0) {
+                        if (isPlayerHit) {
+                            player->takeDamage(damage);
+                            int playerX = BattleConstants::PLAYER_POSITION_X;
+                            int playerY = BattleConstants::PLAYER_POSITION_Y;
+                            effectManager->triggerHitEffect(damage, playerX, playerY, true);
+                            // 引き分けと同じスクリーンシェイク
+                            float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
+                            float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
+                            effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                        } else {
+                            enemy->takeDamage(damage);
+                            int enemyX = BattleConstants::ENEMY_POSITION_X;
+                            int enemyY = BattleConstants::ENEMY_POSITION_Y;
+                            effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
+                            // 引き分けと同じスクリーンシェイク
+                            float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
+                            float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
+                            effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                        }
                     }
                 }
                 
