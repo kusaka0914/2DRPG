@@ -14,6 +14,7 @@
 #include <random>
 #include <algorithm>
 
+int NightState::residentsKilled = 0;
 int NightState::totalResidentsKilled = 0;
 std::vector<std::pair<int, int>> NightState::killedResidentPositions = {};
 int NightState::s_savedPlayerX = TownLayout::PLAYER_START_X;
@@ -23,12 +24,12 @@ bool NightState::s_playerPositionSaved = false;
 NightState::NightState(std::shared_ptr<Player> player)
     : player(player), playerX(s_playerPositionSaved ? s_savedPlayerX : TownLayout::PLAYER_START_X), 
       playerY(s_playerPositionSaved ? s_savedPlayerY : TownLayout::PLAYER_START_Y), 
-      isStealthMode(true), stealthLevel(1), residentsKilled(0),
+      isStealthMode(true), stealthLevel(1),
       moveTimer(0), playerTexture(nullptr), guardTexture(nullptr),
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
       messageBoard(nullptr), nightDisplayLabel(nullptr), nightOperationLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
-      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), shouldReturnToTown(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
       guardHp() {
@@ -183,12 +184,19 @@ void NightState::enter() {
     // 静的変数の現在の状態を保存（住民を倒した処理のチェック用）
     std::vector<std::pair<int, int>> previousKilledPositions = killedResidentPositions;
     int previousTotalKilled = totalResidentsKilled;
+    
+    // 新しい夜に入る時は、1夜に倒した人数をリセット
+    // （前回の夜から戻ってきた場合はリセットしない）
+    static int lastNight = -1;
+    int currentNight = player->getCurrentNight();
+    if (lastNight != currentNight) {
+        residentsKilled = 0;
+        lastNight = currentNight;
+    }
         
         player->autoSave();
         
         setupUI();
-        
-        int currentNight = player->getCurrentNight();
         if (nightDisplayLabel) {
             nightDisplayLabel->setText("第" + std::to_string(currentNight) + "夜");
         }
@@ -355,19 +363,6 @@ void NightState::handleInput(const InputManager& input) {
                 isShowingMessage = false;
                 updateChoiceDisplay();
             }
-            else if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
-                if (stateManager && player->getCurrentNight() < 4) {
-                    TownState::s_nightTimerActive = true;
-                    if (player->getCurrentNight() == 1) {
-                        TownState::s_nightTimer = 240.0f;
-                    } else if (player->getCurrentNight() == 2) {
-                        TownState::s_nightTimer = 180.0f;
-                    } else {
-                        TownState::s_nightTimer = 180.0f;
-                    }
-                    stateManager->changeState(std::make_unique<TownState>(player));
-                }
-            }
             else if (showResidentKilledMessage) {
                 showResidentKilledMessage = false;
                 // 魔王の信頼度が上がったメッセージを表示
@@ -376,7 +371,7 @@ void NightState::handleInput(const InputManager& input) {
                 } else {
                     showMessage("住民を倒しました。\n勇者: ふふっ、だんだん楽しくなってきたぁ、、！\n\n魔王からの信頼度 +10 メンタル +20");
                 }
-                // 3人目を倒した場合は、次のメッセージで街に戻るメッセージを表示するフラグを設定
+                // 3人目を倒した場合は、次のメッセージで街に戻る処理を実行するフラグを設定
                 if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
                     showReturnToTownMessage = true;
                 }
@@ -387,8 +382,46 @@ void NightState::handleInput(const InputManager& input) {
                 int currentNight = player->getCurrentNight();
                 if (currentNight < 4) {
                     showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+                    // 次のSpaceで街に戻る処理を実行するフラグを設定
+                    shouldReturnToTown = true;
                 } else {
+                    // 4夜目以降の場合はメッセージを表示（衛兵を攻撃可能にする）
                     showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
+                }
+            }
+            else if (shouldReturnToTown) {
+                // 街に戻るメッセージを表示した後、Spaceを押した時に街に戻る処理を実行
+                shouldReturnToTown = false;
+                int currentNight = player->getCurrentNight();
+                if (stateManager && currentNight < 4) {
+                    // 1夜に倒した人数をリセット（次の夜のために）
+                    residentsKilled = 0;
+                    TownState::s_nightTimerActive = true;
+                    if (currentNight == 1) {
+                        TownState::s_nightTimer = 240.0f;
+                    } else if (currentNight == 2) {
+                        TownState::s_nightTimer = 180.0f;
+                    } else {
+                        TownState::s_nightTimer = 180.0f;
+                    }
+                    stateManager->changeState(std::make_unique<TownState>(player));
+                }
+            }
+            else if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+                // 3人目を倒したが、メッセージ表示フローを経由していない場合のフォールバック
+                // （通常はshowReturnToTownMessageフラグで処理されるが、念のため）
+                if (stateManager && player->getCurrentNight() < 4) {
+                    // 1夜に倒した人数をリセット（次の夜のために）
+                    residentsKilled = 0;
+                    TownState::s_nightTimerActive = true;
+                    if (player->getCurrentNight() == 1) {
+                        TownState::s_nightTimer = 240.0f;
+                    } else if (player->getCurrentNight() == 2) {
+                        TownState::s_nightTimer = 180.0f;
+                    } else {
+                        TownState::s_nightTimer = 180.0f;
+                    }
+                    stateManager->changeState(std::make_unique<TownState>(player));
                 }
             }
         }
@@ -819,15 +852,8 @@ void NightState::handleResidentKilled(int x, int y) {
     
     player->changeKingTrust(-10);
     
-    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
-        int currentNight = player->getCurrentNight();
-        if (currentNight < 4) {
-            showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
-        } else {
-            showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
-            canAttackGuards = true; // 衛兵を攻撃可能にする
-        }
-    }
+    // 3人目を倒した場合は、メッセージ表示フローで処理されるため、ここでは何もしない
+    // （handleInput()でshowReturnToTownMessageフラグが設定され、街に戻る処理が実行される）
     
     // メンタルや信頼度の変動をセーブ
     player->autoSave();

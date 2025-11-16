@@ -32,8 +32,8 @@ private:
     std::vector<std::pair<int, int>> guards; // 見張りの位置
     std::vector<std::pair<int, int>> guardDirections; // 衛兵の移動方向
     
-    // 住民を倒した回数
-    int residentsKilled;
+    // 住民を倒した回数（1夜ごとにリセットされるが、再戦時は維持される）
+    static int residentsKilled;
     const int MAX_RESIDENTS_PER_NIGHT = 3;
     
     // 合計倒した人数（メンタル計算用）
@@ -75,6 +75,7 @@ private:
     int currentTargetX, currentTargetY; // 現在の襲撃対象の位置
     bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
     bool showReturnToTownMessage; // 街に戻るメッセージ表示フラグ（3人目を倒した後用）
+    bool shouldReturnToTown; // 街に戻る処理を実行するフラグ（メッセージ表示後に使用）
     
     // 夜の表示
     Label* nightDisplayLabel; // 夜の表示用ラベル
