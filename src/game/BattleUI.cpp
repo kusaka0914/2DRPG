@@ -36,21 +36,18 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     
     int playerBaseX = screenWidth / 4;
     int playerBaseY = screenHeight / 2;
-    int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
-    int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
     SDL_Texture* playerTex = graphics->getTexture("player");
+    
     if (playerTex) {
-        graphics->drawTexture(playerTex, playerBaseX - playerWidth / 2, playerBaseY - playerHeight / 2, playerWidth, playerHeight);
+        graphics->drawTextureAspectRatio(playerTex, playerBaseX, playerBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(100, 200, 255, 255);
-        graphics->drawRect(playerBaseX - playerWidth / 2, playerBaseY - playerHeight / 2, playerWidth, playerHeight, true);
+        graphics->drawRect(playerBaseX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerBaseY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
     }
     
     int enemyBaseX = screenWidth * 3 / 4;
     int enemyBaseY = screenHeight / 2;
-    int enemyWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
-    int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
     SDL_Texture* enemyTex = nullptr;
@@ -63,10 +60,10 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     }
     
     if (enemyTex) {
-        graphics->drawTexture(enemyTex, enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight);
+        graphics->drawTextureAspectRatio(enemyTex, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(255, 100, 100, 255);
-        graphics->drawRect(enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+        graphics->drawRect(enemyBaseX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, enemyBaseY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
     }
     
     // 住民戦の場合は10ターン制限を表示
@@ -100,7 +97,7 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     
     graphics->drawText(turnText, 20, 20, "default", turnColor);
     
-    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight, params.residentBehaviorHint);
+    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, params.residentBehaviorHint);
     
     int playerDisplayX = leftX;
     if (params.judgeSubPhase == JudgeSubPhase::SHOW_PLAYER_COMMAND) {
@@ -123,35 +120,57 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         int cmdTextX = playerDisplayX - BattleConstants::JUDGE_COMMAND_X_OFFSET;
         int cmdTextY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
         
-        // プレイヤーコマンドの背景を描画（黒）
-        SDL_Texture* playerCmdTexture = graphics->createTextTexture(playerCmd, "default", playerCmdColor);
-        if (playerCmdTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(playerCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+        // プレイヤーコマンドを画像で表示
+        SDL_Texture* playerCmdImage = getCommandTexture(playerCmd);
+        if (playerCmdImage) {
+            int imageWidth, imageHeight;
+            SDL_QueryTexture(playerCmdImage, nullptr, nullptr, &imageWidth, &imageHeight);
             
-            // テキストを大きく表示
-            int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-            int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+            // 画像を適切なサイズで表示（80px幅に固定、アスペクト比を保持）
+            float aspectRatio = static_cast<float>(imageWidth) / static_cast<float>(imageHeight);
+            int displayWidth, displayHeight;
+            if (imageWidth > imageHeight) {
+                // 横長の画像
+                displayWidth = 80;
+                displayHeight = static_cast<int>(80 / aspectRatio);
+            } else {
+                // 縦長または正方形の画像
+                displayHeight = 80;
+                displayWidth = static_cast<int>(80 * aspectRatio);
+            }
             
-            int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
-            int bgX = cmdTextX - padding;
-            int bgY = cmdTextY - padding;
-            int bgWidth = scaledWidth + padding * 2;
-            int bgHeight = scaledHeight + padding * 2;
+            // 画像を中央に配置
+            int imageX = cmdTextX - (displayWidth / 2);
+            int imageY = cmdTextY - (displayHeight / 2);
             
-            // 黒い背景
-            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-            graphics->setDrawColor(255, 255, 255, 255);
-            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-            
-            // スケールしたテキストを描画
-            graphics->drawTexture(playerCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
-            
-            SDL_DestroyTexture(playerCmdTexture);
+            // 画像を描画（背景なし）
+            graphics->drawTexture(playerCmdImage, imageX, imageY, displayWidth, displayHeight);
         } else {
-            // フォールバック
-            graphics->drawText(playerCmd, cmdTextX, cmdTextY, "default", playerCmdColor);
+            // フォールバック：テキスト表示
+            SDL_Texture* playerCmdTexture = graphics->createTextTexture(playerCmd, "default", playerCmdColor);
+            if (playerCmdTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(playerCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+                
+                int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                
+                int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
+                int bgX = cmdTextX - padding;
+                int bgY = cmdTextY - padding;
+                int bgWidth = scaledWidth + padding * 2;
+                int bgHeight = scaledHeight + padding * 2;
+                
+                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                graphics->setDrawColor(255, 255, 255, 255);
+                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                
+                graphics->drawTexture(playerCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
+                SDL_DestroyTexture(playerCmdTexture);
+            } else {
+                graphics->drawText(playerCmd, cmdTextX, cmdTextY, "default", playerCmdColor);
+            }
         }
     }
     
@@ -170,50 +189,35 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         bool shouldShowVS = true;
         
         if (shouldShowVS) {
-            std::string vsText = "VS";
-            SDL_Color vsTextColor = {255, 255, 255, 255}; // 白文字
-            
-            // VSテキストを大きく表示（コマンドとコマンドの間、中央に配置）
-            SDL_Texture* vsTexture = graphics->createTextTexture(vsText, "default", vsTextColor);
-            if (vsTexture) {
-                int textWidth, textHeight;
-                SDL_QueryTexture(vsTexture, nullptr, nullptr, &textWidth, &textHeight);
+            // VS画像を表示
+            SDL_Texture* vsImage = graphics->getTexture("vs_image");
+            if (vsImage) {
+                int imageWidth, imageHeight;
+                SDL_QueryTexture(vsImage, nullptr, nullptr, &imageWidth, &imageHeight);
                 
-                // バンと出るアニメーション（スケールアニメーション）
-                float vsScale = BattleConstants::JUDGE_VS_BASE_SCALE;
-                if (params.judgeSubPhase == JudgeSubPhase::SHOW_ENEMY_COMMAND) {
-                    // SHOW_ENEMY_COMMANDフェーズではアニメーション
-                    float progress = std::min(1.0f, params.judgeDisplayTimer / BattleConstants::JUDGE_VS_ANIMATION_DURATION);
-                    float eased = progress * progress * (3.0f - 2.0f * progress); // smoothstep
-                    vsScale = BattleConstants::JUDGE_VS_BASE_SCALE * eased; // 0からbaseScaleへ
+                // 画像をコマンド画像と同じサイズで表示（80px幅に固定）
+                float aspectRatio = static_cast<float>(imageWidth) / static_cast<float>(imageHeight);
+                int displayWidth, displayHeight;
+                if (imageWidth > imageHeight) {
+                    // 横長の画像
+                    displayWidth = 80;
+                    displayHeight = static_cast<int>(80 / aspectRatio);
+                } else {
+                    // 縦長または正方形の画像
+                    displayHeight = 80;
+                    displayWidth = static_cast<int>(80 * aspectRatio);
                 }
-                // SHOW_RESULTフェーズでは最大スケールで固定表示
-                
-                int scaledWidth = static_cast<int>(textWidth * vsScale);
-                int scaledHeight = static_cast<int>(textHeight * vsScale);
                 
                 // 中央に配置（コマンドと同じY位置）
-                int vsX = centerX - scaledWidth / 2;
-                int vsY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET - scaledHeight / 2;
+                int vsX = centerX - displayWidth / 2;
+                int vsY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET - displayHeight / 2;
                 
-                // 黒背景を描画
-                int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
-                int bgX = centerX - (scaledWidth / 2) - padding;
-                int bgY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET - (scaledHeight / 2) - padding;
-                int bgWidth = scaledWidth + padding * 2;
-                int bgHeight = scaledHeight + padding * 2;
-                
-                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-                graphics->setDrawColor(255, 255, 255, 255);
-                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-                
-                // スケールしたテキストを描画
-                graphics->drawTexture(vsTexture, vsX, vsY, scaledWidth, scaledHeight);
-                
-                SDL_DestroyTexture(vsTexture);
+                // 画像を描画（背景なし）
+                graphics->drawTexture(vsImage, vsX, vsY, displayWidth, displayHeight);
             } else {
-                // フォールバック
+                // フォールバック：テキスト表示
+                std::string vsText = "VS";
+                SDL_Color vsTextColor = {255, 255, 255, 255};
                 graphics->drawText(vsText, centerX - 30, centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET, "default", vsTextColor);
             }
         }
@@ -250,35 +254,57 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
                 int cmdTextX = enemyDisplayX - BattleConstants::JUDGE_COMMAND_X_OFFSET;
                 int cmdTextY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
                 
-                // 敵コマンドの背景を描画（黒）
-                SDL_Texture* enemyCmdTexture = graphics->createTextTexture(enemyCmd, "default", enemyCmdColor);
-                if (enemyCmdTexture) {
-                    int textWidth, textHeight;
-                    SDL_QueryTexture(enemyCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+                // 敵コマンドを画像で表示
+                SDL_Texture* enemyCmdImage = getCommandTexture(enemyCmd);
+                if (enemyCmdImage) {
+                    int imageWidth, imageHeight;
+                    SDL_QueryTexture(enemyCmdImage, nullptr, nullptr, &imageWidth, &imageHeight);
                     
-                    // テキストを大きく表示
-                    int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-                    int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                    // 画像を適切なサイズで表示（80px幅に固定、アスペクト比を保持）
+                    float aspectRatio = static_cast<float>(imageWidth) / static_cast<float>(imageHeight);
+                    int displayWidth, displayHeight;
+                    if (imageWidth > imageHeight) {
+                        // 横長の画像
+                        displayWidth = 80;
+                        displayHeight = static_cast<int>(80 / aspectRatio);
+                    } else {
+                        // 縦長または正方形の画像
+                        displayHeight = 80;
+                        displayWidth = static_cast<int>(80 * aspectRatio);
+                    }
                     
-                    int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
-                    int bgX = cmdTextX - padding;
-                    int bgY = cmdTextY - padding;
-                    int bgWidth = scaledWidth + padding * 2;
-                    int bgHeight = scaledHeight + padding * 2;
+                    // 画像を中央に配置
+                    int imageX = cmdTextX - (displayWidth / 2);
+                    int imageY = cmdTextY - (displayHeight / 2);
                     
-                    // 黒い背景
-                    graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                    graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-                    graphics->setDrawColor(255, 255, 255, 255);
-                    graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-                    
-                    // スケールしたテキストを描画
-                    graphics->drawTexture(enemyCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
-                    
-                    SDL_DestroyTexture(enemyCmdTexture);
+                    // 画像を描画（背景なし）
+                    graphics->drawTexture(enemyCmdImage, imageX, imageY, displayWidth, displayHeight);
                 } else {
-                    // フォールバック
-                    graphics->drawText(enemyCmd, cmdTextX, cmdTextY, "default", enemyCmdColor);
+                    // フォールバック：テキスト表示
+                    SDL_Texture* enemyCmdTexture = graphics->createTextTexture(enemyCmd, "default", enemyCmdColor);
+                    if (enemyCmdTexture) {
+                        int textWidth, textHeight;
+                        SDL_QueryTexture(enemyCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+                        
+                        int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                        int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                        
+                        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
+                        int bgX = cmdTextX - padding;
+                        int bgY = cmdTextY - padding;
+                        int bgWidth = scaledWidth + padding * 2;
+                        int bgHeight = scaledHeight + padding * 2;
+                        
+                        graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                        graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                        graphics->setDrawColor(255, 255, 255, 255);
+                        graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                        
+                        graphics->drawTexture(enemyCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
+                        SDL_DestroyTexture(enemyCmdTexture);
+                    } else {
+                        graphics->drawText(enemyCmd, cmdTextX, cmdTextY, "default", enemyCmdColor);
+                    }
                 }
             }
         }
@@ -356,21 +382,18 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     int playerBaseX = screenWidth / 4;
     int playerBaseY = screenHeight / 2;
-    int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
-    int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
     SDL_Texture* playerTex = graphics->getTexture("player");
+    
     if (playerTex) {
-        graphics->drawTexture(playerTex, playerBaseX - playerWidth / 2, playerBaseY - playerHeight / 2, playerWidth, playerHeight);
+        graphics->drawTextureAspectRatio(playerTex, playerBaseX, playerBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(100, 200, 255, 255);
-        graphics->drawRect(playerBaseX - playerWidth / 2, playerBaseY - playerHeight / 2, playerWidth, playerHeight, true);
+        graphics->drawRect(playerBaseX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerBaseY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
     }
     
     int enemyBaseX = screenWidth * 3 / 4;
     int enemyBaseY = screenHeight / 2;
-    int enemyWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
-    int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
     SDL_Texture* enemyTex = nullptr;
@@ -383,10 +406,10 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     }
     
     if (enemyTex) {
-        graphics->drawTexture(enemyTex, enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight);
+        graphics->drawTextureAspectRatio(enemyTex, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(255, 100, 100, 255);
-        graphics->drawRect(enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+        graphics->drawRect(enemyBaseX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, enemyBaseY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
     }
     
     // 住民戦の場合は10ターン制限を表示
@@ -399,38 +422,70 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     // 選択済みコマンドを表示（ボタンの上）
     auto playerCmds = battleLogic->getPlayerCommands();
     if (params.currentSelectingTurn > 0) {
-        std::string selectedCommandsText = "";
-        for (int i = 0; i < params.currentSelectingTurn; i++) {
-            if (i > 0) {
-                selectedCommandsText += " → ";
-            }
-            selectedCommandsText += BattleLogic::getCommandName(playerCmds[i]);
-        }
-        
-        SDL_Color selectedCmdColor = {255, 255, 255, 255};
+        // 選択済みコマンドを画像で表示
         int selectedCmdY = centerY - 150; // ボタンの上に配置
+        int imageSpacing = 60; // 画像間のスペース
+        int startX = centerX - ((params.currentSelectingTurn - 1) * imageSpacing / 2);
         
-        // 選択済みコマンドのテキスト背景を描画
-        SDL_Texture* selectedCmdTexture = graphics->createTextTexture(selectedCommandsText, "default", selectedCmdColor);
-        if (selectedCmdTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(selectedCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
-            
-            int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-            int bgX = centerX - 200 - padding;
-            int bgY = selectedCmdY - padding;
-            int bgWidth = textWidth + padding * 2;
-            int bgHeight = textHeight + padding * 2;
-            
-            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-            graphics->setDrawColor(255, 255, 255, 255);
-            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-            
-            SDL_DestroyTexture(selectedCmdTexture);
+        int totalWidth = 0;
+        std::vector<SDL_Texture*> commandImages;
+        std::vector<int> imageWidths;
+        
+        // まず全ての画像を取得してサイズを計算
+        for (int i = 0; i < params.currentSelectingTurn; i++) {
+            std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
+            SDL_Texture* cmdImage = getCommandTexture(cmdName);
+            if (cmdImage) {
+                int imgWidth, imgHeight;
+                SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
+                int displayWidth = 50; // 固定サイズ
+                int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
+                commandImages.push_back(cmdImage);
+                imageWidths.push_back(displayWidth);
+                totalWidth += displayWidth;
+                if (i < params.currentSelectingTurn - 1) {
+                    totalWidth += 20; // 矢印のスペース
+                }
+            } else {
+                commandImages.push_back(nullptr);
+                imageWidths.push_back(0);
+            }
         }
         
-        graphics->drawText(selectedCommandsText, centerX - 200, selectedCmdY, "default", selectedCmdColor);
+        // 画像を描画（背景なし）
+        int currentX = centerX - (totalWidth / 2);
+        for (int i = 0; i < params.currentSelectingTurn; i++) {
+            if (commandImages[i]) {
+                std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
+                SDL_Texture* cmdImage = commandImages[i];
+                int imgWidth, imgHeight;
+                SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
+                int displayWidth = 50;
+                int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
+                int imageX = currentX;
+                int imageY = selectedCmdY - (displayHeight / 2);
+                
+                graphics->drawTexture(cmdImage, imageX, imageY, displayWidth, displayHeight);
+                currentX += displayWidth;
+                
+                // 矢印を表示（最後のコマンド以外）
+                if (i < params.currentSelectingTurn - 1) {
+                    SDL_Color arrowColor = {255, 255, 255, 255};
+                    graphics->drawText("→", currentX + 5, selectedCmdY - 10, "default", arrowColor);
+                    currentX += 20;
+                }
+            } else {
+                // フォールバック：テキスト表示
+                std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
+                SDL_Color selectedCmdColor = {255, 255, 255, 255};
+                graphics->drawText(cmdName, currentX, selectedCmdY - 15, "default", selectedCmdColor);
+                currentX += 60;
+                if (i < params.currentSelectingTurn - 1) {
+                    graphics->drawText("→", currentX, selectedCmdY - 15, "default", selectedCmdColor);
+                    currentX += 20;
+                }
+            }
+        }
     }
     
     auto& cmdSelectState = animationController->getCommandSelectState();
@@ -478,14 +533,36 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
             textColor = {200, 200, 200, 255};
         }
         
-        int textX = startX + (buttonWidth / 2) - 50;
-        int textY = buttonY + (buttonHeight / 2) - 15;
+        // コマンド名を画像で表示
+        std::string commandName = (*params.currentOptions)[i];
+        SDL_Texture* commandImage = getCommandTexture(commandName);
         
-        if (isSelected) {
-            graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
-            graphics->drawText((*params.currentOptions)[i], textX, textY, "default", textColor);
+        if (commandImage) {
+            // 画像を適切なサイズで表示（60px幅に固定）
+            int imageWidth, imageHeight;
+            SDL_QueryTexture(commandImage, nullptr, nullptr, &imageWidth, &imageHeight);
+            
+            int displayWidth = 60;
+            int displayHeight = static_cast<int>(imageHeight * (static_cast<float>(displayWidth) / imageWidth));
+            
+            int imageX = startX + (buttonWidth / 2) - (displayWidth / 2);
+            int imageY = buttonY + (buttonHeight / 2) - (displayHeight / 2);
+            
+            if (isSelected) {
+                graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", {255, 215, 0, 255});
+            }
+            graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
         } else {
-            graphics->drawText((*params.currentOptions)[i], textX, textY, "default", textColor);
+            // フォールバック：テキスト表示
+            int textX = startX + (buttonWidth / 2) - 50;
+            int textY = buttonY + (buttonHeight / 2) - 15;
+            
+            if (isSelected) {
+                graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+                graphics->drawText(commandName, textX, textY, "default", textColor);
+            } else {
+                graphics->drawText(commandName, textX, textY, "default", textColor);
+            }
         }
     }
     
@@ -520,7 +597,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     graphics->drawText(hintText, centerX - 120, screenHeight - 100, "default", hintColor);
     
-    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight, params.residentBehaviorHint);
+    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, params.residentBehaviorHint);
 }
 
 void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& params) {
@@ -658,18 +735,36 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, params.residentBehaviorHint);
     
     renderCharacters(playerX, playerY, enemyX, enemyY, playerWidth, playerHeight, enemyWidth, enemyHeight);
+    
+    // 住民戦ではない場合、中央上部にRock-Paper-Scissors画像を表示
+    if (!enemy->isResident()) {
+        SDL_Texture* rpsTexture = graphics->getTexture("rock_paper_scissors");
+        if (rpsTexture) {
+            int textureWidth, textureHeight;
+            SDL_QueryTexture(rpsTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+            
+            // 中央上部に配置（画像の幅を適切なサイズに調整）
+            int displayWidth = 200; // 表示幅を200pxに設定（必要に応じて調整可能）
+            int displayHeight = static_cast<int>(textureHeight * (static_cast<float>(displayWidth) / textureWidth));
+            int posX = (screenWidth - displayWidth) / 2; // 中央
+            int posY = 20; // 上部から20px下
+            
+            graphics->drawTexture(rpsTexture, posX, posY, displayWidth, displayHeight);
+        }
+    }
 }
 
 void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY,
                                  int playerWidth, int playerHeight, int enemyWidth, int enemyHeight) {
     SDL_Texture* playerTex = graphics->getTexture("player");
+    
     if (playerTex) {
-        graphics->drawTexture(playerTex, playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight);
+        graphics->drawTextureAspectRatio(playerTex, playerX, playerY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(100, 200, 255, 255);
-        graphics->drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, true);
+        graphics->drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
         graphics->setDrawColor(255, 255, 255, 255);
-        graphics->drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
+        graphics->drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
     }
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
@@ -683,12 +778,12 @@ void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY
     }
     
     if (enemyTex) {
-        graphics->drawTexture(enemyTex, enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight);
+        graphics->drawTextureAspectRatio(enemyTex, enemyX, enemyY, BattleConstants::BATTLE_CHARACTER_SIZE);
     } else {
         graphics->setDrawColor(255, 100, 100, 255);
-        graphics->drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+        graphics->drawRect(enemyX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, enemyY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
         graphics->setDrawColor(255, 255, 255, 255);
-        graphics->drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, false);
+        graphics->drawRect(enemyX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, enemyY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
     }
 }
 
@@ -865,6 +960,30 @@ void BattleUI::renderTurnNumber(int turnNumber, int totalTurns, bool isDesperate
         // フォールバック：通常のテキスト描画
         SDL_Color turnColor = {255, 255, 255, 255};
         graphics->drawText(turnText, 20, 20, "default", turnColor);
+    }
+}
+
+SDL_Texture* BattleUI::getCommandTexture(const std::string& commandName) const {
+    if (commandName == "攻撃") {
+        return graphics->getTexture("command_attack");
+    } else if (commandName == "防御") {
+        return graphics->getTexture("command_defend");
+    } else if (commandName == "呪文") {
+        return graphics->getTexture("command_magic");
+    }
+    return nullptr;
+}
+
+void BattleUI::drawCommandImage(const std::string& commandName, int x, int y, int width, int height) const {
+    SDL_Texture* texture = getCommandTexture(commandName);
+    if (texture) {
+        if (width == 0 || height == 0) {
+            int imgWidth, imgHeight;
+            SDL_QueryTexture(texture, nullptr, nullptr, &imgWidth, &imgHeight);
+            graphics->drawTexture(texture, x, y, imgWidth, imgHeight);
+        } else {
+            graphics->drawTexture(texture, x, y, width, height);
+        }
     }
 }
 

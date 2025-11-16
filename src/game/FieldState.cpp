@@ -336,14 +336,19 @@ void FieldState::checkEncounter() {
             const MapTile& currentTile = terrainMap[playerY][playerX];
             if (currentTile.objectType == 2) { // モンスター専用タイル
                 EnemyType enemyType = EnemyType::SLIME; // デフォルト
+                int enemyLevel = 1; // デフォルト
                 for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                     if (activeMonsterPoints[i].first == playerX && activeMonsterPoints[i].second == playerY) {
                         enemyType = activeMonsterTypes[i];
+                        if (i < activeMonsterLevels.size()) {
+                            enemyLevel = activeMonsterLevels[i];
+                        }
                         break;
                     }
                 }
                 
                 Enemy enemy(enemyType);
+                enemy.setLevel(enemyLevel);
                 if (stateManager) {
                     lastBattleX = playerX;
                     lastBattleY = playerY;
@@ -442,41 +447,72 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
         
         if (tile.objectType == 2) { // モンスター専用タイル
             EnemyType enemyType = EnemyType::SLIME; // デフォルト
+            int enemyLevel = 1; // デフォルト
             for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                 if (activeMonsterPoints[i].first == x && activeMonsterPoints[i].second == y) {
                     enemyType = activeMonsterTypes[i];
+                    if (i < activeMonsterLevels.size()) {
+                        enemyLevel = activeMonsterLevels[i];
+                    }
                     break;
                 }
             }
             
             Enemy tempEnemy(enemyType);
+            tempEnemy.setLevel(enemyLevel);
             std::string enemyTextureName = "enemy_" + tempEnemy.getTypeName();
             SDL_Texture* enemyTexture = graphics.getTexture(enemyTextureName);
             
+            // プレイヤーレベルと比較して色を決定
+            int playerLevel = player->getLevel();
+            SDL_Color levelColor;
+            if (enemyLevel < playerLevel) {
+                levelColor = {0, 255, 0, 255}; // 緑（弱い）
+            } else if (enemyLevel == playerLevel) {
+                levelColor = {255, 255, 255, 255}; // 白（同じ）
+            } else {
+                levelColor = {255, 0, 0, 255}; // 赤（高い）
+            }
+            
+            auto& config = UIConfig::UIConfigManager::getInstance();
+            auto fieldConfig = config.getFieldConfig();
+            
             if (enemyTexture) {
-                int enemySize = TILE_SIZE * 0.8;
-                int enemyX = drawX + (TILE_SIZE - enemySize) / 2;
-                int enemyY = drawY + (TILE_SIZE - enemySize) / 2;
-                graphics.drawTexture(enemyTexture, enemyX, enemyY, enemySize, enemySize);
+                // 元の画像サイズを取得してアスペクト比を保持
+                int textureWidth, textureHeight;
+                SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight);
                 
-                auto& config = UIConfig::UIConfigManager::getInstance();
-                auto fieldConfig = config.getFieldConfig();
-                Enemy tempEnemy(enemyType);
-                std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
+                // タイルサイズの80%を基準に、アスペクト比を保持してサイズを計算
+                int baseSize = static_cast<int>(TILE_SIZE * 0.8);
+                float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+                
+                int displayWidth, displayHeight;
+                if (textureWidth > textureHeight) {
+                    // 横長の画像
+                    displayWidth = baseSize;
+                    displayHeight = static_cast<int>(baseSize / aspectRatio);
+                } else {
+                    // 縦長または正方形の画像
+                    displayHeight = baseSize;
+                    displayWidth = static_cast<int>(baseSize * aspectRatio);
+                }
+                
+                int enemyX = drawX + (TILE_SIZE - displayWidth) / 2;
+                int enemyY = drawY + (TILE_SIZE - displayHeight) / 2;
+                graphics.drawTexture(enemyTexture, enemyX, enemyY, displayWidth, displayHeight);
+                
+                std::string levelText = "Lv" + std::to_string(enemyLevel);
                 int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
                 int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
-                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
+                graphics.drawText(levelText, levelX, levelY, "default", levelColor);
             } else {
                 graphics.setDrawColor(255, 0, 0, 255);
                 graphics.drawRect(objX, objY, objSize, objSize, true);
                 
-                auto& config = UIConfig::UIConfigManager::getInstance();
-                auto fieldConfig = config.getFieldConfig();
-                Enemy tempEnemy(enemyType);
-                std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
+                std::string levelText = "Lv" + std::to_string(enemyLevel);
                 int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
                 int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
-                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
+                graphics.drawText(levelText, levelX, levelY, "default", levelColor);
             }
 
         } else { // 岩や木の場合は四角形
@@ -503,6 +539,18 @@ void FieldState::drawPlayer(Graphics& graphics) {
         graphics.setDrawColor(255, 255, 255, 255);
         graphics.drawRect(drawX, drawY, size, size, false);
     }
+    
+    // プレイヤーの上にレベルを表示
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto fieldConfig = config.getFieldConfig();
+    int playerLevel = player->getLevel();
+    std::string levelText = "Lv" + std::to_string(playerLevel);
+    SDL_Color levelColor = {255, 255, 255, 255}; // 白（プレイヤー自身なので固定）
+    
+    // 敵のレベル表示と同じ位置計算（タイルの左上から相対位置）
+    int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
+    int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
+    graphics.drawText(levelText, levelX, levelY, "default", levelColor);
 }
 
 void FieldState::checkTownEntrance() {
@@ -559,6 +607,10 @@ void FieldState::generateMonsterSpawnPoints() {
     monsterSpawnPoints.clear();
     activeMonsterPoints.clear();
     activeMonsterTypes.clear();
+    activeMonsterLevels.clear();
+    
+    int playerLevel = player->getLevel();
+    std::uniform_int_distribution<> disLevel(std::max(1, playerLevel - 2), playerLevel + 2); // プレイヤーレベル±2の範囲
     
     for (int i = 0; i < 5; i++) {
         int x, y;
@@ -572,11 +624,13 @@ void FieldState::generateMonsterSpawnPoints() {
                           !terrainMap[y][x].hasObject;
         } while (!validPosition);
         
-        EnemyType enemyType = Enemy::createRandomEnemy(player->getLevel()).getType();
+        EnemyType enemyType = Enemy::createRandomEnemy(playerLevel).getType();
+        int enemyLevel = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
         
         monsterSpawnPoints.push_back({x, y});
         activeMonsterPoints.push_back({x, y});
         activeMonsterTypes.push_back(enemyType);
+        activeMonsterLevels.push_back(enemyLevel);
         
         terrainMap[y][x].hasObject = true;
         terrainMap[y][x].objectType = 2; // モンスター専用タイル
@@ -606,11 +660,15 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
     terrainMap[newY][newX].hasObject = true;
     terrainMap[newY][newX].objectType = 2;
     
+    int playerLevel = player->getLevel();
+    std::uniform_int_distribution<> disLevel(std::max(1, playerLevel - 2), playerLevel + 2); // プレイヤーレベル±2の範囲
+    
     for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
         if (activeMonsterPoints[i].first == oldX && activeMonsterPoints[i].second == oldY) {
             activeMonsterPoints[i].first = newX;
             activeMonsterPoints[i].second = newY;
-            activeMonsterTypes[i] = Enemy::createRandomEnemy(player->getLevel()).getType();
+            activeMonsterTypes[i] = Enemy::createRandomEnemy(playerLevel).getType();
+            activeMonsterLevels[i] = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
             break;
         }
     }

@@ -218,6 +218,13 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/objects/torii.png", "torii");
     
     graphics.loadTexture("assets/textures/buildings/resident_home.png", "resident_home");
+    
+    // UI画像
+    graphics.loadTexture("assets/textures/UI/Rock-Paper-Scissors.png", "rock_paper_scissors");
+    graphics.loadTexture("assets/textures/UI/attack.png", "command_attack");
+    graphics.loadTexture("assets/textures/UI/defend.png", "command_defend");
+    graphics.loadTexture("assets/textures/UI/magic.png", "command_magic");
+    graphics.loadTexture("assets/textures/UI/vs.png", "vs_image");
     // オブジェクト画像
     graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     graphics.loadTexture("assets/textures/objects/desk.png", "desk");

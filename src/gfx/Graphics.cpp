@@ -12,6 +12,10 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
     screenWidth = width;
     screenHeight = height;
     
+    // 最高画質設定：レンダリングスケーリング品質を線形補間に設定
+    // これはレンダラー作成前に設定する必要がある
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+    
     // SDL初期化
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0) {
         std::cerr << "SDL初期化エラー: " << SDL_GetError() << std::endl;
@@ -42,14 +46,18 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
         return false;
     }
     
-    // レンダラー作成
+    // レンダラー作成（最高品質設定）
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         std::cerr << "レンダラー作成エラー: " << SDL_GetError() << std::endl;
         return false;
     }
     
+    // 論理サイズ設定
     SDL_RenderSetLogicalSize(renderer, width, height);
+    
+    // レンダリング品質を最高に設定（アンチエイリアシング有効）
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
     
     screenWidth = width;
     screenHeight = height;
@@ -115,6 +123,9 @@ SDL_Texture* Graphics::loadTexture(const std::string& filepath, const std::strin
         std::cerr << "テクスチャ作成エラー " << filepath << ": " << SDL_GetError() << std::endl;
         return nullptr;
     }
+    
+    // 線形フィルタリングを有効にして、スケーリング時の画質を向上
+    SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
     
     textures[name] = texture;
     return texture;
@@ -218,7 +229,38 @@ SDL_Texture* Graphics::createTextTexture(const std::string& text, const std::str
     SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
     SDL_FreeSurface(textSurface);
     
+    if (textTexture) {
+        // 線形フィルタリングを有効にして、スケーリング時の画質を向上
+        SDL_SetTextureScaleMode(textTexture, SDL_ScaleModeLinear);
+    }
+    
     return textTexture;
+}
+
+void Graphics::drawTextureAspectRatio(SDL_Texture* texture, int x, int y, int baseSize, bool centerX, bool centerY) {
+    if (!texture) return;
+    
+    int textureWidth, textureHeight;
+    SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
+    
+    // 基準サイズをアスペクト比を保持して計算
+    float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+    int displayWidth, displayHeight;
+    if (textureWidth > textureHeight) {
+        // 横長の画像
+        displayWidth = baseSize;
+        displayHeight = static_cast<int>(baseSize / aspectRatio);
+    } else {
+        // 縦長または正方形の画像
+        displayHeight = baseSize;
+        displayWidth = static_cast<int>(baseSize * aspectRatio);
+    }
+    
+    // 中心配置の場合はオフセットを計算
+    int drawX = centerX ? (x - displayWidth / 2) : x;
+    int drawY = centerY ? (y - displayHeight / 2) : y;
+    
+    drawTexture(texture, drawX, drawY, displayWidth, displayHeight);
 }
 
 void Graphics::drawRect(int x, int y, int width, int height, bool filled) {

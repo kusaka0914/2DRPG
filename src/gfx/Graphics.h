@@ -105,6 +105,20 @@ public:
     void drawTexture(SDL_Texture* texture, int x, int y, int width = -1, int height = -1);
     
     /**
+     * @brief アスペクト比を保持したテクスチャの描画
+     * @details テクスチャの元のアスペクト比を保持しながら、基準サイズに合わせて描画する。
+     * 横長の画像は幅を基準に、縦長の画像は高さを基準にサイズを計算する。
+     * 
+     * @param texture テクスチャへのポインタ
+     * @param x X座標（画像の中心X座標）
+     * @param y Y座標（画像の中心Y座標）
+     * @param baseSize 基準サイズ（横長の画像は幅、縦長の画像は高さとして使用）
+     * @param centerX 画像をX座標を中心に配置するか（デフォルト: true）
+     * @param centerY 画像をY座標を中心に配置するか（デフォルト: true）
+     */
+    void drawTextureAspectRatio(SDL_Texture* texture, int x, int y, int baseSize, bool centerX = true, bool centerY = true);
+    
+    /**
      * @brief テクスチャのクリッピング描画
      * @param name テクスチャ名
      * @param x X座標

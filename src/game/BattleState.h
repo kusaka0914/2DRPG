@@ -216,6 +216,12 @@ private:
     
     // 勝敗UI表示用
     void renderWinLossUI(Graphics& graphics, bool isResultPhase = false);
+    
+    /**
+     * @brief Rock-Paper-Scissors画像を中央上部に表示（住民戦以外）
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
+    void renderRockPaperScissorsImage(Graphics& graphics);
     std::pair<int, int> calculateCurrentWinLoss() const;
     
     /**

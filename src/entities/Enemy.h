@@ -57,6 +57,12 @@ private:
     int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス（住民の場合のみ有効、-1=住民ではない） */
     int residentX;  /**< @brief 住民のX座標（住民の場合のみ有効、-1=住民ではない） */
     int residentY;  /**< @brief 住民のY座標（住民の場合のみ有効、-1=住民ではない） */
+    
+    // 基準レベルと基準ステータス（レベル調整用）
+    int baseLevel;  /**< @brief この敵タイプの基準レベル */
+    int baseHp;  /**< @brief 基準レベルでのHP */
+    int baseAttack;  /**< @brief 基準レベルでの攻撃力 */
+    int baseDefense;  /**< @brief 基準レベルでの防御力 */
 
 public:
     /**
@@ -176,4 +182,10 @@ public:
      * @return 住民のY座標（-1=住民ではない）
      */
     int getResidentY() const { return residentY; }
+    
+    /**
+     * @brief レベルの設定
+     * @param newLevel 新しいレベル
+     */
+    void setLevel(int newLevel);
 }; 

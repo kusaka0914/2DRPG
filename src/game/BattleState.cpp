@@ -416,8 +416,6 @@ void BattleState::render(Graphics& graphics) {
         int enemyX = screenWidth / 2;
         int enemyY = screenHeight / 2;
         constexpr int BASE_ENEMY_SIZE = 300;
-        int enemyWidth = static_cast<int>(BASE_ENEMY_SIZE * introScale);
-        int enemyHeight = static_cast<int>(BASE_ENEMY_SIZE * introScale);
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
     SDL_Texture* enemyTexture = nullptr;
@@ -430,12 +428,31 @@ void BattleState::render(Graphics& graphics) {
     }
     
     if (enemyTexture) {
+            // 元の画像サイズを取得してアスペクト比を保持
+            int textureWidth, textureHeight;
+            SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+            
+            // 基準サイズをアスペクト比を保持して計算
+            float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+            int enemyWidth, enemyHeight;
+            if (textureWidth > textureHeight) {
+                // 横長の画像
+                enemyWidth = static_cast<int>(BASE_ENEMY_SIZE * introScale);
+                enemyHeight = static_cast<int>((BASE_ENEMY_SIZE * introScale) / aspectRatio);
+            } else {
+                // 縦長または正方形の画像
+                enemyHeight = static_cast<int>(BASE_ENEMY_SIZE * introScale);
+                enemyWidth = static_cast<int>((BASE_ENEMY_SIZE * introScale) * aspectRatio);
+            }
+            
             graphics.drawTexture(enemyTexture, enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
+            int fallbackWidth = static_cast<int>(BASE_ENEMY_SIZE * introScale);
+            int fallbackHeight = static_cast<int>(BASE_ENEMY_SIZE * introScale);
             graphics.setDrawColor(255, 100, 100, 255);
-            graphics.drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+            graphics.drawRect(enemyX - fallbackWidth / 2, enemyY - fallbackHeight / 2, fallbackWidth, fallbackHeight, true);
         graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight, false);
+            graphics.drawRect(enemyX - fallbackWidth / 2, enemyY - fallbackHeight / 2, fallbackWidth, fallbackHeight, false);
         }
         
         // 敵の下にテキストを表示（スケールアニメーション付き）
@@ -541,6 +558,9 @@ void BattleState::render(Graphics& graphics) {
         //     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
         // }
         
+        // Rock-Paper-Scissors画像を表示（住民戦以外）
+        renderRockPaperScissorsImage(graphics);
+        
         graphics.present();
         return;
     }
@@ -572,6 +592,9 @@ void BattleState::render(Graphics& graphics) {
         //     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
         // }
         
+        // Rock-Paper-Scissors画像を表示（住民戦以外）
+        renderRockPaperScissorsImage(graphics);
+        
         graphics.present();
         return;
     }
@@ -599,8 +622,20 @@ void BattleState::render(Graphics& graphics) {
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
-        int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
+        SDL_Texture* playerTex = graphics.getTexture("player");
+        
+        // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
         int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+        if (playerTex) {
+            int textureWidth, textureHeight;
+            SDL_QueryTexture(playerTex, nullptr, nullptr, &textureWidth, &textureHeight);
+            float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+            if (textureWidth <= textureHeight) {
+                playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+            } else {
+                playerHeight = static_cast<int>(BattleConstants::BATTLE_CHARACTER_SIZE / aspectRatio);
+            }
+        }
         
         // HP表示（プレイヤーのみ表示）
         SDL_Color whiteColor = {255, 255, 255, 255};
@@ -638,14 +673,13 @@ void BattleState::render(Graphics& graphics) {
         graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
         
         // プレイヤーのみ描画（敵は描画しない）
-        SDL_Texture* playerTex = graphics.getTexture("player");
         if (playerTex) {
-            graphics.drawTexture(playerTex, playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight);
+            graphics.drawTextureAspectRatio(playerTex, playerX, playerY, BattleConstants::BATTLE_CHARACTER_SIZE);
         } else {
             graphics.setDrawColor(100, 200, 255, 255);
-            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, true);
+            graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
             graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
+            graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
         }
         
         // 勝利メッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
@@ -702,8 +736,20 @@ void BattleState::render(Graphics& graphics) {
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
-        int playerWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
+        SDL_Texture* playerTex = graphics.getTexture("player");
+        
+        // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
         int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+        if (playerTex) {
+            int textureWidth, textureHeight;
+            SDL_QueryTexture(playerTex, nullptr, nullptr, &textureWidth, &textureHeight);
+            float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+            if (textureWidth <= textureHeight) {
+                playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+            } else {
+                playerHeight = static_cast<int>(BattleConstants::BATTLE_CHARACTER_SIZE / aspectRatio);
+            }
+        }
         
         // HP表示（プレイヤーのみ表示）
         SDL_Color whiteColor = {255, 255, 255, 255};
@@ -741,14 +787,13 @@ void BattleState::render(Graphics& graphics) {
         graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
         
         // プレイヤーのみ描画（敵は描画しない）
-        SDL_Texture* playerTex = graphics.getTexture("player");
         if (playerTex) {
-            graphics.drawTexture(playerTex, playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight);
+            graphics.drawTextureAspectRatio(playerTex, playerX, playerY, BattleConstants::BATTLE_CHARACTER_SIZE);
         } else {
             graphics.setDrawColor(100, 200, 255, 255);
-            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, true);
+            graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
             graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
+            graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
         }
         
         // レベルアップメッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
@@ -800,6 +845,30 @@ void BattleState::render(Graphics& graphics) {
     // JUDGE_RESULTフェーズの描画（VICTORY_DISPLAYやLEVEL_UP_DISPLAYに遷移していない場合のみ）
     if (currentPhase == BattlePhase::JUDGE_RESULT || 
         currentPhase == BattlePhase::DESPERATE_JUDGE_RESULT) {
+        // 結果フェーズでもコマンド画像を表示するため、renderJudgeAnimationを呼ぶ
+        BattleUI::JudgeRenderParams judgeParams;
+        judgeParams.currentJudgingTurnIndex = currentJudgingTurnIndex;
+        judgeParams.commandTurnCount = battleLogic->getCommandTurnCount();
+        judgeParams.judgeSubPhase = JudgeSubPhase::SHOW_RESULT;  // 結果フェーズ
+        judgeParams.judgeDisplayTimer = 0.0f;  // タイマーは使用しない
+        
+        // 住民戦の場合はコマンド名を直接指定
+        if (enemy->isResident()) {
+            judgeParams.playerCommandName = getPlayerCommandNameForResident(currentResidentPlayerCommand);
+            judgeParams.enemyCommandName = getResidentCommandName(currentResidentCommand);
+            judgeParams.judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+            judgeParams.residentBehaviorHint = getResidentBehaviorHint();
+            judgeParams.residentTurnCount = residentTurnCount;
+        } else {
+            judgeParams.playerCommandName = "";
+            judgeParams.enemyCommandName = "";
+            judgeParams.judgeResult = -999; // 未設定（battleLogicから取得）
+            judgeParams.residentBehaviorHint = "";
+            judgeParams.residentTurnCount = 0;
+        }
+        
+        battleUI->renderJudgeAnimation(judgeParams);
+        
         auto stats = battleLogic->getStats();
         BattleUI::ResultAnnouncementRenderParams params;
         
@@ -831,6 +900,9 @@ void BattleState::render(Graphics& graphics) {
         // ヒットエフェクトを描画
         effectManager->renderHitEffects(graphics);
         
+        // Rock-Paper-Scissors画像を表示（住民戦以外）
+        renderRockPaperScissorsImage(graphics);
+        
         graphics.present();
         return;
     }
@@ -850,8 +922,20 @@ void BattleState::render(Graphics& graphics) {
         playerY += static_cast<int>(shakeState.shakeOffsetY);
     }
     
-    int playerWidth = 300;
+    SDL_Texture* playerTexture = graphics.getTexture("player");
+    
+    // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
     int playerHeight = 300;
+    if (playerTexture) {
+        int textureWidth, textureHeight;
+        SDL_QueryTexture(playerTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+        float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+        if (textureWidth <= textureHeight) {
+            playerHeight = 300;
+        } else {
+            playerHeight = static_cast<int>(300 / aspectRatio);
+        }
+    }
     
     std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
     SDL_Color playerHpColor = {100, 255, 100, 255};
@@ -903,14 +987,13 @@ void BattleState::render(Graphics& graphics) {
     int playerAnimX = playerX + static_cast<int>(charState.playerAttackOffsetX + charState.playerHitOffsetX);
     int playerAnimY = playerY + static_cast<int>(charState.playerAttackOffsetY + charState.playerHitOffsetY);
     
-    SDL_Texture* playerTexture = graphics.getTexture("player");
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, playerAnimX - playerWidth / 2, playerAnimY - playerHeight / 2, playerWidth, playerHeight);
+        graphics.drawTextureAspectRatio(playerTexture, playerAnimX, playerAnimY, 300);
     } else {
         graphics.setDrawColor(100, 200, 255, 255);
-        graphics.drawRect(playerAnimX - playerWidth / 2, playerAnimY - playerHeight / 2, playerWidth, playerHeight, true);
+        graphics.drawRect(playerAnimX - 300 / 2, playerAnimY - 300 / 2, 300, 300, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(playerAnimX - playerWidth / 2, playerAnimY - playerHeight / 2, playerWidth, playerHeight, false);
+        graphics.drawRect(playerAnimX - 300 / 2, playerAnimY - 300 / 2, 300, 300, false);
     }
     
     int enemyBaseX = screenWidth * 3 / 4;
@@ -927,8 +1010,28 @@ void BattleState::render(Graphics& graphics) {
     int enemyAnimX = enemyX + static_cast<int>(charState.enemyAttackOffsetX + charState.enemyHitOffsetX);
     int enemyAnimY = enemyY + static_cast<int>(charState.enemyAttackOffsetY + charState.enemyHitOffsetY);
     
-    int enemyWidth = 300;
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTexture = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTexture = graphics.getTexture(textureName);
+    } else {
+        enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    }
+    
+    // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
     int enemyHeight = 300;
+    if (enemyTexture) {
+        int textureWidth, textureHeight;
+        SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+        float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+        if (textureWidth <= textureHeight) {
+            enemyHeight = 300;
+        } else {
+            enemyHeight = static_cast<int>(300 / aspectRatio);
+        }
+    }
     
     std::string enemyHpText = "HP: " + std::to_string(enemy->getHp()) + "/" + std::to_string(enemy->getMaxHp());
     SDL_Color enemyHpColor = {255, 100, 100, 255};
@@ -940,26 +1043,19 @@ void BattleState::render(Graphics& graphics) {
     }
     graphics.drawText(enemyHpText, enemyHpX, enemyHpY, "default", enemyHpColor);
     
-    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
-    SDL_Texture* enemyTexture = nullptr;
-    if (enemy->isResident()) {
-        int textureIndex = enemy->getResidentTextureIndex();
-        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
-        enemyTexture = graphics.getTexture(textureName);
-    } else {
-        enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
-    }
-    
     if (enemyTexture) {
-        graphics.drawTexture(enemyTexture, enemyAnimX - enemyWidth / 2, enemyAnimY - enemyHeight / 2, enemyWidth, enemyHeight);
+        graphics.drawTextureAspectRatio(enemyTexture, enemyAnimX, enemyAnimY, 300);
     } else {
         graphics.setDrawColor(255, 100, 100, 255);
-        graphics.drawRect(enemyAnimX - enemyWidth / 2, enemyAnimY - enemyHeight / 2, enemyWidth, enemyHeight, true);
+        graphics.drawRect(enemyAnimX - 300 / 2, enemyAnimY - 300 / 2, 300, 300, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(enemyAnimX - enemyWidth / 2, enemyAnimY - enemyHeight / 2, enemyWidth, enemyHeight, false);
+        graphics.drawRect(enemyAnimX - 300 / 2, enemyAnimY - 300 / 2, 300, 300, false);
     }
     
     effectManager->renderHitEffects(graphics);
+    
+    // Rock-Paper-Scissors画像を表示（住民戦以外）
+    renderRockPaperScissorsImage(graphics);
     
     // ui.render(graphics); // バトルログなどの下部UIを非表示
     
@@ -2202,6 +2298,31 @@ std::pair<int, int> BattleState::calculateCurrentWinLoss() const {
     }
     
     return std::make_pair(playerWins, enemyWins);
+}
+
+void BattleState::renderRockPaperScissorsImage(Graphics& graphics) {
+    // 住民戦ではない場合のみ表示
+    if (enemy->isResident()) {
+        return;
+    }
+    
+    SDL_Texture* rpsTexture = graphics.getTexture("rock_paper_scissors");
+    if (rpsTexture) {
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        
+        // 画像のサイズを取得
+        int textureWidth, textureHeight;
+        SDL_QueryTexture(rpsTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+        
+        // 中央上部に配置（画像の幅を適切なサイズに調整）
+        int displayWidth = 200; // 表示幅を200pxに設定（必要に応じて調整可能）
+        int displayHeight = static_cast<int>(textureHeight * (static_cast<float>(displayWidth) / textureWidth));
+        int posX = (screenWidth - displayWidth) / 2; // 中央
+        int posY = 20; // 上部から20px下
+        
+        graphics.drawTexture(rpsTexture, posX, posY, displayWidth, displayHeight);
+    }
 }
 
 void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {

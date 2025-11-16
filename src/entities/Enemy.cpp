@@ -2,14 +2,17 @@
 #include <iostream>
 #include <random>
 
-Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCastMagic(false), magicDamage(0), residentTextureIndex(-1), residentX(-1), residentY(-1) {
+Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCastMagic(false), magicDamage(0), residentTextureIndex(-1), residentX(-1), residentY(-1), baseLevel(1), baseHp(0), baseAttack(0), baseDefense(0) {
     switch (type) {
         case EnemyType::SLIME:
             name = "スライム";
             hp = maxHp = 20;
             attack = 12;
             defense = 2;
-            level = 1;
+            level = baseLevel = 1;
+            baseHp = 20;
+            baseAttack = 12;
+            baseDefense = 2;
             goldReward = 5;
             expReward = 10;
             break;
@@ -19,7 +22,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 40;
             attack = 21;
             defense = 4;
-            level = 3;
+            level = baseLevel = 3;
+            baseHp = 40;
+            baseAttack = 21;
+            baseDefense = 4;
             goldReward = 8;
             expReward = 15;
             break;
@@ -29,7 +35,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 120;
             attack = 38;
             defense = 8;
-            level = 10;
+            level = baseLevel = 10;
+            baseHp = 120;
+            baseAttack = 38;
+            baseDefense = 8;
             goldReward = 15;
             expReward = 20;
             break;
@@ -39,7 +48,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 160;
             attack = 61;
             defense = 12;
-            level = 15;
+            level = baseLevel = 15;
+            baseHp = 160;
+            baseAttack = 61;
+            baseDefense = 12;
             goldReward = 50;
             expReward = 25;
             break;
@@ -49,7 +61,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 210;
             attack = 67;    
             defense = 15;
-            level = 20;
+            level = baseLevel = 20;
+            baseHp = 210;
+            baseAttack = 67;
+            baseDefense = 15;
             goldReward = 80;
             expReward = 30;
             break;
@@ -59,7 +74,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 300;
             attack = 73;
             defense = 20;
-            level = 25;
+            level = baseLevel = 25;
+            baseHp = 300;
+            baseAttack = 73;
+            baseDefense = 20;
             goldReward = 120;
             expReward = 35;
             break;
@@ -69,7 +87,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 450;
             attack = 79;
             defense = 25;
-            level = 30;
+            level = baseLevel = 30;
+            baseHp = 450;
+            baseAttack = 79;
+            baseDefense = 25;
             goldReward = 200;
             expReward = 40;
             break;
@@ -79,10 +100,12 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 550;
             attack = 85;
             defense = 30;
-            level = 35;
+            level = baseLevel = 35;
+            baseHp = 550;
+            baseAttack = 85;
+            baseDefense = 30;
             goldReward = 300;
             expReward = 45;
-
             break;
             
         case EnemyType::WEREWOLF:
@@ -90,7 +113,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 650;
             attack = 91;
             defense = 35;
-            level = 40;
+            level = baseLevel = 40;
+            baseHp = 650;
+            baseAttack = 91;
+            baseDefense = 35;
             goldReward = 400;
             expReward = 50;
             break;
@@ -100,7 +126,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 800;
             attack = 99;
             defense = 40;
-            level = 45;
+            level = baseLevel = 45;
+            baseHp = 800;
+            baseAttack = 99;
+            baseDefense = 40;
             goldReward = 500;
             expReward = 55;
             break;
@@ -110,7 +139,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 950;
             attack = 110;
             defense = 45;
-            level = 50;
+            level = baseLevel = 50;
+            baseHp = 950;
+            baseAttack = 110;
+            baseDefense = 45;
             goldReward = 600;
             expReward = 60;
             break;
@@ -120,7 +152,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 1200;
             attack = 115;
             defense = 50;
-            level = 55;
+            level = baseLevel = 55;
+            baseHp = 1200;
+            baseAttack = 115;
+            baseDefense = 50;
             goldReward = 650;
             expReward = 65;
             break;
@@ -130,7 +165,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 1350;
             attack = 120;
             defense = 55;
-            level = 60;
+            level = baseLevel = 60;
+            baseHp = 1350;
+            baseAttack = 120;
+            baseDefense = 55;
             goldReward = 800;
             expReward = 70;
             break;
@@ -140,7 +178,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 1500;
             attack = 125;
             defense = 60;
-            level = 65;
+            level = baseLevel = 65;
+            baseHp = 1500;
+            baseAttack = 125;
+            baseDefense = 60;
             goldReward = 1000;
             expReward = 75;
             break;
@@ -150,7 +191,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 1650;
             attack = 130;
             defense = 70;
-            level = 70;
+            level = baseLevel = 70;
+            baseHp = 1650;
+            baseAttack = 130;
+            baseDefense = 70;
             goldReward = 1200;
             expReward = 80;
             break;
@@ -160,7 +204,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 1800;
             attack = 135;
             defense = 80;
-            level = 75;
+            level = baseLevel = 75;
+            baseHp = 1800;
+            baseAttack = 135;
+            baseDefense = 80;
             goldReward = 1400;
             expReward = 85;
             break;
@@ -170,7 +217,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 2100;
             attack = 140;
             defense = 90;
-            level = 80;
+            level = baseLevel = 80;
+            baseHp = 2100;
+            baseAttack = 140;
+            baseDefense = 90;
             goldReward = 1600;
             expReward = 90;
             break;
@@ -180,7 +230,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 2300;
             attack = 150;
             defense = 100;
-            level = 85;
+            level = baseLevel = 85;
+            baseHp = 2300;
+            baseAttack = 150;
+            baseDefense = 100;
             goldReward = 2000;
             expReward = 95;
             break;
@@ -190,7 +243,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 2500;
             attack = 158;
             defense = 110;
-            level = 90;
+            level = baseLevel = 90;
+            baseHp = 2500;
+            baseAttack = 158;
+            baseDefense = 110;
             goldReward = 2500;
             expReward = 100;
             break;
@@ -200,7 +256,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 2700;
             attack = 162;
             defense = 120;
-            level = 95;
+            level = baseLevel = 95;
+            baseHp = 2700;
+            baseAttack = 162;
+            baseDefense = 120;
             goldReward = 3000;
             expReward = 100;
             break;
@@ -210,7 +269,10 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             hp = maxHp = 4000;
             attack = 180;
             defense = 150;
-            level = 100;
+            level = baseLevel = 100;
+            baseHp = 4000;
+            baseAttack = 180;
+            baseDefense = 150;
             goldReward = 0;
             expReward = 0;
             break;
@@ -351,4 +413,25 @@ Enemy Enemy::createRandomEnemy(int playerLevel) {
     EnemyType selectedType = possibleEnemies[dis(gen)];
     
     return Enemy(selectedType);
+}
+
+void Enemy::setLevel(int newLevel) {
+    if (newLevel < 1) {
+        newLevel = 1;
+    }
+    
+    // 基準レベルからの差分を計算
+    int levelDiff = newLevel - baseLevel;
+    
+    // プレイヤーと同じ成長率を適用（1レベルあたり：HP+5、攻撃+2、防御+1）
+    int hpIncrease = levelDiff * 5;
+    int attackIncrease = levelDiff * 2;
+    int defenseIncrease = levelDiff * 1;
+    
+    // ステータスを更新
+    level = newLevel;
+    maxHp = baseHp + hpIncrease;
+    hp = maxHp; // HPも全回復
+    attack = baseAttack + attackIncrease;
+    defense = baseDefense + defenseIncrease;
 }

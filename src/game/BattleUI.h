@@ -170,5 +170,22 @@ public:
      * @param isDesperateMode 窮地モードフラグ（デフォルト: false）
      */
     void renderTurnNumber(int turnNumber, int totalTurns, bool isDesperateMode = false);
+    
+    /**
+     * @brief コマンド名から画像テクスチャを取得
+     * @param commandName コマンド名（"攻撃"、"防御"、"呪文"など）
+     * @return コマンド画像のテクスチャ（見つからない場合はnullptr）
+     */
+    SDL_Texture* getCommandTexture(const std::string& commandName) const;
+    
+    /**
+     * @brief コマンド画像を描画
+     * @param commandName コマンド名（"攻撃"、"防御"、"呪文"など）
+     * @param x X座標
+     * @param y Y座標
+     * @param width 表示幅（0の場合は元のサイズ）
+     * @param height 表示高さ（0の場合は元のサイズ）
+     */
+    void drawCommandImage(const std::string& commandName, int x, int y, int width = 0, int height = 0) const;
 };
 

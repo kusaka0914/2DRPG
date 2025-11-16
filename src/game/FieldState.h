@@ -38,6 +38,7 @@ private:
     std::vector<std::pair<int, int>> monsterSpawnPoints; // モンスター出現場所のリスト
     std::vector<std::pair<int, int>> activeMonsterPoints; // 現在アクティブなモンスター出現場所
     std::vector<EnemyType> activeMonsterTypes; // 各出現場所の敵の種類
+    std::vector<int> activeMonsterLevels; // 各出現場所の敵のレベル
     
     // 戦闘終了時の処理
     bool shouldRelocateMonster;
