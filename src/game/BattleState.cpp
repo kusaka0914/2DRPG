@@ -478,7 +478,9 @@ void BattleState::render(Graphics& graphics) {
         params.judgeSubPhase = judgeSubPhase;
         params.judgeDisplayTimer = judgeDisplayTimer;
         battleUI->renderJudgeAnimation(params);
-        // ui.render(graphics); // バトルログなどの下部UIを非表示
+        
+        // 勝敗UIを表示（ジャッジフェーズ中は常に更新）
+        renderWinLossUI(graphics, false);
         
         // if (nightTimerActive) {
         //     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
@@ -762,6 +764,9 @@ void BattleState::render(Graphics& graphics) {
         params.playerWins = stats.playerWins;
         params.enemyWins = stats.enemyWins;
         battleUI->renderResultAnnouncement(params);
+        
+        // 勝敗UIを表示（結果フェーズでは「自分が〜ターン攻撃します」も表示）
+        renderWinLossUI(graphics, true);
         
         // ヒットエフェクトを描画
         effectManager->renderHitEffects(graphics);
@@ -1799,38 +1804,123 @@ void BattleState::showTurnResult(int turnIndex) {
     if (turnIndex < 0 || turnIndex >= turnResults.size()) return;
 }
 
-void BattleState::showFinalResult() {
-    animationController->resetResultAnimation();
-    animationController->resetAll();
-    damageAppliedInAnimation = false;
+
+
+std::pair<int, int> BattleState::calculateCurrentWinLoss() const {
+    int playerWins = 0;
+    int enemyWins = 0;
     
-    auto stats = battleLogic->getStats();
-    std::string resultText = "\n【結果発表】\n";
-    resultText += "自分 " + std::to_string(stats.playerWins) + "勝";
-    resultText += " " + std::to_string(stats.enemyWins) + "敗\n\n";
+    auto playerCmds = battleLogic->getPlayerCommands();
+    auto enemyCmds = battleLogic->getEnemyCommands();
     
-    if (stats.playerWins > stats.enemyWins) {
-        if (stats.hasThreeWinStreak) {
-            resultText += "🔥 3連勝！ダメージ1.5倍！ 🔥\n";
-        } else if (battleLogic->getIsDesperateMode()) {
-            resultText += "🎉 一発逆転成功！ 🎉\n";
-        } else {
-            resultText += "🎯 勝利！\n";
+    // ジャッジフェーズ中は、現在判定中のターンまで計算
+    // 結果フェーズでは全てのターンを計算
+    int maxTurn = (currentPhase == BattlePhase::JUDGE || currentPhase == BattlePhase::DESPERATE_JUDGE) 
+                  ? currentJudgingTurnIndex 
+                  : battleLogic->getCommandTurnCount();
+    
+    for (int i = 0; i < maxTurn; i++) {
+        int result = battleLogic->judgeRound(playerCmds[i], enemyCmds[i]);
+        if (result == BattleConstants::JUDGE_RESULT_PLAYER_WIN) {
+            playerWins++;
+        } else if (result == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
+            enemyWins++;
         }
-        resultText += "自分が" + std::to_string(stats.playerWins) + "ターン分の攻撃を実行！";
-    } else if (stats.enemyWins > stats.playerWins) {
-        if (battleLogic->getIsDesperateMode()) {
-            resultText += "💀 大敗北... 💀\n";
-        } else {
-            resultText += "❌ 敗北...\n";
-        }
-        resultText += "敵が" + std::to_string(stats.enemyWins) + "ターン分の攻撃を実行！";
-    } else {
-        resultText += "⚖️ 引き分け\n";
-        resultText += "両方がダメージを受ける";
     }
     
-    addBattleLog(resultText);
+    return std::make_pair(playerWins, enemyWins);
+}
+
+void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
+    auto winLoss = calculateCurrentWinLoss();
+    int playerWins = winLoss.first;
+    int enemyWins = winLoss.second;
+    
+    int screenWidth = graphics.getScreenWidth();
+    int screenHeight = graphics.getScreenHeight();
+    
+    // 自分と敵の真ん中（x座標はVSがあるところ = screenWidth / 2）
+    int centerX = screenWidth / 2;
+    int centerY = screenHeight / 2;
+    
+    // VSの位置を計算
+    // VSの最大スケール時の高さを計算（JUDGE_VS_BASE_SCALE = 3.0f）
+    // VSテキストの高さを仮定（約30px * 3.0 = 90px）
+    std::string vsText = "VS";
+    SDL_Color vsTextColor = {255, 255, 255, 255};
+    SDL_Texture* vsTexture = graphics.createTextTexture(vsText, "default", vsTextColor);
+    int vsTextWidth = 0, vsTextHeight = 0;
+    if (vsTexture) {
+        SDL_QueryTexture(vsTexture, nullptr, nullptr, &vsTextWidth, &vsTextHeight);
+        SDL_DestroyTexture(vsTexture);
+    }
+    int vsScaledHeight = static_cast<int>(vsTextHeight * BattleConstants::JUDGE_VS_BASE_SCALE);
+    int vsPadding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
+    
+    // VSの背景の下端 = centerY + JUDGE_COMMAND_Y_OFFSET + (scaledHeight / 2) + padding
+    int vsBottomY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET + (vsScaledHeight / 2) + vsPadding;
+    
+    // 勝敗UIはVSの真下に配置
+    int winLossY = vsBottomY + 20; // VSの下に適切な間隔を空ける
+    
+    // 勝敗テキスト
+    std::string winLossText = "自分 " + std::to_string(playerWins) + "勝  " + 
+                              "敵 " + std::to_string(enemyWins) + "勝";
+    SDL_Color textColor = {255, 255, 255, 255}; // 白
+    
+    SDL_Texture* textTexture = graphics.createTextTexture(winLossText, "default", textColor);
+    if (textTexture) {
+        int textWidth, textHeight;
+        SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+        
+        int padding = 8;
+        int bgX = centerX - textWidth / 2 - padding;
+        int bgY = winLossY - padding;
+        
+        // 背景黒
+        graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+        graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+        
+        // テキスト白
+        graphics.drawText(winLossText, centerX - textWidth / 2, winLossY, "default", textColor);
+        
+        SDL_DestroyTexture(textTexture);
+        
+        // 結果フェーズのみ「自分が〜ターン攻撃します」を表示（VSが消えた位置 = VSの位置）
+        if (isResultPhase) {
+            auto stats = battleLogic->getStats();
+            std::string attackText;
+            
+            if (playerWins > enemyWins) {
+                attackText = "自分が" + std::to_string(playerWins) + "ターン分の攻撃を実行！";
+            } else if (enemyWins > playerWins) {
+                attackText = "敵が" + std::to_string(enemyWins) + "ターン分の攻撃を実行！";
+            } else {
+                attackText = "両方がダメージを受ける";
+            }
+            
+            SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", textColor);
+            if (attackTexture) {
+                int attackTextWidth, attackTextHeight;
+                SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
+                
+                // VSが消えた位置（VSの位置 = centerY + JUDGE_COMMAND_Y_OFFSET）
+                int vsY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
+                int attackY = vsY;
+                int attackBgX = centerX - attackTextWidth / 2 - padding;
+                int attackBgY = attackY - padding;
+                
+                // 背景黒
+                graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                graphics.drawRect(attackBgX, attackBgY, attackTextWidth + padding * 2, attackTextHeight + padding * 2, true);
+                
+                // テキスト白
+                graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", textColor);
+                
+                SDL_DestroyTexture(attackTexture);
+            }
+        }
+    }
 }
 
 void BattleState::judgeBattle() {
@@ -2009,7 +2099,6 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
                     
                     if (currentJudgingTurnIndex >= battleLogic->getCommandTurnCount()) {
                         currentPhase = isDesperateMode ? BattlePhase::DESPERATE_JUDGE_RESULT : BattlePhase::JUDGE_RESULT;
-                        showFinalResult();
                         phaseTimer = 0;
                     }
                 }

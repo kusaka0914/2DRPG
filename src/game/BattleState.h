@@ -194,7 +194,6 @@ private:
     void judgeBattle();
     void prepareJudgeResults();
     void showTurnResult(int turnIndex);
-    void showFinalResult();
     void executeWinningTurns(float damageMultiplier);
     bool checkDesperateModeCondition();
     void showDesperateModePrompt();
@@ -203,4 +202,8 @@ private:
     // 重複コードの共通化（DRY原則）
     void updateJudgePhase(float deltaTime, bool isDesperateMode);
     void updateJudgeResultPhase(float deltaTime, bool isDesperateMode);
+    
+    // 勝敗UI表示用
+    void renderWinLossUI(Graphics& graphics, bool isResultPhase = false);
+    std::pair<int, int> calculateCurrentWinLoss() const;
 };

@@ -563,11 +563,6 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     
     graphics->drawText(mainText, textX, textY, "default", mainColor);
     
-    // スコア表示
-    std::string scoreText = "自分 " + std::to_string(params.playerWins) + "勝  " + 
-                           "敵 " + std::to_string(params.enemyWins) + "勝";
-    SDL_Color scoreColor = {255, 255, 255, 255};
-    graphics->drawText(scoreText, centerX - 150, centerY + 50, "default", scoreColor);
     
     if (params.hasThreeWinStreak && params.isVictory) {
         std::string bonusText = "✨ ダメージ1.5倍ボーナス！ ✨";
@@ -575,17 +570,6 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
         graphics->drawText(bonusText, centerX - 150, centerY + 80, "default", bonusColor);
     }
     
-    // 詳細テキスト
-    std::string detailText;
-    if (params.isVictory) {
-        detailText = "自分が" + std::to_string(params.playerWins) + "ターン分の攻撃を実行！";
-    } else if (params.isDefeat) {
-        detailText = "敵が" + std::to_string(params.enemyWins) + "ターン分の攻撃を実行！";
-    } else {
-        detailText = "両方がダメージを受ける";
-    }
-    SDL_Color detailColor = {200, 200, 200, 255};
-    graphics->drawText(detailText, centerX - 200, centerY + 100, "default", detailColor);
     
     if (params.isVictory) {
         float starGlow = std::sin(resultState.resultAnimationTimer * 3.14159f * 8.0f) * 0.5f + 0.5f;

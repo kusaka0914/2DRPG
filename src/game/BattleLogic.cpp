@@ -187,23 +187,23 @@ void BattleLogic::generateEnemyCommands() {
     }
     
     // ランダムに決定した行動タイプを使用
-    // 固定の確率分布を設定（多い方から50%、30%、20%）
+    // 固定の確率分布を設定（多い方から60%、30%、10%）
     int attackProb, defendProb, spellProb;
     switch (enemyBehaviorType) {
         case EnemyBehaviorType::ATTACK_TYPE:
-            attackProb = 55;
+            attackProb = 60;
             defendProb = 10;
-            spellProb = 35;
+            spellProb = 30;
             break;
         case EnemyBehaviorType::DEFEND_TYPE:
-            attackProb = 35;
-            defendProb = 55;
+            attackProb = 30;
+            defendProb = 60;
             spellProb = 10;
             break;
         case EnemyBehaviorType::SPELL_TYPE:
             attackProb = 10;
-            defendProb = 35;
-            spellProb = 55;
+            defendProb = 30;
+            spellProb = 60;
             break;
     }
     
