@@ -39,6 +39,8 @@ public:
         std::string playerCommandName;  /**< @brief プレイヤーコマンド名（住民戦用） */
         std::string enemyCommandName;   /**< @brief 敵コマンド名（住民戦用） */
         int judgeResult;  /**< @brief 判定結果（住民戦用、-999=未設定の場合はbattleLogicから取得） */
+        std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
+        int residentTurnCount;  /**< @brief 住民戦の現在のターン数（住民戦用、0の場合は通常の表示） */
     };
     
     /**
@@ -51,6 +53,8 @@ public:
         bool isDesperateMode;
         int selectedOption;
         const std::vector<std::string>* currentOptions;  /**< @brief ポインタに変更（参照はデフォルトコンストラクタを削除するため） */
+        std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
+        int residentTurnCount;  /**< @brief 住民戦の現在のターン数（住民戦用、0の場合は通常の表示） */
     };
     
     /**
@@ -64,6 +68,7 @@ public:
         bool hasThreeWinStreak;
         int playerWins;
         int enemyWins;
+        std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
     };
 
 private:
@@ -142,6 +147,7 @@ public:
      * @brief HP表示（共通）
      * @details プレイヤーと敵のHPバーをキャラクターの頭上に表示する。
      * 現在HPと最大HPの比率に応じてバーの長さが変わる。
+     * 住民戦の場合は、通常のヒント表示の代わりに住民の様子を表示する。
      * 
      * @param playerX プレイヤーのX座標
      * @param playerY プレイヤーのY座標
@@ -149,9 +155,10 @@ public:
      * @param enemyY 敵のY座標
      * @param playerHeight プレイヤーの高さ
      * @param enemyHeight 敵の高さ
+     * @param residentBehaviorHint 住民の様子（住民戦の場合のみ、デフォルトは空文字列）
      */
     void renderHP(int playerX, int playerY, int enemyX, int enemyY,
-                  int playerHeight, int enemyHeight);
+                  int playerHeight, int enemyHeight, const std::string& residentBehaviorHint = "");
     
     /**
      * @brief ターン数表示（共通）

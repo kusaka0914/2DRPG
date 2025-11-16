@@ -153,6 +153,9 @@ private:
     // 住民との戦闘用
     int currentResidentPlayerCommand;  /**< @brief 現在の住民戦のプレイヤーコマンド */
     int currentResidentCommand;        /**< @brief 現在の住民戦の住民コマンド */
+    std::string cachedResidentBehaviorHint;  /**< @brief キャッシュされた住民の様子（同じターン中は同じメッセージを表示） */
+    int cachedResidentCommand;  /**< @brief キャッシュされた住民のコマンド（予測表示と実際のコマンドを一致させるため） */
+    int residentTurnCount;  /**< @brief 住民戦の現在のターン数（1から10まで、10ターン経過でゲームオーバー） */
     
     // INTROフェーズ用
     float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
@@ -227,4 +230,5 @@ private:
     int judgeResidentTurn(int playerCommand, int residentCommand) const;  /**< @brief 住民との戦闘の判定（特殊ルール） */
     std::string getResidentCommandName(int command);  /**< @brief 住民のコマンド名を取得 */
     std::string getPlayerCommandNameForResident(int command);  /**< @brief プレイヤーのコマンド名を取得（住民戦用） */
+    std::string getResidentBehaviorHint() const;  /**< @brief 住民の様子を取得（次の行動を推測できるヒント） */
 };

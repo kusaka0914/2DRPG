@@ -69,7 +69,13 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         graphics->drawRect(enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight, true);
     }
     
-    std::string turnText = "ターン " + std::to_string(params.currentJudgingTurnIndex + 1) + " / " + std::to_string(params.commandTurnCount);
+    // 住民戦の場合は10ターン制限を表示
+    std::string turnText;
+    if (params.residentTurnCount > 0) {
+        turnText = "ターン " + std::to_string(params.residentTurnCount) + " / 10";
+    } else {
+        turnText = "ターン " + std::to_string(params.currentJudgingTurnIndex + 1) + " / " + std::to_string(params.commandTurnCount);
+    }
     SDL_Color turnColor = {255, 255, 255, 255};
     
     // ターンテキストの背景を描画
@@ -94,7 +100,7 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     
     graphics->drawText(turnText, 20, 20, "default", turnColor);
     
-    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight);
+    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight, params.residentBehaviorHint);
     
     int playerDisplayX = leftX;
     if (params.judgeSubPhase == JudgeSubPhase::SHOW_PLAYER_COMMAND) {
@@ -383,7 +389,12 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         graphics->drawRect(enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight, true);
     }
     
-    renderTurnNumber(params.currentSelectingTurn + 1, params.commandTurnCount, params.isDesperateMode);
+    // 住民戦の場合は10ターン制限を表示
+    if (params.residentTurnCount > 0) {
+        renderTurnNumber(params.residentTurnCount, 10, params.isDesperateMode);
+    } else {
+        renderTurnNumber(params.currentSelectingTurn + 1, params.commandTurnCount, params.isDesperateMode);
+    }
     
     // 選択済みコマンドを表示（ボタンの上）
     auto playerCmds = battleLogic->getPlayerCommands();
@@ -478,7 +489,13 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         }
     }
     
-    std::string hintText = "↑↓で選択  Enterで決定  Qで戻る";
+    // 住民戦の場合は「Qで戻る」を表示しない
+    std::string hintText;
+    if (params.residentTurnCount > 0) {
+        hintText = "↑↓で選択  Enterで決定";
+    } else {
+        hintText = "↑↓で選択  Enterで決定  Qで戻る";
+    }
     SDL_Color hintColor = {255, 255, 255, 255};
     
     // 選択方法のテキスト背景を描画
@@ -503,7 +520,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     graphics->drawText(hintText, centerX - 120, screenHeight - 100, "default", hintColor);
     
-    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight);
+    renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, playerHeight, enemyHeight, params.residentBehaviorHint);
 }
 
 void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& params) {
@@ -638,7 +655,7 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     int enemyWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
     int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
-    renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight);
+    renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, params.residentBehaviorHint);
     
     renderCharacters(playerX, playerY, enemyX, enemyY, playerWidth, playerHeight, enemyWidth, enemyHeight);
 }
@@ -676,11 +693,11 @@ void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY
 }
 
 void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
-                        int playerHeight, int enemyHeight) {
+                        int playerHeight, int enemyHeight, const std::string& residentBehaviorHint) {
     SDL_Color whiteColor = {255, 255, 255, 255};
     int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
     
-    // プレイヤーの名前とレベル（HPの上に表示）
+    // プレイヤーの名前とレベル（HPの上に表示）- 住民戦でも表示
     std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
     SDL_Texture* playerNameTexture = graphics->createTextTexture(playerNameText, "default", whiteColor);
     if (playerNameTexture) {
@@ -696,43 +713,46 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     }
     graphics->drawText(playerNameText, playerX - 100, playerY - playerHeight / 2 - 80, "default", whiteColor);
     
-    std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-    SDL_Texture* playerHpTexture = graphics->createTextTexture(playerHpText, "default", whiteColor);
-    if (playerHpTexture) {
-        int textWidth, textHeight;
-        SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
-        int bgX = playerX - 100 - padding;
-        int bgY = playerY - playerHeight / 2 - 40 - padding;
-        graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-        graphics->setDrawColor(255, 255, 255, 255);
-        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-        SDL_DestroyTexture(playerHpTexture);
-    }
-    graphics->drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
-    
-    // ステータス上昇呪文の状態を表示（HPの下）
-    if (player->hasNextTurnBonusActive()) {
-        float multiplier = player->getNextTurnMultiplier();
-        int turns = player->getNextTurnBonusTurns();
-        // 倍率を文字列に変換（小数点以下1桁まで表示）
-        int multiplierInt = static_cast<int>(multiplier * 10);
-        std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
-        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
-        SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
-        SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
-        if (statusTexture) {
+    // 住民戦の場合はプレイヤーのHP表示をスキップ
+    if (!enemy->isResident()) {
+        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
+        SDL_Texture* playerHpTexture = graphics->createTextTexture(playerHpText, "default", whiteColor);
+        if (playerHpTexture) {
             int textWidth, textHeight;
-            SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
+            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
             int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 + padding;
+            int bgY = playerY - playerHeight / 2 - 40 - padding;
             graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
             graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics->setDrawColor(255, 255, 100, 255);
+            graphics->setDrawColor(255, 255, 255, 255);
             graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(statusTexture);
+            SDL_DestroyTexture(playerHpTexture);
         }
-        graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
+        graphics->drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+        
+        // ステータス上昇呪文の状態を表示（HPの下）
+        if (player->hasNextTurnBonusActive()) {
+            float multiplier = player->getNextTurnMultiplier();
+            int turns = player->getNextTurnBonusTurns();
+            // 倍率を文字列に変換（小数点以下1桁まで表示）
+            int multiplierInt = static_cast<int>(multiplier * 10);
+            std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
+            std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
+            SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
+            SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
+            if (statusTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
+                int bgX = playerX - 100 - padding;
+                int bgY = playerY - playerHeight / 2 + padding;
+                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+                graphics->setDrawColor(255, 255, 100, 255);
+                graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+                SDL_DestroyTexture(statusTexture);
+            }
+            graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
+        }
     }
     
     // 敵の名前とレベル（HPの上に表示）
@@ -754,40 +774,41 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     graphics->drawText(enemyNameText, enemyX - 100, enemyY - enemyHeight / 2 - 80, "default", whiteColor);
     
     // 敵の型のヒントを表示（敵の名前の下）
-    if (battleLogic) {
+    // 住民戦の場合は住民の様子を表示、それ以外は通常のヒントを表示
+    bool hasHint = false;
+    std::string hintText = "";
+    
+    if (enemy->isResident() && !residentBehaviorHint.empty()) {
+        // 住民戦の場合は住民の様子を表示
+        hintText = residentBehaviorHint;
+        hasHint = true;
+    } else if (battleLogic) {
+        // 通常戦の場合は従来のヒント表示
         if (!battleLogic->isBehaviorTypeDetermined()) {
             // 戦闘開始時は、保存された除外する型を使って「〜ではなさそうだ」と表示
             BattleLogic::EnemyBehaviorType excludedType = battleLogic->getExcludedBehaviorType();
-            std::string hintText = BattleLogic::getNegativeBehaviorTypeHint(excludedType);
-            SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", whiteColor);
-            if (hintTexture) {
-                int hintWidth, hintHeight;
-                SDL_QueryTexture(hintTexture, nullptr, nullptr, &hintWidth, &hintHeight);
-                int hintBgX = enemyX - 100 - padding;
-                int hintBgY = enemyY - enemyHeight / 2 - 40 - padding;
-                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, true);
-                graphics->setDrawColor(255, 255, 255, 255);
-                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
-                graphics->drawText(hintText, enemyX - 100, enemyY - enemyHeight / 2 - 40, "default", whiteColor);
-                SDL_DestroyTexture(hintTexture);
-            }
+            hintText = BattleLogic::getNegativeBehaviorTypeHint(excludedType);
+            hasHint = !hintText.empty();
         } else {
             // 型が確定した後はヒントを表示
-            std::string hintText = battleLogic->getBehaviorTypeHint(battleLogic->getEnemyBehaviorType());
-            SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", whiteColor);
-            if (hintTexture) {
-                int hintWidth, hintHeight;
-                SDL_QueryTexture(hintTexture, nullptr, nullptr, &hintWidth, &hintHeight);
-                int hintBgX = enemyX - 100 - padding;
-                int hintBgY = enemyY - enemyHeight / 2 - 40 - padding;
-                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, true);
-                graphics->setDrawColor(255, 255, 255, 255);
-                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
-                graphics->drawText(hintText, enemyX - 100, enemyY - enemyHeight / 2 - 40, "default", whiteColor);
-                SDL_DestroyTexture(hintTexture);
-            }
+            hintText = battleLogic->getBehaviorTypeHint(battleLogic->getEnemyBehaviorType());
+            hasHint = !hintText.empty();
+        }
+    }
+    
+    if (hasHint) {
+        SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", whiteColor);
+        if (hintTexture) {
+            int hintWidth, hintHeight;
+            SDL_QueryTexture(hintTexture, nullptr, nullptr, &hintWidth, &hintHeight);
+            int hintBgX = enemyX - 100 - padding;
+            int hintBgY = enemyY - enemyHeight / 2 - 40 - padding;
+            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, true);
+            graphics->setDrawColor(255, 255, 255, 255);
+            graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
+            graphics->drawText(hintText, enemyX - 100, enemyY - enemyHeight / 2 - 40, "default", whiteColor);
+            SDL_DestroyTexture(hintTexture);
         }
     }
     
@@ -797,8 +818,8 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
         int textWidth, textHeight;
         SDL_QueryTexture(enemyHpTexture, nullptr, nullptr, &textWidth, &textHeight);
         int bgX = enemyX - 100 - padding;
-        // ヒントが表示されている場合は、HPの位置を下にずらす（型が確定していない時もヒントを表示するため）
-        int hpOffsetY = battleLogic ? 40 : 0;
+        // ヒントが表示されている場合は、HPの位置を下にずらす（住民戦でも通常戦でもヒントを表示するため）
+        int hpOffsetY = hasHint ? 40 : 0;
         int bgY = enemyY - enemyHeight / 2 - 40 - padding + hpOffsetY;
         graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
         graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
@@ -806,8 +827,8 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
         graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
         SDL_DestroyTexture(enemyHpTexture);
     }
-    // ヒントが表示されている場合は、HPの位置を下にずらす（型が確定していない時もヒントを表示するため）
-    int hpOffsetY = battleLogic ? 40 : 0;
+    // ヒントが表示されている場合は、HPの位置を下にずらす（住民戦でも通常戦でもヒントを表示するため）
+    int hpOffsetY = hasHint ? 40 : 0;
     graphics->drawText(enemyHpText, enemyX - 100, enemyY - enemyHeight / 2 - 40 + hpOffsetY, "default", whiteColor);
 }
 

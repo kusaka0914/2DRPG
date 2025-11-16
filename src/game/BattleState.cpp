@@ -9,6 +9,7 @@
 #include "../core/utils/ui_config_manager.h"
 #include <sstream>
 #include <random>
+#include <chrono>
 #include <cmath> // abs関数のために追加
 #include <iostream> // デバッグ情報のために追加
 
@@ -23,7 +24,9 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       damageAppliedInAnimation(false), waitingForSpellSelection(false),
       judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
       introScale(0.0f), introTimer(0.0f),
-      currentResidentPlayerCommand(-1), currentResidentCommand(-1) {
+      currentResidentPlayerCommand(-1), currentResidentCommand(-1),
+      cachedResidentBehaviorHint(""), cachedResidentCommand(-1),
+      residentTurnCount(0) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -206,6 +209,7 @@ void BattleState::update(float deltaTime) {
                 currentPhase = BattlePhase::COMMAND_SELECT;
                 if (enemy->isResident()) {
                     battleLogic->setCommandTurnCount(1);  // 住民戦は1ターンずつ
+                    residentTurnCount = 1;  // 住民戦のターン数を初期化
                 } else {
                     battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
                 }
@@ -515,10 +519,14 @@ void BattleState::render(Graphics& graphics) {
             params.playerCommandName = getPlayerCommandNameForResident(currentResidentPlayerCommand);
             params.enemyCommandName = getResidentCommandName(currentResidentCommand);
             params.judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+            params.residentBehaviorHint = getResidentBehaviorHint();
+            params.residentTurnCount = residentTurnCount;  // 住民戦の現在のターン数
         } else {
             params.playerCommandName = "";
             params.enemyCommandName = "";
             params.judgeResult = -999; // 未設定（battleLogicから取得）
+            params.residentBehaviorHint = "";
+            params.residentTurnCount = 0;  // 通常戦の場合は0
         }
         
         battleUI->renderJudgeAnimation(params);
@@ -547,6 +555,14 @@ void BattleState::render(Graphics& graphics) {
         params.isDesperateMode = battleLogic->getIsDesperateMode();
         params.selectedOption = selectedOption;
         params.currentOptions = &currentOptions;
+        // 住民戦の場合は住民の様子を渡す
+        if (enemy->isResident()) {
+            params.residentBehaviorHint = getResidentBehaviorHint();
+            params.residentTurnCount = residentTurnCount;  // 住民戦の現在のターン数
+        } else {
+            params.residentBehaviorHint = "";
+            params.residentTurnCount = 0;  // 通常戦の場合は0
+        }
         battleUI->renderCommandSelectionUI(params);
         
         // if (nightTimerActive) {
@@ -795,6 +811,7 @@ void BattleState::render(Graphics& graphics) {
             params.isDefeat = (params.enemyWins > params.playerWins);
             params.isDesperateMode = false;
             params.hasThreeWinStreak = false;
+            params.residentBehaviorHint = getResidentBehaviorHint();  // 住民戦の場合は住民の様子を渡す
         } else {
             params.isVictory = (stats.playerWins > stats.enemyWins);
             params.isDefeat = (stats.enemyWins > stats.playerWins);
@@ -802,6 +819,7 @@ void BattleState::render(Graphics& graphics) {
             params.hasThreeWinStreak = stats.hasThreeWinStreak;
             params.playerWins = stats.playerWins;
             params.enemyWins = stats.enemyWins;
+            params.residentBehaviorHint = "";  // 通常戦の場合は空文字列
         }
         
         battleUI->renderResultAnnouncement(params);
@@ -1083,14 +1101,18 @@ void BattleState::showSpellMenu() {
 
 int BattleState::generateResidentCommand() {
     // 住民のコマンドを生成（怯える70%、助けを呼ぶ30%）
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
+    // より確実な乱数生成のため、時間ベースのシードも使用
+    std::random_device rd;
+    unsigned int seed = rd() ^ static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    std::mt19937 gen(seed);
     std::uniform_int_distribution<> dis(1, 100);
     
     int roll = dis(gen);
+    // 確率分布：1-70 = 怯える（70%）、71-100 = 助けを呼ぶ（30%）
     if (roll <= 70) {
         return BattleConstants::RESIDENT_COMMAND_AFRAID;  // 怯える
     } else {
+        // roll > 70 の場合は助けを呼ぶ（71-100の範囲、30%の確率）
         return BattleConstants::RESIDENT_COMMAND_CALL_HELP;  // 助けを呼ぶ
     }
 }
@@ -1141,6 +1163,15 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
         }
         
         // 引き分けの場合は次のターンへ（pendingDamagesは空のまま）
+        residentTurnCount++;
+        // 10ターン経過したらゲームオーバー
+        if (residentTurnCount > 10) {
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<GameOverState>(
+                    player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+            }
+            return;
+        }
         currentPhase = BattlePhase::COMMAND_SELECT;
         battleLogic->setCommandTurnCount(1);
         initializeCommandSelection();
@@ -1191,6 +1222,27 @@ int BattleState::judgeResidentTurn(int playerCommand, int residentCommand) const
         }
     }
     return BattleConstants::JUDGE_RESULT_DRAW;
+}
+
+std::string BattleState::getResidentBehaviorHint() const {
+    // キャッシュされた住民の様子を返す（同じターン中は同じメッセージを表示）
+    if (!cachedResidentBehaviorHint.empty()) {
+        return cachedResidentBehaviorHint;
+    }
+    
+    // キャッシュがない場合（念のため）は確率的に予測
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 100);
+    
+    int roll = dis(gen);
+    if (roll <= 70) {
+        // 怯えるの可能性が高い → 震えが止まらないようだ
+        return "震えが止まらないようだ";
+    } else {
+        // 助けを呼ぶの可能性が高い → 辺りを見渡している
+        return "辺りを見渡している";
+    }
 }
 
 // 住民戦でも通常のupdateJudgePhaseとupdateJudgeResultPhaseを使用するため、これらの関数は不要
@@ -1710,8 +1762,14 @@ void BattleState::executeSelectedOption() {
             }
             
             if (playerCmd >= 0) {
-                // 住民のコマンドを生成
-                int residentCmd = generateResidentCommand();
+                // 住民のコマンドは事前に生成済み（initializeCommandSelectionで生成）
+                // キャッシュされたコマンドを使用することで、予測表示と実際のコマンドが一致する
+                int residentCmd = cachedResidentCommand;
+                
+                // キャッシュが無効な場合（念のため）は新しく生成
+                if (residentCmd < 0) {
+                    residentCmd = generateResidentCommand();
+                }
                 
                 // 通常のJUDGEフェーズに遷移（住民戦でも同じUIを使用）
                 isShowingOptions = false;
@@ -1973,6 +2031,37 @@ void BattleState::initializeCommandSelection() {
     battleLogic->setEnemyCommands(enemyCmds);
     currentSelectingTurn = 0;
     isShowingOptions = false;
+    
+    // 住民戦の場合は住民のコマンドを事前に生成して、それに基づいて様子を表示
+    // これにより、予測表示と実際のコマンドが一致する
+    // ただし、50%の確率で「様子が伺えない」と表示し、どちらのコマンドを使うかわからないようにする
+    if (enemy->isResident()) {
+        // 実際に使われるコマンドを事前に生成
+        cachedResidentCommand = generateResidentCommand();
+        
+        // 30%の確率で「様子が伺えない」と表示（どちらのコマンドを使うかわからない）
+        std::random_device rd;
+        unsigned int seed = rd() ^ static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+        std::mt19937 gen(seed);
+        std::uniform_int_distribution<> dis(1, 100);
+        
+        int behaviorRoll = dis(gen);
+        if (behaviorRoll <= 50) {
+            // 30%の確率で様子が伺えない
+            cachedResidentBehaviorHint = "様子が伺えない";
+        } else {
+            // 70%の確率で、生成したコマンドに基づいて住民の様子を設定
+            if (cachedResidentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
+                // 怯える → 震えが止まらないようだ
+                cachedResidentBehaviorHint = "震えが止まらないようだ";
+            } else if (cachedResidentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
+                // 助けを呼ぶ → 辺りを見渡している
+                cachedResidentBehaviorHint = "辺りを見渡している";
+            } else {
+                cachedResidentBehaviorHint = "";
+            }
+        }
+    }
 }
 
 void BattleState::selectCommandForTurn(int turnIndex) {
@@ -2398,10 +2487,27 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
             case JudgeSubPhase::SHOW_RESULT:
                 if (judgeDisplayTimer >= BattleConstants::JUDGE_RESULT_DISPLAY_TIME) {
                     // 住民戦の場合は1ターンずつなので、結果フェーズに遷移
+                    // ただし、引き分け（身を隠す+怯える）または身を隠す+助けを呼ぶの場合は結果フェーズをスキップ
                     if (enemy->isResident()) {
-                        currentPhase = BattlePhase::JUDGE_RESULT;
-                        judgeDisplayTimer = 0.0f;
-                        phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
+                        // 引き分けかどうかを判定
+                        int judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+                        bool isDraw = (judgeResult == BattleConstants::JUDGE_RESULT_DRAW);
+                        // 身を隠す + 助けを呼ぶの場合も結果フェーズをスキップ（判定では勝利だが、実際は引き分け処理）
+                        bool isHideAndCallHelp = (currentResidentPlayerCommand == BattleConstants::PLAYER_COMMAND_HIDE &&
+                                                   currentResidentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP);
+                        
+                        if (isDraw || isHideAndCallHelp) {
+                            // 引き分けまたは身を隠す+助けを呼ぶの場合は結果フェーズをスキップして直接コマンド選択に遷移
+                            processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+                            // processResidentTurn内で既にコマンド選択フェーズに遷移しているので、ここでは何もしない
+                            judgeDisplayTimer = 0.0f;
+                            phaseTimer = 0.0f;
+                        } else {
+                            // それ以外の場合は結果フェーズに遷移
+                            currentPhase = BattlePhase::JUDGE_RESULT;
+                            judgeDisplayTimer = 0.0f;
+                            phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
+                        }
                     } else {
                         currentJudgingTurnIndex++;
                         judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
@@ -2765,6 +2871,15 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
             if (enemy->getIsAlive() && player->getIsAlive()) {
                 if (enemy->isResident()) {
                     // 住民戦の場合は次のターンへ
+                    residentTurnCount++;
+                    // 10ターン経過したらゲームオーバー
+                    if (residentTurnCount > 10) {
+                        if (stateManager) {
+                            stateManager->changeState(std::make_unique<GameOverState>(
+                                player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                        }
+                        return;
+                    }
                     currentPhase = BattlePhase::COMMAND_SELECT;
                     battleLogic->setCommandTurnCount(1);
                     initializeCommandSelection();
@@ -2799,6 +2914,15 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         if (enemy->getIsAlive() && player->getIsAlive()) {
             if (enemy->isResident()) {
                 // 住民戦の場合は次のターンへ
+                residentTurnCount++;
+                // 10ターン経過したらゲームオーバー
+                if (residentTurnCount > 10) {
+                    if (stateManager) {
+                        stateManager->changeState(std::make_unique<GameOverState>(
+                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                    }
+                    return;
+                }
                 currentPhase = BattlePhase::COMMAND_SELECT;
                 battleLogic->setCommandTurnCount(1);
                 initializeCommandSelection();
