@@ -25,10 +25,7 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     graphics->clear();
     
     // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
-    SDL_Texture* bgTexture = graphics->getTexture("battle_bg");
-    if (!bgTexture) {
-        bgTexture = graphics->loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-    }
+    SDL_Texture* bgTexture = getBattleBackgroundTexture();
     if (bgTexture) {
         graphics->drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
     }
@@ -55,7 +52,16 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     int enemyWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
     int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
-    SDL_Texture* enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTex = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTex = graphics->getTexture(textureName);
+    } else {
+        enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    }
+    
     if (enemyTex) {
         graphics->drawTexture(enemyTex, enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
@@ -307,10 +313,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     graphics->clear();
     
     // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
-    SDL_Texture* bgTexture = graphics->getTexture("battle_bg");
-    if (!bgTexture) {
-        bgTexture = graphics->loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-    }
+    SDL_Texture* bgTexture = getBattleBackgroundTexture();
     if (bgTexture) {
         graphics->drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
     }
@@ -337,7 +340,16 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     int enemyWidth = BattleConstants::BATTLE_CHARACTER_SIZE;
     int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
     
-    SDL_Texture* enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTex = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTex = graphics->getTexture(textureName);
+    } else {
+        enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    }
+    
     if (enemyTex) {
         graphics->drawTexture(enemyTex, enemyBaseX - enemyWidth / 2, enemyBaseY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
@@ -479,10 +491,7 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     graphics->clear();
     
     // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
-    SDL_Texture* bgTexture = graphics->getTexture("battle_bg");
-    if (!bgTexture) {
-        bgTexture = graphics->loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-    }
+    SDL_Texture* bgTexture = getBattleBackgroundTexture();
     if (bgTexture) {
         graphics->drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
     }
@@ -620,7 +629,16 @@ void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY
         graphics->drawRect(playerX - playerWidth / 2, playerY - playerHeight / 2, playerWidth, playerHeight, false);
     }
     
-    SDL_Texture* enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTex = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTex = graphics->getTexture(textureName);
+    } else {
+        enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    }
+    
     if (enemyTex) {
         graphics->drawTexture(enemyTex, enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
@@ -692,7 +710,9 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     }
     
     // 敵の名前とレベル（HPの上に表示）
-    std::string enemyNameText = enemy->getTypeName() + " Lv." + std::to_string(enemy->getLevel());
+    // 住民の場合は住民の名前を使用、それ以外は通常の敵名を使用
+    std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
+    std::string enemyNameText = enemyName + " Lv." + std::to_string(enemy->getLevel());
     SDL_Texture* enemyNameTexture = graphics->createTextTexture(enemyNameText, "default", whiteColor);
     if (enemyNameTexture) {
         int textWidth, textHeight;
@@ -799,5 +819,22 @@ void BattleUI::renderTurnNumber(int turnNumber, int totalTurns, bool isDesperate
         SDL_Color turnColor = {255, 255, 255, 255};
         graphics->drawText(turnText, 20, 20, "default", turnColor);
     }
+}
+
+SDL_Texture* BattleUI::getBattleBackgroundTexture() const {
+    // 住民の場合は夜の背景、それ以外は通常の戦闘背景を使用
+    SDL_Texture* bgTexture = nullptr;
+    if (enemy->isResident()) {
+        bgTexture = graphics->getTexture("night_bg");
+        if (!bgTexture) {
+            bgTexture = graphics->loadTexture("assets/textures/bg/night_bg.png", "night_bg");
+        }
+    } else {
+        bgTexture = graphics->getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics->loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+    }
+    return bgTexture;
 }
 

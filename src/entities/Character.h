@@ -64,6 +64,12 @@ public:
     std::string getName() const { return name; }
     
     /**
+     * @brief 名前の設定
+     * @param newName 新しい名前
+     */
+    void setName(const std::string& newName) { name = newName; }
+    
+    /**
      * @brief HPの取得
      * @return 現在のHP
      */

@@ -54,6 +54,9 @@ private:
     int expReward;
     bool canCastMagic;
     int magicDamage;
+    int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス（住民の場合のみ有効、-1=住民ではない） */
+    int residentX;  /**< @brief 住民のX座標（住民の場合のみ有効、-1=住民ではない） */
+    int residentY;  /**< @brief 住民のY座標（住民の場合のみ有効、-1=住民ではない） */
 
 public:
     /**
@@ -136,4 +139,41 @@ public:
      * @return 生成されたボス敵
      */
     static Enemy createBossEnemy(int playerLevel);
+    
+    /**
+     * @brief 住民のテクスチャインデックスの設定
+     * @param index 住民のテクスチャインデックス（0-5）
+     */
+    void setResidentTextureIndex(int index) { residentTextureIndex = index; }
+    
+    /**
+     * @brief 住民のテクスチャインデックスの取得
+     * @return 住民のテクスチャインデックス（-1=住民ではない）
+     */
+    int getResidentTextureIndex() const { return residentTextureIndex; }
+    
+    /**
+     * @brief 住民かどうかの判定
+     * @return 住民かどうか
+     */
+    bool isResident() const { return residentTextureIndex >= 0; }
+    
+    /**
+     * @brief 住民の位置情報の設定
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     */
+    void setResidentPosition(int x, int y) { residentX = x; residentY = y; }
+    
+    /**
+     * @brief 住民のX座標の取得
+     * @return 住民のX座標（-1=住民ではない）
+     */
+    int getResidentX() const { return residentX; }
+    
+    /**
+     * @brief 住民のY座標の取得
+     * @return 住民のY座標（-1=住民ではない）
+     */
+    int getResidentY() const { return residentY; }
 }; 

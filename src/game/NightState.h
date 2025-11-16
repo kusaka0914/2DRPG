@@ -42,6 +42,11 @@ private:
     // 倒した住民の位置を記録（次の夜に配置しないため）
     static std::vector<std::pair<int, int>> killedResidentPositions;
     
+    // プレイヤーの位置を保存（戦闘から戻ってきた時に復元するため）
+    static int s_savedPlayerX;
+    static int s_savedPlayerY;
+    static bool s_playerPositionSaved;
+    
     // 移動タイマー
     float moveTimer;
     const float MOVE_DELAY = 0.2f;
@@ -150,6 +155,13 @@ public:
      * @return 倒した住民の位置のリスト
      */
     static const std::vector<std::pair<int, int>>& getKilledResidentPositions() { return killedResidentPositions; }
+    
+    /**
+     * @brief 住民を倒した処理を実行
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     */
+    void handleResidentKilled(int x, int y);
     
 private:
     /**
@@ -266,6 +278,14 @@ private:
      * @return テクスチャインデックス
      */
     int getResidentTextureIndex(int x, int y) const;
+    
+    /**
+     * @brief 住民の名前の取得
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     * @return 住民の名前
+     */
+    std::string getResidentName(int x, int y) const;
     
     /**
      * @brief UIの更新

@@ -318,7 +318,10 @@ void BattleState::update(float deltaTime) {
             
         case BattlePhase::VICTORY_DISPLAY:
             if (phaseTimer > 2.0f) {
-                if (player->getLevel() > oldLevel) {
+                // 住民との戦闘の場合はレベルアップをスキップ
+                if (enemy->isResident()) {
+                    endBattle();
+                } else if (player->getLevel() > oldLevel) {
                     hasLeveledUp = true;
                     currentPhase = BattlePhase::LEVEL_UP_DISPLAY;
                     phaseTimer = 0;
@@ -369,12 +372,7 @@ void BattleState::render(Graphics& graphics) {
         // 背景画像を描画
         int screenWidth = graphics.getScreenWidth();
         int screenHeight = graphics.getScreenHeight();
-        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
-        if (!bgTexture) {
-            // 背景画像が読み込まれていない場合は読み込む
-            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-        }
-        
+        SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
         if (bgTexture) {
             // 背景画像を画面全体に描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
@@ -386,6 +384,12 @@ void BattleState::render(Graphics& graphics) {
         int screenWidth = graphics.getScreenWidth();
         int screenHeight = graphics.getScreenHeight();
         
+        // 背景画像を描画
+        SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        }
+        
         // 中央に敵を配置
         int enemyX = screenWidth / 2;
         int enemyY = screenHeight / 2;
@@ -393,7 +397,16 @@ void BattleState::render(Graphics& graphics) {
         int enemyWidth = static_cast<int>(BASE_ENEMY_SIZE * introScale);
         int enemyHeight = static_cast<int>(BASE_ENEMY_SIZE * introScale);
     
-    SDL_Texture* enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTexture = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTexture = graphics.getTexture(textureName);
+    } else {
+        enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    }
+    
     if (enemyTexture) {
             graphics.drawTexture(enemyTexture, enemyX - enemyWidth / 2, enemyY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
@@ -404,7 +417,9 @@ void BattleState::render(Graphics& graphics) {
         }
         
         // 敵の下にテキストを表示（スケールアニメーション付き）
-        std::string appearText = enemy->getTypeName() + "があらわれた！";
+        // 住民の場合は住民の名前を使用、それ以外は通常の敵名を使用
+        std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
+        std::string appearText = enemyName + "があらわれた！";
         SDL_Color textColor = {255, 255, 255, 255};
         
         // テキストをテクスチャとして取得
@@ -524,10 +539,7 @@ void BattleState::render(Graphics& graphics) {
         graphics.clear();
         
         // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
-        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
-        if (!bgTexture) {
-            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-        }
+        SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
         if (bgTexture) {
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         }
@@ -630,10 +642,7 @@ void BattleState::render(Graphics& graphics) {
         graphics.clear();
         
         // 背景画像を描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
-        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
-        if (!bgTexture) {
-            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
-        }
+        SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
         if (bgTexture) {
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         }
@@ -868,7 +877,16 @@ void BattleState::render(Graphics& graphics) {
     }
     graphics.drawText(enemyHpText, enemyHpX, enemyHpY, "default", enemyHpColor);
     
-    SDL_Texture* enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
+    SDL_Texture* enemyTexture = nullptr;
+    if (enemy->isResident()) {
+        int textureIndex = enemy->getResidentTextureIndex();
+        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+        enemyTexture = graphics.getTexture(textureName);
+    } else {
+        enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+    }
+    
     if (enemyTexture) {
         graphics.drawTexture(enemyTexture, enemyAnimX - enemyWidth / 2, enemyAnimY - enemyHeight / 2, enemyWidth, enemyHeight);
     } else {
@@ -997,6 +1015,23 @@ void BattleState::hideMessage() {
 
 void BattleState::loadBattleImages() {
     // 背景画像はrender()で必要に応じて読み込む
+}
+
+SDL_Texture* BattleState::getBattleBackgroundTexture(Graphics& graphics) const {
+    // 住民の場合は夜の背景、それ以外は通常の戦闘背景を使用
+    SDL_Texture* bgTexture = nullptr;
+    if (enemy->isResident()) {
+        bgTexture = graphics.getTexture("night_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/night_bg.png", "night_bg");
+        }
+    } else {
+        bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+    }
+    return bgTexture;
 }
 
 void BattleState::showSpellMenu() {
@@ -1189,6 +1224,13 @@ void BattleState::checkBattleEnd() {
             
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
+        } else if (enemy->isResident()) {
+            // 住民との戦闘の場合、経験値・ゴールド・レベルアップをスキップ
+            lastResult = BattleResult::PLAYER_VICTORY;
+            addBattleLog("住民は倒れた...");
+            // レベルアップをスキップして直接終了
+            endBattle();
+            return;
         } else {
             int expGained = enemy->getExpReward();
             int goldGained = enemy->getGoldReward();
@@ -1221,7 +1263,19 @@ void BattleState::showResult() {
 void BattleState::endBattle() {
     if (stateManager) {
         if (lastResult == BattleResult::PLAYER_DEFEAT) {
-            stateManager->changeState(std::make_unique<GameOverState>(player, "戦闘に敗北しました。"));
+            // 敵の情報を渡してGameOverStateを作成（再戦用）
+            stateManager->changeState(std::make_unique<GameOverState>(
+                player, "戦闘に敗北しました。", enemy->getType(), enemy->getLevel()));
+        } else if (enemy->isResident()) {
+            // 住民との戦闘の場合、NightStateに戻り、住民を倒した処理を実行
+            int residentX = enemy->getResidentX();
+            int residentY = enemy->getResidentY();
+            
+            // 住民の位置情報をPlayerに保存（NightState::enter()で処理を実行）
+            player->addKilledResident(residentX, residentY);
+            
+            // NightStateに戻る（enter()で住民を倒した処理を実行）
+            stateManager->changeState(std::make_unique<NightState>(player));
         } else {
             if (enemy->getType() == EnemyType::DEMON_LORD) {
                 stateManager->changeState(std::make_unique<EndingState>(player));

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <random>
 
-Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCastMagic(false), magicDamage(0) {
+Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCastMagic(false), magicDamage(0), residentTextureIndex(-1), residentX(-1), residentY(-1) {
     switch (type) {
         case EnemyType::SLIME:
             name = "スライム";

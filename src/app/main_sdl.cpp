@@ -7,12 +7,13 @@ void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " [options]\n";
     std::cout << "Options:\n";
     std::cout << "  --debug <state>    Start from specified state (for debugging)\n";
-    std::cout << "                     Available states: room, town, castle, demon, field\n";
+    std::cout << "                     Available states: room, town, night, castle, demon, field\n";
     std::cout << "  -h, --help         Show this help message\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << programName << "                    # Start from main menu (normal)\n";
     std::cout << "  " << programName << " --debug room       # Start from room (debug)\n";
     std::cout << "  " << programName << " --debug town       # Start from town (debug)\n";
+    std::cout << "  " << programName << " --debug night      # Start from night state (debug)\n";
     std::cout << "  " << programName << " --debug castle     # Start from castle (debug)\n";
     std::cout << "  " << programName << " --debug demon      # Start from demon castle (debug)\n";
     std::cout << "  " << programName << " --debug field       # Start from field (debug)\n";

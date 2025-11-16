@@ -208,4 +208,11 @@ private:
     // 勝敗UI表示用
     void renderWinLossUI(Graphics& graphics, bool isResultPhase = false);
     std::pair<int, int> calculateCurrentWinLoss() const;
+    
+    /**
+     * @brief 戦闘背景画像の取得
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @return 背景画像のテクスチャ（住民の場合は夜の背景、それ以外は通常の戦闘背景）
+     */
+    SDL_Texture* getBattleBackgroundTexture(Graphics& graphics) const;
 };

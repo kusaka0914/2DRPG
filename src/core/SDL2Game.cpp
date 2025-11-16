@@ -3,6 +3,7 @@
 #include "../game/RoomState.h"
 #include "../game/CastleState.h"
 #include "../game/TownState.h"
+#include "../game/NightState.h"
 #include "../game/DemonCastleState.h"
 #include "../game/FieldState.h"
 #include "../core/utils/ui_config_manager.h"
@@ -107,6 +108,8 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<RoomState>(player));
         } else if (debugStartState == "town") {
             stateManager.changeState(std::make_unique<TownState>(player));
+        } else if (debugStartState == "night") {
+            stateManager.changeState(std::make_unique<NightState>(player));
         } else if (debugStartState == "castle") {
             stateManager.changeState(std::make_unique<CastleState>(player, false));
         } else if (debugStartState == "demon") {
@@ -115,7 +118,7 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<FieldState>(player));
         } else {
             std::cerr << "警告: 不明なデバッグ状態 '" << debugStartState << "'。メインメニューから開始します。" << std::endl;
-            std::cerr << "利用可能な状態: room, town, castle, demon, field" << std::endl;
+            std::cerr << "利用可能な状態: room, town, night, castle, demon, field" << std::endl;
             stateManager.changeState(std::make_unique<MainMenuState>(player));
         }
     } else {

@@ -111,6 +111,12 @@ public:
     void renderResultAnnouncement(const ResultAnnouncementRenderParams& params);
     
     /**
+     * @brief 戦闘背景画像の取得
+     * @return 背景画像のテクスチャ（住民の場合は夜の背景、それ以外は通常の戦闘背景）
+     */
+    SDL_Texture* getBattleBackgroundTexture() const;
+    
+    /**
      * @brief キャラクター描画（共通）
      * @details プレイヤーと敵のキャラクターを指定された位置とサイズで描画する。
      * 画面揺れのオフセットも適用される。

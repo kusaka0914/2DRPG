@@ -16,9 +16,13 @@
 
 int NightState::totalResidentsKilled = 0;
 std::vector<std::pair<int, int>> NightState::killedResidentPositions = {};
+int NightState::s_savedPlayerX = TownLayout::PLAYER_START_X;
+int NightState::s_savedPlayerY = TownLayout::PLAYER_START_Y;
+bool NightState::s_playerPositionSaved = false;
 
 NightState::NightState(std::shared_ptr<Player> player)
-    : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
+    : player(player), playerX(s_playerPositionSaved ? s_savedPlayerX : TownLayout::PLAYER_START_X), 
+      playerY(s_playerPositionSaved ? s_savedPlayerY : TownLayout::PLAYER_START_Y), 
       isStealthMode(true), stealthLevel(1), residentsKilled(0),
       moveTimer(0), playerTexture(nullptr), guardTexture(nullptr),
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
@@ -140,6 +144,12 @@ void NightState::enter() {
             player->setNightTime(true);
         }
         
+        // 保存された位置がある場合は復元
+        if (s_playerPositionSaved) {
+            playerX = s_savedPlayerX;
+            playerY = s_savedPlayerY;
+        }
+        
         residents.clear();
     std::vector<std::pair<int, int>> allResidentPositions = {
         {3, 7},   // 町の住人1
@@ -170,9 +180,9 @@ void NightState::enter() {
         }
     }
     
-    // 静的変数も更新
-    killedResidentPositions = killedResidents;
-    totalResidentsKilled = killedResidents.size();
+    // 静的変数の現在の状態を保存（住民を倒した処理のチェック用）
+    std::vector<std::pair<int, int>> previousKilledPositions = killedResidentPositions;
+    int previousTotalKilled = totalResidentsKilled;
         
         player->autoSave();
         
@@ -182,8 +192,40 @@ void NightState::enter() {
         if (nightDisplayLabel) {
             nightDisplayLabel->setText("第" + std::to_string(currentNight) + "夜");
         }
-        // メッセージ表示
-        showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
+        
+        // 戦闘から戻ってきた場合、最新の倒した住民を処理
+        bool residentKilledInBattle = false;
+        const auto& playerKilledResidents = player->getKilledResidents();
+        if (!playerKilledResidents.empty()) {
+            // 最新の倒した住民の位置を取得
+            const auto& lastKilled = playerKilledResidents.back();
+            int x = lastKilled.first;
+            int y = lastKilled.second;
+            
+            // まだ処理していない住民か確認（previousKilledPositionsに含まれていない場合）
+            bool alreadyProcessed = false;
+            for (const auto& pos : previousKilledPositions) {
+                if (pos.first == x && pos.second == y) {
+                    alreadyProcessed = true;
+                    break;
+                }
+            }
+            
+            // まだ処理していない場合、住民を倒した処理を実行
+            if (!alreadyProcessed) {
+                handleResidentKilled(x, y);
+                residentKilledInBattle = true;
+            }
+        }
+        
+        // 静的変数を更新（住民を倒した処理の後）
+        killedResidentPositions = playerKilledResidents;
+        totalResidentsKilled = playerKilledResidents.size();
+        
+        // メッセージ表示（住民を倒した処理でメッセージが表示されていない場合のみ）
+        if (!residentKilledInBattle && !isShowingMessage) {
+            showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
+        }
     } catch (const std::exception& e) {
     }
 }
@@ -421,6 +463,11 @@ void NightState::attackResident(int x, int y) {
         return;
     }
     
+    // 戦闘に移行する前にプレイヤーの位置を保存
+    s_savedPlayerX = playerX;
+    s_savedPlayerY = playerY;
+    s_playerPositionSaved = true;
+    
     currentTargetX = x;
     currentTargetY = y;
     
@@ -460,6 +507,42 @@ void NightState::updateChoiceDisplay() {
 }
 
 void NightState::executeResidentChoice(int choice) {
+    if (choice == 0) {
+        // 「倒す」を選択した場合、戦闘画面に遷移
+        isShowingResidentChoice = false;
+        
+        // 住民を敵として戦闘を開始
+        // 住民は弱い敵として扱う（SLIMEタイプ、レベル1）
+        Enemy residentEnemy(EnemyType::SLIME);
+        
+        // 住民の名前を取得して設定
+        std::string residentName = getResidentName(currentTargetX, currentTargetY);
+        residentEnemy.setName(residentName);
+        
+        // 住民の画像インデックスを取得して設定
+        int textureIndex = getResidentTextureIndex(currentTargetX, currentTargetY);
+        residentEnemy.setResidentTextureIndex(textureIndex);
+        
+        // 住民の位置情報を設定
+        residentEnemy.setResidentPosition(currentTargetX, currentTargetY);
+        
+        if (stateManager) {
+            stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(residentEnemy)));
+        }
+        return;
+    } else if (choice == 1) {
+        // 「倒さない」を選択した場合の処理（既存の処理）
+        isShowingResidentChoice = false;
+        
+        player->changeDemonTrust(-10);
+        player->changeMental(20);
+        
+        showMessage("住民：「ありがとうございます！本当にありがとうございます！」\n魔王からの信頼度 -10 メンタル +20");
+        return;
+    }
+    
+    // 以下は既存の処理（確率判定による住民撃破）は一旦コメントアウト
+    /*
     if (choice == 0) {
         isShowingResidentChoice = false;
         
@@ -520,14 +603,7 @@ void NightState::executeResidentChoice(int choice) {
             player->changeDemonTrust(-10); // 魔王からの信頼度を10減少
             showMessage("住人を倒すのをためらいました。\n勇者: ああぁぁぁぁぁ、私には出来ないよ、、\n\n魔王からの信頼度 -10");
         }
-    } else if (choice == 1) {
-        isShowingResidentChoice = false;
-        
-        player->changeDemonTrust(-10);
-        player->changeMental(20);
-        
-        showMessage("住民：「ありがとうございます！本当にありがとうございます！」\n魔王からの信頼度 -10 メンタル +20");
-    }
+    */
 }
 
 void NightState::showMessage(const std::string& message) {
@@ -657,6 +733,77 @@ int NightState::getResidentTextureIndex(int x, int y) const {
     }
     
     return 0; // デフォルト
+}
+
+std::string NightState::getResidentName(int x, int y) const {
+    std::vector<std::pair<int, int>> allPositions = {
+        {3, 7},   // 町の住人1
+        {7, 6},   // 町の住人2
+        {11, 8},  // 町の住人3
+        {5, 10},  // 町の住人4
+        {19, 8},  // 町の住人5
+        {23, 6},  // 町の住人6
+        {27, 7},  // 町の住人7
+        {6, 13},  // 町の住人8
+        {24, 13}, // 町の住人9
+        {3, 14},  // 町の住人10
+        {19, 14}, // 町の住人11
+        {20, 4}   // 町の住人12
+    };
+    
+    std::vector<std::string> residentNames = {
+        "町の住人1", "町の住人2", "町の住人3", "町の住人4", "町の住人5", "町の住人6",
+        "町の住人7", "町の住人8", "町の住人9", "町の住人10", "町の住人11", "町の住人12"
+    };
+    
+    for (size_t i = 0; i < allPositions.size() && i < residentNames.size(); ++i) {
+        if (allPositions[i].first == x && allPositions[i].second == y) {
+            return residentNames[i];
+        }
+    }
+    
+    return "住民"; // デフォルト
+}
+
+void NightState::handleResidentKilled(int x, int y) {
+    residentsKilled++;
+    
+    player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
+    
+    totalResidentsKilled++; // 合計倒した人数を増加
+    if (totalResidentsKilled >= 6) { // 合計6人以上倒した場合
+        player->changeMental(20); // メンタルを20上昇
+    } else {
+        player->changeMental(-20); // メンタルを20減少
+    }
+    
+    killedResidentPositions.push_back({x, y});
+    player->addKilledResident(x, y);
+    
+    residents.erase(std::remove_if(residents.begin(), residents.end(),
+        [x, y](const std::pair<int, int>& pos) {
+            return pos.first == x && pos.second == y;
+        }), residents.end());
+    
+    // 最初のメッセージを表示
+    showMessage("住民：「みんなお前を信じてたんだぞ。\nほんっと、最低な勇者だな。」");
+    
+    // 追加のメッセージ表示フラグを設定（handleInput()で処理される）
+    showResidentKilledMessage = true;
+    
+    player->changeKingTrust(-10);
+    
+    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+        int currentNight = player->getCurrentNight();
+        if (currentNight < 4) {
+            showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+        } else {
+            showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
+            canAttackGuards = true; // 衛兵を攻撃可能にする
+        }
+    }
+    
+    checkGameProgress();
 } 
 
 void NightState::loadTextures(Graphics& graphics) {

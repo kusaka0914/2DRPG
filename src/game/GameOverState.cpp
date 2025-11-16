@@ -3,13 +3,19 @@
 #include "NightState.h"
 #include "FieldState.h"
 #include "TownState.h"
+#include "BattleState.h"
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
 
-GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason)
-    : player(player), gameOverReason(reason), titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
+GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
+                             EnemyType enemyType, int enemyLevel)
+    : player(player), gameOverReason(reason), 
+      battleEnemyType(enemyType), battleEnemyLevel(enemyLevel),
+      titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
+    // 戦闘に敗北した場合のみ敵情報を有効にする
+    hasBattleEnemyInfo = (gameOverReason.find("戦闘に敗北") != std::string::npos);
 }
 
 void GameOverState::enter() {
@@ -62,7 +68,22 @@ void GameOverState::handleInput(const InputManager& input) {
                           << "/" << player->getMaxHp() << ", isAlive: " << (player->getIsAlive() ? "true" : "false") << std::endl;
                 
                 if (gameOverReason.find("戦闘に敗北") != std::string::npos) {
-                    stateManager->changeState(std::make_unique<FieldState>(player));
+                    // 再戦可能な場合（敵情報がある場合）は再戦、そうでなければFieldStateに戻る
+                    if (hasBattleEnemyInfo) {
+                        // プレイヤーのHP/MPを回復してから再戦
+                        player->heal(player->getMaxHp());
+                        player->restoreMp(player->getMaxMp());
+                        
+                        // 同じ敵との戦闘を再開
+                        Enemy enemy(battleEnemyType);
+                        // 敵のレベルを目標レベルまで上げる
+                        while (enemy.getLevel() < battleEnemyLevel) {
+                            enemy.levelUp();
+                        }
+                        stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
+                    } else {
+                        stateManager->changeState(std::make_unique<FieldState>(player));
+                    }
                 } else {
                     stateManager->changeState(std::make_unique<NightState>(player));
                 }
@@ -104,7 +125,13 @@ void GameOverState::setupUI() {
     
     int instructionX, instructionY;
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.position, 1100, 650);
-    auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, "スペースキーまたはAボタンで夜の街に再スタート", "default");
+    std::string instructionText;
+    if (hasBattleEnemyInfo) {
+        instructionText = "スペースキーまたはAボタンで再戦";
+    } else {
+        instructionText = "スペースキーまたはAボタンで夜の街に再スタート";
+    }
+    auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, instructionText, "default");
     instructionLabelPtr->setColor(gameOverConfig.instruction.color);
     instruction = instructionLabelPtr.get();
     ui.addElement(std::move(instructionLabelPtr));

@@ -8,6 +8,7 @@
 #include "../core/GameState.h"
 #include "../ui/UI.h"
 #include "../entities/Player.h"
+#include "../entities/Enemy.h"
 #include <memory>
 
 /**
@@ -20,6 +21,11 @@ private:
     UIManager ui;
     std::string gameOverReason;
     
+    // 再戦用の敵情報（戦闘に敗北した場合のみ有効）
+    bool hasBattleEnemyInfo;  /**< @brief 戦闘に敗北した場合の敵情報があるか */
+    EnemyType battleEnemyType; /**< @brief 戦闘に敗北した場合の敵の種類 */
+    int battleEnemyLevel;      /**< @brief 戦闘に敗北した場合の敵のレベル */
+    
     // UI要素
     Label* titleLabel;
     Label* reasonLabel;
@@ -30,8 +36,11 @@ public:
      * @brief コンストラクタ
      * @param player プレイヤーへの共有ポインタ
      * @param reason ゲームオーバーの理由
+     * @param enemyType 戦闘に敗北した場合の敵の種類（オプション）
+     * @param enemyLevel 戦闘に敗北した場合の敵のレベル（オプション）
      */
-    GameOverState(std::shared_ptr<Player> player, const std::string& reason);
+    GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
+                  EnemyType enemyType = EnemyType::SLIME, int enemyLevel = 1);
     
     /**
      * @brief 状態に入る
