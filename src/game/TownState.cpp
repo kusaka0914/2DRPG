@@ -212,7 +212,7 @@ void TownState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     if (showGameExplanation) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             explanationStep++;
             
             if (explanationStep >= gameExplanationTexts.size()) {
@@ -233,7 +233,7 @@ void TownState::handleInput(const InputManager& input) {
     }
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -257,7 +257,7 @@ void TownState::handleInput(const InputManager& input) {
         return;
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (currentLocation == TownLocation::INN) {
             player->heal(player->getMaxHp());
             showMessage("宿屋で休みました。HPが全回復しました！");
@@ -316,13 +316,13 @@ void TownState::setupUI(Graphics& graphics) {
     std::string controlsText;
     switch (currentLocation) {
         case TownLocation::SHOP:
-            controlsText = "スペース/Aボタン: 買い物(武器・防具・薬草), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 買い物(武器・防具・薬草), ESC/Bボタン: 外に出る";
             break;
         case TownLocation::INN:
-            controlsText = "スペース/Aボタン: 休む(HP全回復), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 休む(HP全回復), ESC/Bボタン: 外に出る";
             break;
         case TownLocation::CHURCH:
-            controlsText = "スペース/Aボタン: 祈る(心の回復), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 祈る(心の回復), ESC/Bボタン: 外に出る";
             break;
     }
     
@@ -908,17 +908,17 @@ void TownState::checkBuildingEntrance() {
 
 void TownState::enterShop() {
     currentLocation = TownLocation::SHOP;
-    showMessage("道具屋に入りました。武器、防具、薬草などが売っています。スペースで買い物、ESCで外に出ます。");
+    showMessage("道具屋に入りました。武器、防具、薬草などが売っています。エンターで買い物、ESCで外に出ます。");
 }
 
 void TownState::enterInn() {
     currentLocation = TownLocation::INN;
-    showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。スペースで休むとHPが全回復します。ESCで外に出ます。");
+    showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。エンターで休むとHPが全回復します。ESCで外に出ます。");
 }
 
 void TownState::enterChurch() {
     currentLocation = TownLocation::CHURCH;
-    showMessage("教会に入りました。ステンドグラスから差し込む光が神聖な雰囲気を作り出しています。スペースで祈りを捧げることができます。ESCで外に出ます。");
+    showMessage("教会に入りました。ステンドグラスから差し込む光が神聖な雰囲気を作り出しています。エンターで祈りを捧げることができます。ESCで外に出ます。");
 }
 
 void TownState::exitBuilding() {

@@ -320,11 +320,11 @@ std::string BattleLogic::getBehaviorTypeHint(EnemyBehaviorType type) {
 std::string BattleLogic::getNegativeBehaviorTypeHint(EnemyBehaviorType type) {
     switch (type) {
         case EnemyBehaviorType::ATTACK_TYPE:
-            return "気性は荒くなさそうだ";
+            return "攻撃型ではないようだ";
         case EnemyBehaviorType::DEFEND_TYPE:
-            return "臆病ではなさそうだ";
+            return "防御型ではないようだ";
         case EnemyBehaviorType::SPELL_TYPE:
-            return "距離を取るタイプではなさそうだ";
+            return "呪文型ではないようだ";
     }
     return "";
 }

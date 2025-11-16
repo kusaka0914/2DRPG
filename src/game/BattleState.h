@@ -156,6 +156,7 @@ private:
     std::string cachedResidentBehaviorHint;  /**< @brief キャッシュされた住民の様子（同じターン中は同じメッセージを表示） */
     int cachedResidentCommand;  /**< @brief キャッシュされた住民のコマンド（予測表示と実際のコマンドを一致させるため） */
     int residentTurnCount;  /**< @brief 住民戦の現在のターン数（1から10まで、10ターン経過でゲームオーバー） */
+    bool residentAttackFailed;  /**< @brief 住民戦で攻撃が失敗したか（メンタルが低くてためらった） */
     
     // INTROフェーズ用
     float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */

@@ -247,7 +247,7 @@ void FieldState::handleInput(const InputManager& input) {
         return;
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         checkTownEntrance();
         return;
     }

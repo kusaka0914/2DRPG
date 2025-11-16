@@ -26,7 +26,8 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       introScale(0.0f), introTimer(0.0f),
       currentResidentPlayerCommand(-1), currentResidentCommand(-1),
       cachedResidentBehaviorHint(""), cachedResidentCommand(-1),
-      residentTurnCount(0) {
+      residentTurnCount(0),
+      residentAttackFailed(false) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -1122,28 +1123,67 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
     if (playerCommand == BattleConstants::COMMAND_ATTACK) {
         // プレイヤーが攻撃を選択
         if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
-            // 住民が怯える + プレイヤーが攻撃 → 無条件で攻撃成功
-            // 通常の戦闘と同じようにpendingDamagesに追加
-            int baseAttack = player->getTotalAttack();
-            int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
+            // 住民が怯える + プレイヤーが攻撃 → メンタルに基づく成功率で判定
+            int mental = player->getMental();
+            int successRate = 80; // 基本成功率80%
             
-            BattleLogic::DamageInfo damageInfo;
-            damageInfo.damage = damage;
-            damageInfo.isPlayerHit = false;
-            damageInfo.isDraw = false;
-            damageInfo.playerDamage = 0;
-            damageInfo.enemyDamage = damage;
-            damageInfo.commandType = BattleConstants::COMMAND_ATTACK;
-            damageInfo.isCounterRush = false;
-            damageInfo.skipAnimation = false;
+            // メンタルが低いほど成功率が下がる
+            if (mental < 30) {
+                successRate = 40;
+            } else if (mental < 50) {
+                successRate = 60;
+            } else if (mental > 80) {
+                successRate = 90; // メンタルが高いと成功率が上がる
+            }
             
-            pendingDamages.push_back(damageInfo);
-            damageAppliedInAnimation = false;
-            currentExecutingTurn = 0;
-            executeDelayTimer = 0.0f;
+            // ランダム判定
+            std::random_device rd;
+            unsigned int seed = rd() ^ static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+            std::mt19937 gen(seed);
+            std::uniform_int_distribution<> dis(1, 100);
+            int roll = dis(gen);
             
-            // アニメーションを開始
-            animationController->resetResultAnimation();
+            if (roll <= successRate) {
+                // 攻撃成功
+                int baseAttack = player->getTotalAttack();
+                int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
+                
+                BattleLogic::DamageInfo damageInfo;
+                damageInfo.damage = damage;
+                damageInfo.isPlayerHit = false;
+                damageInfo.isDraw = false;
+                damageInfo.playerDamage = 0;
+                damageInfo.enemyDamage = damage;
+                damageInfo.commandType = BattleConstants::COMMAND_ATTACK;
+                damageInfo.isCounterRush = false;
+                damageInfo.skipAnimation = false;
+                
+                pendingDamages.push_back(damageInfo);
+                damageAppliedInAnimation = false;
+                currentExecutingTurn = 0;
+                executeDelayTimer = 0.0f;
+                
+                // アニメーションを開始
+                animationController->resetResultAnimation();
+            } else {
+                // 攻撃失敗（メンタルが低くてためらった）
+                addBattleLog("住民を倒すのをためらいました。");
+                residentAttackFailed = true;
+                // 結果フェーズに遷移して「ためらいました」を表示
+                currentPhase = BattlePhase::JUDGE_RESULT;
+                phaseTimer = 0.0f;
+                // 次のターンへ（pendingDamagesは空のまま）
+                residentTurnCount++;
+                // 10ターン経過したらゲームオーバー
+                if (residentTurnCount > 10) {
+                    if (stateManager) {
+                        stateManager->changeState(std::make_unique<GameOverState>(
+                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                            true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
+                    }
+                    return;
+                }
+            }
         } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
             // 住民が助けを呼ぶ + プレイヤーが攻撃 → ゲームオーバー（再戦可能）
             if (stateManager) {
@@ -2223,7 +2263,10 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         if (isResultPhase) {
             // 1. 「〜ターン分の攻撃を実行」を常に表示（勝敗UIの下）
             std::string totalAttackText;
-            if (playerWins > enemyWins) {
+            // 住民戦で攻撃失敗時は「ためらいました」を表示
+            if (enemy->isResident() && residentAttackFailed) {
+                totalAttackText = player->getName() + "はメンタルの影響で攻撃をためらいました。";
+            } else if (playerWins > enemyWins) {
                 totalAttackText = player->getName() + "が" + std::to_string(playerWins) + "ターン分の攻撃を実行！";
             } else if (enemyWins > playerWins) {
                 totalAttackText = "敵が" + std::to_string(enemyWins) + "ターン分の攻撃を実行！";
@@ -2534,7 +2577,23 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     
     // 住民戦の場合は特別な処理（最初の1回だけprocessResidentTurnを呼ぶ）
     if (enemy->isResident()) {
-        if (pendingDamages.empty() && phaseTimer < 2.0f) {
+        // 攻撃失敗時は既にJUDGE_RESULTフェーズに遷移しているので、2秒間表示してから次のターンに進む
+        if (residentAttackFailed && pendingDamages.empty()) {
+            phaseTimer += deltaTime;
+            // 2秒経過したら次のターンに進む
+            if (phaseTimer >= 2.0f) {
+                residentAttackFailed = false; // フラグをリセット
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                battleLogic->setCommandTurnCount(1);
+                initializeCommandSelection();
+                phaseTimer = 0.0f;
+                return;
+            } else {
+                return;  // 2秒経過するまではreturn
+            }
+        }
+        
+        if (pendingDamages.empty() && phaseTimer < 2.0f && !residentAttackFailed) {
             phaseTimer += deltaTime;
             // 2秒後に実際の処理に移行
             if (phaseTimer >= 2.0f) {

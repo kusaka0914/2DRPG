@@ -56,7 +56,7 @@ void GameOverState::render(Graphics& graphics) {
 void GameOverState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (stateManager) {
             float nightTimer;
             bool nightTimerActive;
@@ -140,9 +140,9 @@ void GameOverState::setupUI() {
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.position, 1100, 650);
     std::string instructionText;
     if (hasBattleEnemyInfo) {
-        instructionText = "スペースキーまたはAボタンで再戦";
+        instructionText = "EnterまたはAボタンで再戦";
     } else {
-        instructionText = "スペースキーまたはAボタンで夜の街に再スタート";
+        instructionText = "EnterまたはAボタンで夜の街に再スタート";
     }
     auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, instructionText, "default");
     instructionLabelPtr->setColor(gameOverConfig.instruction.color);

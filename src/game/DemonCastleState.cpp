@@ -108,14 +108,14 @@ void DemonCastleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue(); // メッセージクリアではなく次の会話に進む
         }
         return; // メッセージ表示中は他の操作を無効化
     }
     
     if (isTalkingToDemon) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue();
         }
         return;

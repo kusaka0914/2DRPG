@@ -164,7 +164,7 @@ void RoomState::setupUI(Graphics& graphics) {
     config.calculatePosition(howToX, howToY, roomConfig.howToOperateText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     auto howtooperateLabel = std::make_unique<Label>(howToX, howToY, "", "default");
     howtooperateLabel->setColor(roomConfig.howToOperateText.color);
-    howtooperateLabel->setText("移動: 矢印キー\n調べる/ドアに入る/次のメッセージ: スペースキー");
+    howtooperateLabel->setText("移動: 矢印キー\n調べる/ドアに入る/次のメッセージ: Enter");
     howtooperateBoard = howtooperateLabel.get(); // ポインタを保存
     ui.addElement(std::move(howtooperateLabel));
 }

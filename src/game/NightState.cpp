@@ -349,14 +349,14 @@ void NightState::handleInput(const InputManager& input) {
             updateChoiceDisplay();
         }
         
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             handleResidentChoice();
         }
         return; // 選択肢表示中は他の操作を無効化
     }
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
             
             if (isShowingResidentChoice) {
@@ -382,7 +382,7 @@ void NightState::handleInput(const InputManager& input) {
                 int currentNight = player->getCurrentNight();
                 if (currentNight < 4) {
                     showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
-                    // 次のSpaceで街に戻る処理を実行するフラグを設定
+                    // 次のEnterで街に戻る処理を実行するフラグを設定
                     shouldReturnToTown = true;
                 } else {
                     // 4夜目以降の場合はメッセージを表示（衛兵を攻撃可能にする）
@@ -390,7 +390,7 @@ void NightState::handleInput(const InputManager& input) {
                 }
             }
             else if (shouldReturnToTown) {
-                // 街に戻るメッセージを表示した後、Spaceを押した時に街に戻る処理を実行
+                // 街に戻るメッセージを表示した後、Enterを押した時に街に戻る処理を実行
                 shouldReturnToTown = false;
                 int currentNight = player->getCurrentNight();
                 if (stateManager && currentNight < 4) {
@@ -437,7 +437,7 @@ void NightState::handleInput(const InputManager& input) {
         return;
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (canEnterCastle) {
             checkCastleEntrance();
             return;
@@ -474,7 +474,7 @@ void NightState::setupUI() {
 
         auto nightOperationLabel = std::make_unique<Label>(95, 15, "", "default");
         nightOperationLabel->setColor({255, 255, 255, 255}); // 白文字
-        nightOperationLabel->setText("住人を倒す: スペースキー");
+        nightOperationLabel->setText("住人を倒す: Enter");
         this->nightOperationLabel = nightOperationLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightOperationLabel));
     } catch (const std::exception& e) {

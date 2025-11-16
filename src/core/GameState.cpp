@@ -161,7 +161,7 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
     ui.handleInput(input);
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -171,7 +171,7 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
         handleMovement();
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (isNearExit()) {
             onExit();
         } else {

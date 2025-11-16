@@ -132,7 +132,7 @@ void CastleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             if (fromNightState && allDefeated) {
                 clearMessage();
                 if (stateManager) {
@@ -146,7 +146,7 @@ void CastleState::handleInput(const InputManager& input) {
     }
     
     if (isTalkingToKing) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue();
         }
         return;
