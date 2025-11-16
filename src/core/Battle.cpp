@@ -64,7 +64,7 @@ void Battle::executePlayerAction(PlayerAction action) {
         case PlayerAction::MAGIC:
             {
                 SpellType spell = chooseMagic();
-                if (spell == SpellType::KIZUGAIAERU) {
+                if (spell == SpellType::HEAL) {
                     player->castSpell(spell);
                 } else {
                     player->castSpell(spell, enemy);
@@ -105,15 +105,10 @@ SpellType Battle::chooseMagic() const {
     int choice = getValidInput(1, 8);
     
     switch (choice) {
-        case 1: return SpellType::KIZUGAIAERU;
-        case 2: return SpellType::ATSUIATSUI;
-        case 3: return SpellType::BIRIBIRIDOKKAN;
-        case 4: return SpellType::DARKNESSIMPACT;
-        case 5: return SpellType::ICHIKABACHIKA;
-        case 6: return SpellType::TSUGICHOTTOTSUYOI;
-        case 7: return SpellType::TSUGIMECHATSUYOI;
-        case 8: return SpellType::WANCHANTAOSERU;
-        default: return SpellType::KIZUGAIAERU;
+        case 0: return SpellType::HEAL;
+        case 1: return SpellType::STATUS_UP;
+        case 2: return SpellType::ATTACK;
+        default: return SpellType::HEAL;
     }
 }
 

@@ -41,6 +41,7 @@ public:
         int enemyDamage;   /**< @brief 引き分け時の敵のダメージ */
         int commandType;   /**< @brief コマンドタイプ（0=攻撃, 1=防御, 2=呪文）-1=未設定 */
         bool isCounterRush; /**< @brief true=カウンターラッシュ（防御で勝利した場合） */
+        bool skipAnimation; /**< @brief true=攻撃アニメーションをスキップ（ステータス上昇呪文や回復呪文の場合） */
     };
     
     /**

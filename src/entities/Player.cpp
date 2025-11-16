@@ -31,22 +31,7 @@ void Player::levelUp() {
     hp = maxHp;
     mp = maxMp;
     
-    if (level == 3) {
-        learnSpell(SpellType::KIZUGAIAERU, 10); // キズガイエール
-        learnSpell(SpellType::ATSUIATSUI, 4); // アツイアツーイ
-    }
-    if (level == 10) {
-        learnSpell(SpellType::BIRIBIRIDOKKAN, 8); // ビリビリドッカーン
-        learnSpell(SpellType::ICHIKABACHIKA, 6); // イチカバチーカ
-    }
-    if (level == 30) {
-        learnSpell(SpellType::TSUGICHOTTOTSUYOI, 5); // ツギチョットツヨーイ
-        learnSpell(SpellType::DARKNESSIMPACT, 12); // ダークネスインパクト
-    }
-    if (level == 60) {
-        learnSpell(SpellType::TSUGIMECHATSUYOI, 8); // ツギメッチャツヨーイ
-        learnSpell(SpellType::WANCHANTAOSERU, 15); // ワンチャンタオセール
-    }
+    // 新しいシステム：3種類の魔法は自動的に使用可能（学習不要）
     
     playerStory->setLevelUpStory(level);
 }
@@ -59,35 +44,7 @@ void Player::displayInfo() const {
     int equipAttackBonus = equipmentManager.getTotalAttackBonus();
     int equipDefenseBonus = equipmentManager.getTotalDefenseBonus();
     
-    for (const auto& spell : spells) {
-        int mpCost = 0;
-        switch (spell.first) {
-            case SpellType::KIZUGAIAERU:
-                mpCost = 10; // キズガイエール: レベル×3
-                break;
-            case SpellType::ATSUIATSUI:
-                mpCost = 4; // アツイアツーイ: レベル×4
-                break;
-            case SpellType::BIRIBIRIDOKKAN:
-                mpCost = 8; // ビリビリドッカーン: レベル×8
-                break;
-            case SpellType::DARKNESSIMPACT:
-                mpCost = 12; // ダークネスインパクト: レベル×12
-                break;
-            case SpellType::ICHIKABACHIKA:
-                mpCost = 4; // イチカバチーカ: レベル×6
-                break;
-            case SpellType::TSUGICHOTTOTSUYOI:
-                mpCost = 2; // ツギチョットツヨーイ: レベル×5
-                break;
-            case SpellType::TSUGIMECHATSUYOI:
-                mpCost = 4; // ツギメッチャツヨーイ: レベル×8
-                break;
-            case SpellType::WANCHANTAOSERU:
-                mpCost = 8; // ワンチャンタオセール: レベル×15
-                break;
-        }
-    }
+    // 新しいシステム：3種類の魔法は自動的に使用可能（表示不要）
 }
 
 void Player::gainExp(int expGained) {
@@ -104,166 +61,43 @@ void Player::gainExp(int expGained) {
 }
 
 bool Player::canCastSpell(SpellType spell) const {
-    auto it = spells.find(spell);
-    if (it == spells.end()) return false;
-    
-    int requiredMp = 0;
-    switch (spell) {
-        case SpellType::KIZUGAIAERU:
-            requiredMp = 10; // キズガイエール: レベル×3
-            break;
-        case SpellType::ATSUIATSUI:
-            requiredMp = 4; // アツイアツーイ: レベル×4
-            break;
-        case SpellType::BIRIBIRIDOKKAN:
-            requiredMp = 8; // ビリビリドッカーン: レベル×8
-            break;
-        case SpellType::DARKNESSIMPACT:
-            requiredMp = 12; // ダークネスインパクト: レベル×12
-            break;
-        case SpellType::ICHIKABACHIKA:
-            requiredMp = 4; // イチカバチーカ: レベル×6
-            break;
-        case SpellType::TSUGICHOTTOTSUYOI:
-            requiredMp = 2; // ツギチョットツヨーイ: レベル×5
-            break;
-        case SpellType::TSUGIMECHATSUYOI:
-            requiredMp = 4; // ツギメッチャツヨーイ: レベル×8
-            break;
-        case SpellType::WANCHANTAOSERU:
-            requiredMp = 8; // ワンチャンタオセール: レベル×15
-            break;
-    }
-    return mp >= requiredMp;
+    // 取得済みかのチェック不要：常に使用可能
+    (void)spell; // 未使用警告を回避
+    return true;
 }
 
 int Player::castSpell(SpellType spell, Character* target) {
-    if (!canCastSpell(spell)) {
-        return 0;
-    }
-    
-    int mpCost = 0;
     switch (spell) {
-        case SpellType::KIZUGAIAERU:
-            mpCost = 10; // キズガイエール: レベル×3
-            break;
-        case SpellType::ATSUIATSUI:
-            mpCost = 4; // アツイアツーイ: レベル×4
-            break;
-        case SpellType::BIRIBIRIDOKKAN:
-            mpCost = 8; // ビリビリドッカーン: レベル×8
-            break;
-        case SpellType::DARKNESSIMPACT:
-            mpCost = 12; // ダークネスインパクト: レベル×12
-            break;
-        case SpellType::ICHIKABACHIKA:
-            mpCost = 4; // イチカバチーカ: レベル×6
-            break;
-        case SpellType::TSUGICHOTTOTSUYOI:
-            mpCost = 2; // ツギチョットツヨーイ: レベル×5
-            break;
-        case SpellType::TSUGIMECHATSUYOI:
-            mpCost = 4; // ツギメッチャツヨーイ: レベル×8
-            break;
-        case SpellType::WANCHANTAOSERU:
-            mpCost = 8; // ワンチャンタオセール: レベル×15
-            break;
-    }
-    mp -= mpCost;
-    
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    
-    switch (spell) {
-        case SpellType::KIZUGAIAERU:
+        case SpellType::HEAL:
             {
-                int healAmount = static_cast<int>(getMaxHp() * 0.8); // 体力の20%回復
+                // 回復魔法：自分のHPが4割回復
+                int healAmount = static_cast<int>(getMaxHp() * 0.4);
                 heal(healAmount);
                 return healAmount;
             }
-            break;
-        case SpellType::ATSUIATSUI:
-            if (target) {
-                int baseAttack = getTotalAttack();
-                if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
-                }
-                int baseDamage = baseAttack * 1.25; // 低MP攻撃呪文
-                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
-                target->takeDamage(finalDamage);
-                return finalDamage;
-            }
-            break;
-        case SpellType::BIRIBIRIDOKKAN:
-            if (target) {
-                int baseAttack = getTotalAttack();
-                if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
-                }
-                int baseDamage = baseAttack * 1.5; // 中MP攻撃呪文
-                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
-                target->takeDamage(finalDamage);
-                return finalDamage;
-            }
-            break;
-        case SpellType::DARKNESSIMPACT:
-            if (target) {
-                int baseAttack = getTotalAttack();
-                if (hasNextTurnBonusActive()) {
-                    baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
-                }
-                int baseDamage = baseAttack * 2; // 高MP攻撃呪文
-                int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
-                target->takeDamage(finalDamage);
-                return finalDamage;
-            }
-            break;
-        case SpellType::ICHIKABACHIKA:
+        case SpellType::STATUS_UP:
             {
-                std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-                if (dist(gen) < 0.5f) {
-                    setCounterEffect(true);
-                    return 1; // 成功を示す
-                } else {
-                    return 0; // 失敗を示す
-                }
+                // ステータスアップ魔法：次の攻撃が2.5倍になる
+                setNextTurnBonus(true, 2.5f, 1);
+                return 1; // 成功を示す
             }
-            break;
-        case SpellType::TSUGICHOTTOTSUYOI:
+        case SpellType::ATTACK:
             {
-                std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-                if (dist(gen) < 0.8f) {
-                    setNextTurnBonus(true, 1.8f, 1);
-                    return 1; // 成功を示す
-                } else {
-                    return 0; // 失敗を示す
-                }
-            }
-            break;
-        case SpellType::TSUGIMECHATSUYOI:
-            {
-                std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-                if (dist(gen) < 0.5f) {
-                    setNextTurnBonus(true, 2.5f, 1);
-                    return 1; // 成功を示す
-                } else {
-                    return 0; // 失敗を示す
-                }
-            }
-            break;
-        case SpellType::WANCHANTAOSERU:
-            if (target) {
-                std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-                if (dist(gen) < 100.0f) {
-                    target->takeDamage(target->getHp()); // 現在のHP分のダメージ
-                    return target->getHp();
-                } else {
-                    return 0;
+                // 攻撃魔法：通常の攻撃と同じ攻撃力（BattleStateで処理）
+                if (target) {
+                    int baseAttack = getTotalAttack();
+                    if (hasNextTurnBonusActive()) {
+                        baseAttack = static_cast<int>(baseAttack * getNextTurnMultiplier());
+                    }
+                    int baseDamage = baseAttack;
+                    int finalDamage = std::max(1, baseDamage - target->getEffectiveDefense());
+                    target->takeDamage(finalDamage);
+                    return finalDamage;
                 }
             }
             break;
     }
-    return 0; // デフォルトの戻り値
+    return 0;
 }
 
 void Player::learnSpell(SpellType spell, int mpCost) {
@@ -508,48 +342,24 @@ bool Player::autoLoad(float& nightTimer, bool& nightTimerActive) {
 
 std::string Player::getSpellName(SpellType spell) {
     switch (spell) {
-        case SpellType::KIZUGAIAERU:
-            return "キズガイエール";
-        case SpellType::ATSUIATSUI:
-            return "アツイアツーイ";
-        case SpellType::BIRIBIRIDOKKAN:
-            return "ビリビリドッカーン";
-        case SpellType::DARKNESSIMPACT:
-            return "ダークネスインパクト";
-        case SpellType::ICHIKABACHIKA:
-            return "イチカバチーカ";
-        case SpellType::TSUGICHOTTOTSUYOI:
-            return "ツギチョットツヨーイ";
-        case SpellType::TSUGIMECHATSUYOI:
-            return "ツギメッチャツヨーイ";
-        case SpellType::WANCHANTAOSERU:
-            return "ワンチャンタオセール";
+        case SpellType::HEAL:
+            return "回復魔法";
+        case SpellType::STATUS_UP:
+            return "ステータスアップ魔法";
+        case SpellType::ATTACK:
+            return "攻撃魔法";
         default:
-            return "不明な呪文";
+            return "不明な魔法";
     }
 }
 
 std::vector<SpellType> Player::getSpellsLearnedAtLevel(int level) {
+    // 新しいシステム：3種類の魔法は自動的に使用可能（レベルに関係なく）
+    (void)level;
     std::vector<SpellType> spells;
-    
-    switch (level) {
-        case 3:
-            spells.push_back(SpellType::KIZUGAIAERU);
-            spells.push_back(SpellType::ATSUIATSUI);
-            break;
-        case 10:
-            spells.push_back(SpellType::BIRIBIRIDOKKAN);
-            spells.push_back(SpellType::ICHIKABACHIKA);
-            break;
-        case 30:
-            spells.push_back(SpellType::TSUGICHOTTOTSUYOI);
-            spells.push_back(SpellType::DARKNESSIMPACT);
-            break;
-        case 60:
-            spells.push_back(SpellType::TSUGIMECHATSUYOI);
-            spells.push_back(SpellType::WANCHANTAOSERU);
-            break;
-    }
-    
+    // 全ての魔法を返す（常に使用可能）
+    spells.push_back(SpellType::HEAL);
+    spells.push_back(SpellType::STATUS_UP);
+    spells.push_back(SpellType::ATTACK);
     return spells;
 } 

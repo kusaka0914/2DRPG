@@ -95,7 +95,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                 if (cmd == BattleConstants::COMMAND_ATTACK) {
                     int baseDamage = calculatePlayerAttackDamage();
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
-                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false});
+                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false, false});
                 } else if (cmd == BattleConstants::COMMAND_SPELL) {
                     // 呪文で勝利した場合、ダメージエントリを追加しない
                     // （後でプレイヤーが選択した呪文を実行するため）
@@ -106,7 +106,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                     int counterDamage = static_cast<int>(baseDamage / 5.0f * damageMultiplier);
                     // 5回のダメージエントリを追加
                     for (int j = 0; j < 5; j++) {
-                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true});
+                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true, false});
                     }
                 }
             }
@@ -115,7 +115,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
         for (int i = 0; i < commandTurnCount; i++) {
             if (judgeRound(playerCommands[i], enemyCommands[i]) == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
                 int damage = calculateEnemyAttackDamage();
-                damages.push_back({damage, true, false, 0, 0, -1, false}); // true = プレイヤーがダメージを受ける
+                damages.push_back({damage, true, false, 0, 0, -1, false, false}); // true = プレイヤーがダメージを受ける
             }
         }
     } else {
@@ -129,7 +129,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
             }
         }
         if (totalPlayerDamage > 0 || totalEnemyDamage > 0) {
-            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false}); // isDraw = true
+            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false, false}); // isDraw = true
         }
     }
     

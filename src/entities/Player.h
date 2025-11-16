@@ -17,18 +17,13 @@
 #include <map>
 
 /**
- * @brief 呪文の種類
- * @details プレイヤーが使用可能な呪文の種類を定義する。
+ * @brief 魔法の種類
+ * @details プレイヤーが使用可能な魔法の種類を定義する。
  */
 enum class SpellType {
-    KIZUGAIAERU,  // キズガイエール（体力20%回復）
-    ATSUIATSUI,   // アツイアツーイ（低MP攻撃呪文）
-    BIRIBIRIDOKKAN, // ビリビリドッカーン（中MP攻撃呪文）
-    DARKNESSIMPACT, // ダークネスインパクト（高MP攻撃呪文）
-    ICHIKABACHIKA,   // イチカバチーカ（カウンター技）
-    TSUGICHOTTOTSUYOI,     // ツギチョットツヨーイ（次のターン2.5倍）
-    TSUGIMECHATSUYOI,   // ツギメッチャツヨーイ（次のターン4倍）
-    WANCHANTAOSERU  /**< @brief ワンチャンタオセール（即死技） */
+    STATUS_UP,    /**< @brief ステータスアップ魔法（次の攻撃が2.5倍になる） */
+    HEAL,         /**< @brief 回復魔法（HPが4割回復） */
+    ATTACK        /**< @brief 攻撃魔法（通常の攻撃と同じ攻撃力） */
 };
 
 /**
@@ -534,6 +529,12 @@ public:
      * @return 次のターンの倍率
      */
     float getNextTurnMultiplier() const { return playerStats->getSpellEffects().nextTurnMultiplier; }
+    
+    /**
+     * @brief 次のターンボーナスの残りターン数の取得
+     * @return 残りターン数
+     */
+    int getNextTurnBonusTurns() const { return playerStats->getSpellEffects().nextTurnBonusTurns; }
     
     /**
      * @brief 次のターンボーナスの設定

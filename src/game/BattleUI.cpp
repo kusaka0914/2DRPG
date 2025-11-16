@@ -683,6 +683,30 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     }
     graphics->drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
     
+    // ステータス上昇呪文の状態を表示（HPの下）
+    if (player->hasNextTurnBonusActive()) {
+        float multiplier = player->getNextTurnMultiplier();
+        int turns = player->getNextTurnBonusTurns();
+        // 倍率を文字列に変換（小数点以下1桁まで表示）
+        int multiplierInt = static_cast<int>(multiplier * 10);
+        std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
+        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
+        SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
+        SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
+        if (statusTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
+            int bgX = playerX - 100 - padding;
+            int bgY = playerY - playerHeight / 2 + padding;
+            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+            graphics->setDrawColor(255, 255, 100, 255);
+            graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+            SDL_DestroyTexture(statusTexture);
+        }
+        graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
+    }
+    
     // 敵の名前とレベル（HPの上に表示）
     std::string enemyNameText = enemy->getTypeName() + " Lv." + std::to_string(enemy->getLevel());
     SDL_Texture* enemyNameTexture = graphics->createTextTexture(enemyNameText, "default", whiteColor);
