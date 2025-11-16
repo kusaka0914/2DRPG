@@ -709,19 +709,7 @@ void BattleState::render(Graphics& graphics) {
             levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
         }
         
-        std::vector<SpellType> learnedSpells;
-        for (int level = oldLevel + 1; level <= player->getLevel(); level++) {
-            auto spellsAtLevel = Player::getSpellsLearnedAtLevel(level);
-            learnedSpells.insert(learnedSpells.end(), spellsAtLevel.begin(), spellsAtLevel.end());
-        }
-        
-        if (!learnedSpells.empty()) {
-            levelUpText += "\n";
-            for (const auto& spell : learnedSpells) {
-                levelUpText += Player::getSpellName(spell) + " ";
-            }
-            levelUpText += "を覚えた！";
-        }
+        // 新しいシステム：魔法は初期から覚えているため、魔法習得メッセージは表示しない
         
         SDL_Color textColor = {255, 255, 255, 255};
         
@@ -1886,38 +1874,101 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         
         SDL_DestroyTexture(textTexture);
         
-        // 結果フェーズのみ「自分が〜ターン攻撃します」を表示（VSが消えた位置 = VSの位置）
+        // 結果フェーズのみ、ターン数表示と現在実行中のターンに応じたメッセージを表示
         if (isResultPhase) {
-            auto stats = battleLogic->getStats();
-            std::string attackText;
+    auto stats = battleLogic->getStats();
             
+            // 1. 「〜ターン分の攻撃を実行」を常に表示（勝敗UIの下）
+            std::string totalAttackText;
             if (playerWins > enemyWins) {
-                attackText = "自分が" + std::to_string(playerWins) + "ターン分の攻撃を実行！";
+                totalAttackText = player->getName() + "が" + std::to_string(playerWins) + "ターン分の攻撃を実行！";
             } else if (enemyWins > playerWins) {
-                attackText = "敵が" + std::to_string(enemyWins) + "ターン分の攻撃を実行！";
-            } else {
-                attackText = "両方がダメージを受ける";
+                totalAttackText = "敵が" + std::to_string(enemyWins) + "ターン分の攻撃を実行！";
+        } else {
+                totalAttackText = "両方がダメージを受ける";
             }
             
-            SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", textColor);
-            if (attackTexture) {
-                int attackTextWidth, attackTextHeight;
-                SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
+            SDL_Texture* totalAttackTexture = graphics.createTextTexture(totalAttackText, "default", textColor);
+            if (totalAttackTexture) {
+                int totalAttackTextWidth, totalAttackTextHeight;
+                SDL_QueryTexture(totalAttackTexture, nullptr, nullptr, &totalAttackTextWidth, &totalAttackTextHeight);
                 
-                // VSが消えた位置（VSの位置 = centerY + JUDGE_COMMAND_Y_OFFSET）
-                int vsY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
-                int attackY = vsY;
-                int attackBgX = centerX - attackTextWidth / 2 - padding;
-                int attackBgY = attackY - padding;
+                // 勝敗UIの下に配置
+                int totalAttackY = winLossY + textHeight + 20; // 勝敗UIの下に適切な間隔を空ける
+                int totalAttackBgX = centerX - totalAttackTextWidth / 2 - padding;
+                int totalAttackBgY = totalAttackY - padding;
                 
                 // 背景黒
                 graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics.drawRect(attackBgX, attackBgY, attackTextWidth + padding * 2, attackTextHeight + padding * 2, true);
+                graphics.drawRect(totalAttackBgX, totalAttackBgY, totalAttackTextWidth + padding * 2, totalAttackTextHeight + padding * 2, true);
                 
                 // テキスト白
-                graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", textColor);
+                graphics.drawText(totalAttackText, centerX - totalAttackTextWidth / 2, totalAttackY, "default", textColor);
                 
-                SDL_DestroyTexture(attackTexture);
+                SDL_DestroyTexture(totalAttackTexture);
+                
+                // 2. 現在実行中のターンに応じたメッセージを表示（「〜ターン分の攻撃を実行」の下）
+                if (playerWins > enemyWins) {
+                    std::string attackText;
+                    
+                    // 現在実行中のターンに対応するメッセージを生成
+                    if (currentExecutingTurn < pendingDamages.size()) {
+                        const auto& damageInfo = pendingDamages[currentExecutingTurn];
+                        
+                        if (damageInfo.commandType == BattleConstants::COMMAND_ATTACK) {
+                            attackText = player->getName() + "のアタック！";
+                        } else if (damageInfo.commandType == BattleConstants::COMMAND_DEFEND) {
+                            attackText = player->getName() + "のラッシュアタック！";
+                        } else if (damageInfo.commandType == BattleConstants::COMMAND_SPELL) {
+                            // 呪文の種類を取得
+                            auto it = executedSpellsByDamageIndex.find(currentExecutingTurn);
+                            if (it != executedSpellsByDamageIndex.end()) {
+                                SpellType spellType = it->second;
+                                switch (spellType) {
+                                    case SpellType::STATUS_UP:
+                                        attackText = player->getName() + "がステータスアップ呪文発動！";
+                                        break;
+                                    case SpellType::HEAL:
+                                        attackText = player->getName() + "が回復呪文発動！";
+                                        break;
+                                    case SpellType::ATTACK:
+                                        attackText = player->getName() + "が攻撃呪文発動！";
+                                        break;
+                                    default:
+                                        attackText = player->getName() + "が呪文発動！";
+                                        break;
+                                }
+        } else {
+                                attackText = player->getName() + "が呪文発動！";
+        }
+    } else {
+                            // デフォルトメッセージ
+                            attackText = player->getName() + "の攻撃！";
+                        }
+                    }
+                    
+                    if (!attackText.empty()) {
+                        SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", textColor);
+                        if (attackTexture) {
+                            int attackTextWidth, attackTextHeight;
+                            SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
+                            
+                            // 「〜ターン分の攻撃を実行」の下に配置
+                            int attackY = totalAttackY + totalAttackTextHeight + 20; // 上記UIの下に適切な間隔を空ける
+                            int attackBgX = centerX - attackTextWidth / 2 - padding;
+                            int attackBgY = attackY - padding;
+                            
+                            // 背景黒
+                            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                            graphics.drawRect(attackBgX, attackBgY, attackTextWidth + padding * 2, attackTextHeight + padding * 2, true);
+                            
+                            // テキスト白
+                            graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", textColor);
+                            
+                            SDL_DestroyTexture(attackTexture);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1930,6 +1981,7 @@ void BattleState::judgeBattle() {
 void BattleState::prepareDamageList(float damageMultiplier) {
     // 呪文で勝利したターンを記録
     spellWinTurns.clear();
+    executedSpellsByDamageIndex.clear();  // 呪文の記録をクリア
     auto playerCmds = battleLogic->getPlayerCommands();
     auto enemyCmds = battleLogic->getEnemyCommands();
     auto stats = battleLogic->getStats();
@@ -2173,7 +2225,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     spellDamage.commandType = BattleConstants::COMMAND_SPELL;
                     spellDamage.isCounterRush = false;
                     spellDamage.skipAnimation = false;  // 攻撃魔法なのでアニメーションを実行
+                    int damageIndex = pendingDamages.size();
                     pendingDamages.push_back(spellDamage);
+                    // 攻撃呪文を記録
+                    executedSpellsByDamageIndex[damageIndex] = SpellType::ATTACK;
                 }
             } else {
                 // 攻撃以外の魔法の場合、効果を適用
@@ -2189,7 +2244,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                 spellDamage.commandType = BattleConstants::COMMAND_SPELL;
                 spellDamage.isCounterRush = false;
                 spellDamage.skipAnimation = true;  // ステータスアップ魔法や回復魔法なのでアニメーションをスキップ
+                int damageIndex = pendingDamages.size();
                 pendingDamages.push_back(spellDamage);
+                // 呪文の種類を記録
+                executedSpellsByDamageIndex[damageIndex] = selectedSpell;
                 
                 // ログに記録
                 switch (selectedSpell) {

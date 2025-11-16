@@ -19,6 +19,7 @@
 #include "BattleUI.h"
 #include "BattlePhaseManager.h"
 #include <memory>
+#include <map>
 
 /**
  * @brief 戦闘フェーズの種類
@@ -137,6 +138,7 @@ private:
     bool damageAppliedInAnimation;     // アニメーション中にダメージが適用されたか（ピーク時検出用）
     std::vector<int> spellWinTurns;    // 呪文で勝利したターンのインデックス（結果フェーズで呪文選択用）
     bool waitingForSpellSelection;     // 呪文選択待ちフラグ
+    std::map<int, SpellType> executedSpellsByDamageIndex;  /**< @brief pendingDamagesのインデックス → 実行した呪文の種類 */
     
     // 段階的な結果表示用
     int currentJudgingTurn;            // 現在表示中のターン（0から開始）
