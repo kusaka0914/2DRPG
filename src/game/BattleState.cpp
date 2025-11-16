@@ -1148,7 +1148,8 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             // 住民が助けを呼ぶ + プレイヤーが攻撃 → ゲームオーバー（再戦可能）
             if (stateManager) {
                 stateManager->changeState(std::make_unique<GameOverState>(
-                    player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                    player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                    true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
             }
             return;
         }
@@ -1168,7 +1169,8 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
         if (residentTurnCount > 10) {
             if (stateManager) {
                 stateManager->changeState(std::make_unique<GameOverState>(
-                    player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                    player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                    true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
             }
             return;
         }
@@ -2876,7 +2878,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     if (residentTurnCount > 10) {
                         if (stateManager) {
                             stateManager->changeState(std::make_unique<GameOverState>(
-                                player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                                player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                                true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                         }
                         return;
                     }
@@ -2919,7 +2922,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                 if (residentTurnCount > 10) {
                     if (stateManager) {
                         stateManager->changeState(std::make_unique<GameOverState>(
-                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                            true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                     }
                     return;
                 }

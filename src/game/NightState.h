@@ -74,6 +74,7 @@ private:
     std::vector<std::string> choiceOptions;
     int currentTargetX, currentTargetY; // 現在の襲撃対象の位置
     bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
+    bool showReturnToTownMessage; // 街に戻るメッセージ表示フラグ（3人目を倒した後用）
     
     // 夜の表示
     Label* nightDisplayLabel; // 夜の表示用ラベル

@@ -10,12 +10,16 @@
 #include <iostream>
 
 GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
-                             EnemyType enemyType, int enemyLevel)
+                             EnemyType enemyType, int enemyLevel,
+                             bool isResident, const std::string& residentName,
+                             int residentX, int residentY, int residentTextureIndex)
     : player(player), gameOverReason(reason), 
       battleEnemyType(enemyType), battleEnemyLevel(enemyLevel),
+      isResidentBattle(isResident), residentName(residentName),
+      residentX(residentX), residentY(residentY), residentTextureIndex(residentTextureIndex),
       titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
-    // 戦闘に敗北した場合のみ敵情報を有効にする
-    hasBattleEnemyInfo = (gameOverReason.find("戦闘に敗北") != std::string::npos);
+    // 戦闘に敗北した場合または住民戦でゲームオーバーになった場合のみ敵情報を有効にする
+    hasBattleEnemyInfo = (gameOverReason.find("戦闘に敗北") != std::string::npos) || isResidentBattle;
 }
 
 void GameOverState::enter() {
@@ -67,20 +71,29 @@ void GameOverState::handleInput(const InputManager& input) {
                 std::cout << "GameOverState: プレイヤーHP復元 - HP: " << player->getHp() 
                           << "/" << player->getMaxHp() << ", isAlive: " << (player->getIsAlive() ? "true" : "false") << std::endl;
                 
-                if (gameOverReason.find("戦闘に敗北") != std::string::npos) {
+                if (gameOverReason.find("戦闘に敗北") != std::string::npos || isResidentBattle) {
                     // 再戦可能な場合（敵情報がある場合）は再戦、そうでなければFieldStateに戻る
                     if (hasBattleEnemyInfo) {
                         // プレイヤーのHP/MPを回復してから再戦
                         player->heal(player->getMaxHp());
                         player->restoreMp(player->getMaxMp());
                         
-                        // 同じ敵との戦闘を再開
-                        Enemy enemy(battleEnemyType);
-                        // 敵のレベルを目標レベルまで上げる
-                        while (enemy.getLevel() < battleEnemyLevel) {
-                            enemy.levelUp();
+                        // 住民戦の場合は住民の情報を復元して再戦
+                        if (isResidentBattle) {
+                            Enemy enemy(EnemyType::SLIME);
+                            enemy.setName(residentName);
+                            enemy.setResidentTextureIndex(residentTextureIndex);
+                            enemy.setResidentPosition(residentX, residentY);
+                            stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
+                        } else {
+                            // 通常の敵との戦闘を再開
+                            Enemy enemy(battleEnemyType);
+                            // 敵のレベルを目標レベルまで上げる
+                            while (enemy.getLevel() < battleEnemyLevel) {
+                                enemy.levelUp();
+                            }
+                            stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
                         }
-                        stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
                     } else {
                         stateManager->changeState(std::make_unique<FieldState>(player));
                     }

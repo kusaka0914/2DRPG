@@ -28,7 +28,7 @@ NightState::NightState(std::shared_ptr<Player> player)
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
       messageBoard(nullptr), nightDisplayLabel(nullptr), nightOperationLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
-      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
       guardHp() {
@@ -370,10 +370,25 @@ void NightState::handleInput(const InputManager& input) {
             }
             else if (showResidentKilledMessage) {
                 showResidentKilledMessage = false;
+                // 魔王の信頼度が上がったメッセージを表示
                 if (totalResidentsKilled <= 6) {
                     showMessage("住民を倒しました。\n勇者: ああぁぁぁぁ、ごめんなさい。倒さないと私が魔王にやられちゃうんだ、、\n\n魔王からの信頼度 +10 メンタル -20");
                 } else {
                     showMessage("住民を倒しました。\n勇者: ふふっ、だんだん楽しくなってきたぁ、、！\n\n魔王からの信頼度 +10 メンタル +20");
+                }
+                // 3人目を倒した場合は、次のメッセージで街に戻るメッセージを表示するフラグを設定
+                if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+                    showReturnToTownMessage = true;
+                }
+            }
+            else if (showReturnToTownMessage) {
+                showReturnToTownMessage = false;
+                // 街に戻るメッセージを表示
+                int currentNight = player->getCurrentNight();
+                if (currentNight < 4) {
+                    showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+                } else {
+                    showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
                 }
             }
         }
@@ -451,6 +466,17 @@ void NightState::checkResidentInteraction() {
 void NightState::attackResident(int x, int y) {
     
     if (isShowingResidentChoice) {
+        return;
+    }
+    
+    // 1夜に倒せる住民の最大値は3人まで
+    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+        int currentNight = player->getCurrentNight();
+        if (currentNight < 4) {
+            showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+        } else {
+            showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
+        }
         return;
     }
     
@@ -802,6 +828,9 @@ void NightState::handleResidentKilled(int x, int y) {
             canAttackGuards = true; // 衛兵を攻撃可能にする
         }
     }
+    
+    // メンタルや信頼度の変動をセーブ
+    player->autoSave();
     
     checkGameProgress();
 } 

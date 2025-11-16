@@ -26,6 +26,13 @@ private:
     EnemyType battleEnemyType; /**< @brief 戦闘に敗北した場合の敵の種類 */
     int battleEnemyLevel;      /**< @brief 戦闘に敗北した場合の敵のレベル */
     
+    // 住民戦用の情報（住民戦でゲームオーバーになった場合のみ有効）
+    bool isResidentBattle;  /**< @brief 住民戦でゲームオーバーになったか */
+    std::string residentName;  /**< @brief 住民の名前 */
+    int residentX;  /**< @brief 住民のX座標 */
+    int residentY;  /**< @brief 住民のY座標 */
+    int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス */
+    
     // UI要素
     Label* titleLabel;
     Label* reasonLabel;
@@ -38,9 +45,16 @@ public:
      * @param reason ゲームオーバーの理由
      * @param enemyType 戦闘に敗北した場合の敵の種類（オプション）
      * @param enemyLevel 戦闘に敗北した場合の敵のレベル（オプション）
+     * @param isResident 住民戦でゲームオーバーになったか（オプション）
+     * @param residentName 住民の名前（住民戦の場合のみ有効）
+     * @param residentX 住民のX座標（住民戦の場合のみ有効）
+     * @param residentY 住民のY座標（住民戦の場合のみ有効）
+     * @param residentTextureIndex 住民のテクスチャインデックス（住民戦の場合のみ有効）
      */
     GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
-                  EnemyType enemyType = EnemyType::SLIME, int enemyLevel = 1);
+                  EnemyType enemyType = EnemyType::SLIME, int enemyLevel = 1,
+                  bool isResident = false, const std::string& residentName = "",
+                  int residentX = -1, int residentY = -1, int residentTextureIndex = -1);
     
     /**
      * @brief 状態に入る
