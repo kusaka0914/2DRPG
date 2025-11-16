@@ -22,7 +22,8 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       currentJudgingTurn(0), currentExecutingTurn(0), executeDelayTimer(0.0f),
       damageAppliedInAnimation(false), waitingForSpellSelection(false),
       judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
-      introScale(0.0f), introTimer(0.0f) {
+      introScale(0.0f), introTimer(0.0f),
+      currentResidentPlayerCommand(-1), currentResidentCommand(-1) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -197,11 +198,17 @@ void BattleState::update(float deltaTime) {
             
             // INTRO_DURATION秒後にコマンド選択画面へ遷移
             if (introTimer >= BattleConstants::INTRO_DURATION) {
-                currentPhase = BattlePhase::COMMAND_SELECT;
                 phaseTimer = 0;
                 introScale = 1.0f;
                 introTextScale = 1.0f;
-                battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                
+                // 住民との戦闘の場合は1ターンずつ、通常の戦闘は3ターンずつ
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                if (enemy->isResident()) {
+                    battleLogic->setCommandTurnCount(1);  // 住民戦は1ターンずつ
+                } else {
+                    battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                }
                 battleLogic->setDesperateMode(false);
                 isFirstCommandSelection = true;
                 initializeCommandSelection();
@@ -273,6 +280,11 @@ void BattleState::update(float deltaTime) {
             }
             break;
         }
+            
+            
+        case BattlePhase::RESIDENT_TURN_RESULT:
+            // 住民との戦闘用：ターン結果処理（processResidentTurn内で処理）
+            break;
             
         case BattlePhase::PLAYER_TURN:
             if (!isShowingOptions) {
@@ -492,6 +504,18 @@ void BattleState::render(Graphics& graphics) {
         params.commandTurnCount = battleLogic->getCommandTurnCount();
         params.judgeSubPhase = judgeSubPhase;
         params.judgeDisplayTimer = judgeDisplayTimer;
+        
+        // 住民戦の場合はコマンド名を直接指定
+        if (enemy->isResident()) {
+            params.playerCommandName = getPlayerCommandNameForResident(currentResidentPlayerCommand);
+            params.enemyCommandName = getResidentCommandName(currentResidentCommand);
+            params.judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+        } else {
+            params.playerCommandName = "";
+            params.enemyCommandName = "";
+            params.judgeResult = -999; // 未設定（battleLogicから取得）
+        }
+        
         battleUI->renderJudgeAnimation(params);
         
         // 勝敗UIを表示（ジャッジフェーズ中は常に更新）
@@ -506,6 +530,8 @@ void BattleState::render(Graphics& graphics) {
         graphics.present();
         return;
     }
+    
+    // 住民戦でも通常のJUDGEとJUDGE_RESULTフェーズを使用するため、特別な描画処理は不要
     
     if ((currentPhase == BattlePhase::COMMAND_SELECT || 
          currentPhase == BattlePhase::DESPERATE_COMMAND_SELECT) && 
@@ -1037,11 +1063,115 @@ SDL_Texture* BattleState::getBattleBackgroundTexture(Graphics& graphics) const {
 void BattleState::showSpellMenu() {
 }
 
+int BattleState::generateResidentCommand() {
+    // 住民のコマンドを生成（怯える70%、助けを呼ぶ30%）
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 100);
+    
+    int roll = dis(gen);
+    if (roll <= 70) {
+        return BattleConstants::RESIDENT_COMMAND_AFRAID;  // 怯える
+    } else {
+        return BattleConstants::RESIDENT_COMMAND_CALL_HELP;  // 助けを呼ぶ
+    }
+}
+
+void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
+    // 住民との戦闘の特殊ルールを処理
+    if (playerCommand == BattleConstants::COMMAND_ATTACK) {
+        // プレイヤーが攻撃を選択
+        if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
+            // 住民が怯える + プレイヤーが攻撃 → 無条件で攻撃成功
+            int baseAttack = player->getTotalAttack();
+            int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
+            enemy->takeDamage(damage);
+            addBattleLog("住民が怯えている間に攻撃した！" + std::to_string(damage) + "のダメージ！");
+            
+            // 敵が倒れたか確認
+            if (!enemy->getIsAlive()) {
+                checkBattleEnd();
+            } else {
+                // 次のターンへ
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                battleLogic->setCommandTurnCount(1);
+                initializeCommandSelection();
+            }
+        } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
+            // 住民が助けを呼ぶ + プレイヤーが攻撃 → ゲームオーバー（再戦可能）
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<GameOverState>(
+                    player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel()));
+            }
+            return;
+        }
+    } else if (playerCommand == BattleConstants::PLAYER_COMMAND_HIDE) {
+        // プレイヤーが身を隠すを選択
+        if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
+            // 住民が怯える + プレイヤーが身を隠す → 何も起こらない
+            addBattleLog("住民が怯えている。何も起こらなかった。");
+            // 次のターンへ
+            currentPhase = BattlePhase::COMMAND_SELECT;
+            battleLogic->setCommandTurnCount(1);
+            initializeCommandSelection();
+        } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
+            // 住民が助けを呼ぶ + プレイヤーが身を隠す → 戦闘続行
+            addBattleLog("住民が助けを呼んだが、身を隠して見つからなかった。");
+            // 次のターンへ
+            currentPhase = BattlePhase::COMMAND_SELECT;
+            battleLogic->setCommandTurnCount(1);
+            initializeCommandSelection();
+        }
+    }
+}
+
 void BattleState::handleSpellSelection(int spellChoice) {
     // 新しいシステムでは使用しない（自動選択されるため）
     // 互換性のために空の実装を残す
     (void)spellChoice;
 }
+
+std::string BattleState::getResidentCommandName(int command) {
+    switch (command) {
+        case BattleConstants::RESIDENT_COMMAND_AFRAID:
+            return "怯える";
+        case BattleConstants::RESIDENT_COMMAND_CALL_HELP:
+            return "助けを呼ぶ";
+        default:
+            return "不明";
+    }
+}
+
+std::string BattleState::getPlayerCommandNameForResident(int command) {
+    switch (command) {
+        case BattleConstants::COMMAND_ATTACK:
+            return "攻撃";
+        case BattleConstants::PLAYER_COMMAND_HIDE:
+            return "身を隠す";
+        default:
+            return "不明";
+    }
+}
+
+int BattleState::judgeResidentTurn(int playerCommand, int residentCommand) {
+    // 住民との戦闘の特殊ルールに基づく判定
+    if (playerCommand == BattleConstants::COMMAND_ATTACK) {
+        if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
+            return BattleConstants::JUDGE_RESULT_PLAYER_WIN;  // 無条件で攻撃成功
+        } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
+            return BattleConstants::JUDGE_RESULT_ENEMY_WIN;  // ゲームオーバー
+        }
+    } else if (playerCommand == BattleConstants::PLAYER_COMMAND_HIDE) {
+        if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
+            return BattleConstants::JUDGE_RESULT_DRAW;  // 何も起こらない
+        } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
+            return BattleConstants::JUDGE_RESULT_PLAYER_WIN;  // 戦闘続行（プレイヤー有利）
+        }
+    }
+    return BattleConstants::JUDGE_RESULT_DRAW;
+}
+
+// 住民戦でも通常のupdateJudgePhaseとupdateJudgeResultPhaseを使用するため、これらの関数は不要
 
 void BattleState::showItemMenu() {
     hideMessage();
@@ -1548,28 +1678,54 @@ void BattleState::executeSelectedOption() {
         }
     } else if (currentPhase == BattlePhase::COMMAND_SELECT || 
                currentPhase == BattlePhase::DESPERATE_COMMAND_SELECT) {
-        int cmd = -1;
-        if (selected == "攻撃") {
-            cmd = 0;
-        } else if (selected == "防御") {
-            cmd = 1;
-        } else if (selected == "呪文") {
-            // MP消費の概念を削除：習得済みの呪文があれば使用可能
-                cmd = 2;
-        }
-        
-        if (cmd >= 0 && currentSelectingTurn < battleLogic->getCommandTurnCount()) {
-            auto playerCmds = battleLogic->getPlayerCommands();
-            if (currentSelectingTurn < playerCmds.size()) {
-                playerCmds[currentSelectingTurn] = cmd;
-                battleLogic->setPlayerCommands(playerCmds);
+        // 住民戦の場合は特別な処理
+        if (enemy->isResident()) {
+            int playerCmd = -1;
+            if (selected == "攻撃") {
+                playerCmd = BattleConstants::COMMAND_ATTACK;
+            } else if (selected == "身を隠す") {
+                playerCmd = BattleConstants::PLAYER_COMMAND_HIDE;
             }
-            currentSelectingTurn++;
             
-            if (currentSelectingTurn < battleLogic->getCommandTurnCount()) {
-                selectCommandForTurn(currentSelectingTurn);
-            } else {
+            if (playerCmd >= 0) {
+                // 住民のコマンドを生成
+                int residentCmd = generateResidentCommand();
+                
+                // 通常のJUDGEフェーズに遷移（住民戦でも同じUIを使用）
                 isShowingOptions = false;
+                currentPhase = BattlePhase::JUDGE;
+                judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
+                judgeDisplayTimer = 0.0f;
+                currentJudgingTurnIndex = 0;
+                // 現在のコマンドを保存（processResidentTurnで使用）
+                currentResidentPlayerCommand = playerCmd;
+                currentResidentCommand = residentCmd;
+            }
+        } else {
+            // 通常の戦闘
+            int cmd = -1;
+            if (selected == "攻撃") {
+                cmd = 0;
+            } else if (selected == "防御") {
+                cmd = 1;
+            } else if (selected == "呪文") {
+                // MP消費の概念を削除：習得済みの呪文があれば使用可能
+                cmd = 2;
+            }
+            
+            if (cmd >= 0 && currentSelectingTurn < battleLogic->getCommandTurnCount()) {
+                auto playerCmds = battleLogic->getPlayerCommands();
+                if (currentSelectingTurn < playerCmds.size()) {
+                    playerCmds[currentSelectingTurn] = cmd;
+                    battleLogic->setPlayerCommands(playerCmds);
+                }
+                currentSelectingTurn++;
+                
+                if (currentSelectingTurn < battleLogic->getCommandTurnCount()) {
+                    selectCommandForTurn(currentSelectingTurn);
+                } else {
+                    isShowingOptions = false;
+                }
             }
         }
     } else if (currentPhase == BattlePhase::PLAYER_TURN) {
@@ -1799,11 +1955,18 @@ void BattleState::initializeCommandSelection() {
 
 void BattleState::selectCommandForTurn(int turnIndex) {
     currentOptions.clear();
-    currentOptions.push_back("攻撃");
-    currentOptions.push_back("防御");
     
-    // 新しいシステム：常に魔法を選択可能（取得済みかのチェック不要）
+    // 住民戦の場合は「攻撃」「身を隠す」のみ
+    if (enemy->isResident()) {
+        currentOptions.push_back("攻撃");
+        currentOptions.push_back("身を隠す");
+    } else {
+        // 通常の戦闘：攻撃、防御、呪文
+        currentOptions.push_back("攻撃");
+        currentOptions.push_back("防御");
+        // 新しいシステム：常に魔法を選択可能（取得済みかのチェック不要）
         currentOptions.push_back("呪文");
+    }
     
     selectedOption = 0;
     isShowingOptions = true;
@@ -2199,13 +2362,19 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
                 
             case JudgeSubPhase::SHOW_RESULT:
                 if (judgeDisplayTimer >= BattleConstants::JUDGE_RESULT_DISPLAY_TIME) {
-                    currentJudgingTurnIndex++;
-                    judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
-                    judgeDisplayTimer = 0.0f;
-                    
-                    if (currentJudgingTurnIndex >= battleLogic->getCommandTurnCount()) {
-                        currentPhase = isDesperateMode ? BattlePhase::DESPERATE_JUDGE_RESULT : BattlePhase::JUDGE_RESULT;
-                        phaseTimer = 0;
+                    // 住民戦の場合は1ターンずつなので、結果フェーズに遷移
+                    if (enemy->isResident()) {
+                        currentPhase = BattlePhase::JUDGE_RESULT;
+                        judgeDisplayTimer = 0.0f;
+                    } else {
+                        currentJudgingTurnIndex++;
+                        judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
+                        judgeDisplayTimer = 0.0f;
+                        
+                        if (currentJudgingTurnIndex >= battleLogic->getCommandTurnCount()) {
+                            currentPhase = isDesperateMode ? BattlePhase::DESPERATE_JUDGE_RESULT : BattlePhase::JUDGE_RESULT;
+                            phaseTimer = 0;
+                        }
                     }
                 }
                 break;
@@ -2216,6 +2385,16 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
 void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) {
     // フェーズが既に変更されている場合は処理をスキップ
     if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+        return;
+    }
+    
+    // 住民戦の場合は特別な処理
+    if (enemy->isResident()) {
+        phaseTimer += deltaTime;
+        // 2秒後に実際の処理に移行
+        if (phaseTimer >= 2.0f) {
+            processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+        }
         return;
     }
     

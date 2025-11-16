@@ -86,6 +86,11 @@ namespace BattleConstants {
     constexpr int COMMAND_DEFEND = 1;
     constexpr int COMMAND_SPELL = 2;
     
+    // 住民との戦闘用コマンド
+    constexpr int RESIDENT_COMMAND_AFRAID = 10;      /**< @brief 住民：怯える */
+    constexpr int RESIDENT_COMMAND_CALL_HELP = 11;   /**< @brief 住民：助けを呼ぶ */
+    constexpr int PLAYER_COMMAND_HIDE = 20;          /**< @brief プレイヤー：身を隠す */
+    
     // 判定結果定数
     constexpr int JUDGE_RESULT_PLAYER_WIN = 1;
     constexpr int JUDGE_RESULT_ENEMY_WIN = -1;

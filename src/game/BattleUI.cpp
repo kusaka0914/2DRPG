@@ -104,8 +104,15 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     }
     
     if (params.judgeSubPhase >= JudgeSubPhase::SHOW_PLAYER_COMMAND) {
-        auto playerCmds = battleLogic->getPlayerCommands();
-        std::string playerCmd = BattleLogic::getCommandName(playerCmds[params.currentJudgingTurnIndex]);
+        std::string playerCmd;
+        if (!params.playerCommandName.empty()) {
+            // 住民戦用：コマンド名を直接使用
+            playerCmd = params.playerCommandName;
+        } else {
+            // 通常戦闘：battleLogicから取得
+            auto playerCmds = battleLogic->getPlayerCommands();
+            playerCmd = BattleLogic::getCommandName(playerCmds[params.currentJudgingTurnIndex]);
+        }
         SDL_Color playerCmdColor = {255, 255, 255, 255}; // 白いテキスト
         int cmdTextX = playerDisplayX - BattleConstants::JUDGE_COMMAND_X_OFFSET;
         int cmdTextY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
@@ -216,11 +223,23 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         
         if (shouldShowEnemyCmd) {
             // 敵のコマンドを表示
-            auto enemyCmds = battleLogic->getEnemyCommands();
-            // 範囲チェック
-            if (params.currentJudgingTurnIndex >= 0 && 
-                params.currentJudgingTurnIndex < static_cast<int>(enemyCmds.size())) {
-                std::string enemyCmd = BattleLogic::getCommandName(enemyCmds[params.currentJudgingTurnIndex]);
+            std::string enemyCmd;
+            if (!params.enemyCommandName.empty()) {
+                // 住民戦用：コマンド名を直接使用
+                enemyCmd = params.enemyCommandName;
+            } else {
+                // 通常戦闘：battleLogicから取得
+                auto enemyCmds = battleLogic->getEnemyCommands();
+                // 範囲チェック
+                if (params.currentJudgingTurnIndex >= 0 && 
+                    params.currentJudgingTurnIndex < static_cast<int>(enemyCmds.size())) {
+                    enemyCmd = BattleLogic::getCommandName(enemyCmds[params.currentJudgingTurnIndex]);
+                } else {
+                    enemyCmd = "不明";
+                }
+            }
+            
+            if (!enemyCmd.empty()) {
                 SDL_Color enemyCmdColor = {255, 255, 255, 255}; // 白いテキスト
                 int cmdTextX = enemyDisplayX - BattleConstants::JUDGE_COMMAND_X_OFFSET;
                 int cmdTextY = centerY + BattleConstants::JUDGE_COMMAND_Y_OFFSET;
@@ -260,10 +279,17 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     }
     
     if (params.judgeSubPhase == JudgeSubPhase::SHOW_RESULT) {
-        auto playerCmds = battleLogic->getPlayerCommands();
-        auto enemyCmds = battleLogic->getEnemyCommands();
-        int result = battleLogic->judgeRound(playerCmds[params.currentJudgingTurnIndex], 
-                               enemyCmds[params.currentJudgingTurnIndex]);
+        int result;
+        if (params.judgeResult != -999) {
+            // 住民戦用：判定結果を直接使用
+            result = params.judgeResult;
+        } else {
+            // 通常戦闘：battleLogicから取得
+            auto playerCmds = battleLogic->getPlayerCommands();
+            auto enemyCmds = battleLogic->getEnemyCommands();
+            result = battleLogic->judgeRound(playerCmds[params.currentJudgingTurnIndex], 
+                                   enemyCmds[params.currentJudgingTurnIndex]);
+        }
         
         std::string resultText;
         SDL_Color resultColor;

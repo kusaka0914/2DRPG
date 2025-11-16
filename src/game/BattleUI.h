@@ -34,6 +34,11 @@ public:
         int commandTurnCount;
         JudgeSubPhase judgeSubPhase;
         float judgeDisplayTimer;  /**< @brief タイマー（秒） */
+        
+        // 住民戦用：コマンド名を直接指定（空文字列の場合は従来通りbattleLogicから取得）
+        std::string playerCommandName;  /**< @brief プレイヤーコマンド名（住民戦用） */
+        std::string enemyCommandName;   /**< @brief 敵コマンド名（住民戦用） */
+        int judgeResult;  /**< @brief 判定結果（住民戦用、-999=未設定の場合はbattleLogicから取得） */
     };
     
     /**

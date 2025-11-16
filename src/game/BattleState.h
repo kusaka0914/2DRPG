@@ -36,6 +36,7 @@ enum class BattlePhase {
     DESPERATE_JUDGE,        // 読み合い判定（6ターン、各ターン結果を順に表示）
     DESPERATE_JUDGE_RESULT, // 結果発表（窮地モード）
     DESPERATE_EXECUTE,      /**< @brief 実行（ダメージ倍率あり） */
+    RESIDENT_TURN_RESULT,    /**< @brief 住民との戦闘用：ターン結果処理（ダメージ適用など） */
     // 既存のフェーズ（後方互換性のため残す）
     PLAYER_TURN,            /**< @brief プレイヤーのターン（古いシステム） */
     PLAYER_ATTACK_DISPLAY,
@@ -149,6 +150,10 @@ private:
     float judgeDisplayTimer;           // 表示タイマー
     int currentJudgingTurnIndex;       // 現在判定中のターン（0から開始）
     
+    // 住民との戦闘用
+    int currentResidentPlayerCommand;  /**< @brief 現在の住民戦のプレイヤーコマンド */
+    int currentResidentCommand;        /**< @brief 現在の住民戦の住民コマンド */
+    
     // INTROフェーズ用
     float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
     float introTextScale;              /**< @brief テキスト出現演出のスケール（0.0から1.0へ） */
@@ -215,4 +220,11 @@ private:
      * @return 背景画像のテクスチャ（住民の場合は夜の背景、それ以外は通常の戦闘背景）
      */
     SDL_Texture* getBattleBackgroundTexture(Graphics& graphics) const;
+    
+    // 住民との戦闘用メソッド
+    void processResidentTurn(int playerCommand, int residentCommand);
+    int generateResidentCommand();  /**< @brief 住民のコマンドを生成（怯える70%、助けを呼ぶ30%） */
+    int judgeResidentTurn(int playerCommand, int residentCommand);  /**< @brief 住民との戦闘の判定（特殊ルール） */
+    std::string getResidentCommandName(int command);  /**< @brief 住民のコマンド名を取得 */
+    std::string getPlayerCommandNameForResident(int command);  /**< @brief プレイヤーのコマンド名を取得（住民戦用） */
 };
