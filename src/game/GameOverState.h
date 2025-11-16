@@ -1,0 +1,75 @@
+/**
+ * @file GameOverState.h
+ * @brief ゲームオーバーの状態を担当するクラス
+ * @details ゲームオーバー画面の表示、ゲームオーバーの理由表示、メインメニューへの戻りなどの機能を管理する。
+ */
+
+#pragma once
+#include "../core/GameState.h"
+#include "../ui/UI.h"
+#include "../entities/Player.h"
+#include <memory>
+
+/**
+ * @brief ゲームオーバーの状態を担当するクラス
+ * @details ゲームオーバー画面の表示、ゲームオーバーの理由表示、メインメニューへの戻りなどの機能を管理する。
+ */
+class GameOverState : public GameState {
+private:
+    std::shared_ptr<Player> player;
+    UIManager ui;
+    std::string gameOverReason;
+    
+    // UI要素
+    Label* titleLabel;
+    Label* reasonLabel;
+    Label* instruction;
+    
+public:
+    /**
+     * @brief コンストラクタ
+     * @param player プレイヤーへの共有ポインタ
+     * @param reason ゲームオーバーの理由
+     */
+    GameOverState(std::shared_ptr<Player> player, const std::string& reason);
+    
+    /**
+     * @brief 状態に入る
+     */
+    void enter() override;
+    
+    /**
+     * @brief 状態から出る
+     */
+    void exit() override;
+    
+    /**
+     * @brief 更新処理
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
+    void update(float deltaTime) override;
+    
+    /**
+     * @brief 描画処理
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
+    void render(Graphics& graphics) override;
+    
+    /**
+     * @brief 入力処理
+     * @param input 入力マネージャーへの参照
+     */
+    void handleInput(const InputManager& input) override;
+    
+    /**
+     * @brief 状態タイプの取得
+     * @return 状態タイプ（GAME_OVER）
+     */
+    StateType getType() const override { return StateType::GAME_OVER; }
+    
+private:
+    /**
+     * @brief UIのセットアップ
+     */
+    void setupUI();
+}; 
