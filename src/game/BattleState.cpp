@@ -217,6 +217,11 @@ void BattleState::update(float deltaTime) {
         }
             
         case BattlePhase::COMMAND_SELECT:
+            // 住民戦の場合は既にJUDGEフェーズに遷移しているので、ここでは処理しない
+            if (enemy->isResident()) {
+                break;
+            }
+            
             if (isFirstCommandSelection && checkDesperateModeCondition()) {
                 isFirstCommandSelection = false;
                 currentPhase = BattlePhase::DESPERATE_MODE_PROMPT;
@@ -780,12 +785,25 @@ void BattleState::render(Graphics& graphics) {
         currentPhase == BattlePhase::DESPERATE_JUDGE_RESULT) {
         auto stats = battleLogic->getStats();
         BattleUI::ResultAnnouncementRenderParams params;
-        params.isVictory = (stats.playerWins > stats.enemyWins);
-        params.isDefeat = (stats.enemyWins > stats.playerWins);
-        params.isDesperateMode = battleLogic->getIsDesperateMode();
-        params.hasThreeWinStreak = stats.hasThreeWinStreak;
-        params.playerWins = stats.playerWins;
-        params.enemyWins = stats.enemyWins;
+        
+        // 住民戦の場合は、calculateCurrentWinLoss()の結果を使用
+        if (enemy->isResident()) {
+            auto winLoss = calculateCurrentWinLoss();
+            params.playerWins = winLoss.first;
+            params.enemyWins = winLoss.second;
+            params.isVictory = (params.playerWins > params.enemyWins);
+            params.isDefeat = (params.enemyWins > params.playerWins);
+            params.isDesperateMode = false;
+            params.hasThreeWinStreak = false;
+        } else {
+            params.isVictory = (stats.playerWins > stats.enemyWins);
+            params.isDefeat = (stats.enemyWins > stats.playerWins);
+            params.isDesperateMode = battleLogic->getIsDesperateMode();
+            params.hasThreeWinStreak = stats.hasThreeWinStreak;
+            params.playerWins = stats.playerWins;
+            params.enemyWins = stats.enemyWins;
+        }
+        
         battleUI->renderResultAnnouncement(params);
         
         // 勝敗UIを表示（結果フェーズでは「自分が〜ターン攻撃します」も表示）
@@ -1083,20 +1101,27 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
         // プレイヤーが攻撃を選択
         if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
             // 住民が怯える + プレイヤーが攻撃 → 無条件で攻撃成功
+            // 通常の戦闘と同じようにpendingDamagesに追加
             int baseAttack = player->getTotalAttack();
             int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
-            enemy->takeDamage(damage);
-            addBattleLog("住民が怯えている間に攻撃した！" + std::to_string(damage) + "のダメージ！");
             
-            // 敵が倒れたか確認
-            if (!enemy->getIsAlive()) {
-                checkBattleEnd();
-            } else {
-                // 次のターンへ
-                currentPhase = BattlePhase::COMMAND_SELECT;
-                battleLogic->setCommandTurnCount(1);
-                initializeCommandSelection();
-            }
+            BattleLogic::DamageInfo damageInfo;
+            damageInfo.damage = damage;
+            damageInfo.isPlayerHit = false;
+            damageInfo.isDraw = false;
+            damageInfo.playerDamage = 0;
+            damageInfo.enemyDamage = damage;
+            damageInfo.commandType = BattleConstants::COMMAND_ATTACK;
+            damageInfo.isCounterRush = false;
+            damageInfo.skipAnimation = false;
+            
+            pendingDamages.push_back(damageInfo);
+            damageAppliedInAnimation = false;
+            currentExecutingTurn = 0;
+            executeDelayTimer = 0.0f;
+            
+            // アニメーションを開始
+            animationController->resetResultAnimation();
         } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
             // 住民が助けを呼ぶ + プレイヤーが攻撃 → ゲームオーバー（再戦可能）
             if (stateManager) {
@@ -1106,22 +1131,19 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             return;
         }
     } else if (playerCommand == BattleConstants::PLAYER_COMMAND_HIDE) {
-        // プレイヤーが身を隠すを選択
+        // プレイヤーが身を隠すを選択 → 引き分け（何も起こらない）
         if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
             // 住民が怯える + プレイヤーが身を隠す → 何も起こらない
             addBattleLog("住民が怯えている。何も起こらなかった。");
-            // 次のターンへ
-            currentPhase = BattlePhase::COMMAND_SELECT;
-            battleLogic->setCommandTurnCount(1);
-            initializeCommandSelection();
         } else if (residentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP) {
             // 住民が助けを呼ぶ + プレイヤーが身を隠す → 戦闘続行
             addBattleLog("住民が助けを呼んだが、身を隠して見つからなかった。");
-            // 次のターンへ
-            currentPhase = BattlePhase::COMMAND_SELECT;
-            battleLogic->setCommandTurnCount(1);
-            initializeCommandSelection();
         }
+        
+        // 引き分けの場合は次のターンへ（pendingDamagesは空のまま）
+        currentPhase = BattlePhase::COMMAND_SELECT;
+        battleLogic->setCommandTurnCount(1);
+        initializeCommandSelection();
     }
 }
 
@@ -1153,7 +1175,7 @@ std::string BattleState::getPlayerCommandNameForResident(int command) {
     }
 }
 
-int BattleState::judgeResidentTurn(int playerCommand, int residentCommand) {
+int BattleState::judgeResidentTurn(int playerCommand, int residentCommand) const {
     // 住民との戦闘の特殊ルールに基づく判定
     if (playerCommand == BattleConstants::COMMAND_ATTACK) {
         if (residentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID) {
@@ -2015,6 +2037,21 @@ std::pair<int, int> BattleState::calculateCurrentWinLoss() const {
     int playerWins = 0;
     int enemyWins = 0;
     
+    // 住民戦の場合は、judgeResidentTurnの結果を使用
+    if (enemy->isResident()) {
+        // currentResidentPlayerCommandとcurrentResidentCommandが-1の場合は未設定なので、引き分けを返す
+        if (currentResidentPlayerCommand == -1 || currentResidentCommand == -1) {
+            return std::make_pair(0, 0);
+        }
+        int result = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+        if (result == BattleConstants::JUDGE_RESULT_PLAYER_WIN) {
+            playerWins = 1;
+        } else if (result == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
+            enemyWins = 1;
+        }
+        return std::make_pair(playerWins, enemyWins);
+    }
+    
     auto playerCmds = battleLogic->getPlayerCommands();
     auto enemyCmds = battleLogic->getEnemyCommands();
     
@@ -2093,15 +2130,13 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         
         // 結果フェーズのみ、ターン数表示と現在実行中のターンに応じたメッセージを表示
         if (isResultPhase) {
-    auto stats = battleLogic->getStats();
-            
             // 1. 「〜ターン分の攻撃を実行」を常に表示（勝敗UIの下）
             std::string totalAttackText;
             if (playerWins > enemyWins) {
                 totalAttackText = player->getName() + "が" + std::to_string(playerWins) + "ターン分の攻撃を実行！";
             } else if (enemyWins > playerWins) {
                 totalAttackText = "敵が" + std::to_string(enemyWins) + "ターン分の攻撃を実行！";
-        } else {
+            } else {
                 totalAttackText = "両方がダメージを受ける";
             }
             
@@ -2366,6 +2401,7 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
                     if (enemy->isResident()) {
                         currentPhase = BattlePhase::JUDGE_RESULT;
                         judgeDisplayTimer = 0.0f;
+                        phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
                     } else {
                         currentJudgingTurnIndex++;
                         judgeSubPhase = JudgeSubPhase::SHOW_PLAYER_COMMAND;
@@ -2388,30 +2424,45 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         return;
     }
     
-    // 住民戦の場合は特別な処理
+    // 住民戦の場合は特別な処理（最初の1回だけprocessResidentTurnを呼ぶ）
     if (enemy->isResident()) {
-        phaseTimer += deltaTime;
-        // 2秒後に実際の処理に移行
-        if (phaseTimer >= 2.0f) {
-            processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+        if (pendingDamages.empty() && phaseTimer < 2.0f) {
+            phaseTimer += deltaTime;
+            // 2秒後に実際の処理に移行
+            if (phaseTimer >= 2.0f) {
+                processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+                // processResidentTurnでpendingDamagesに追加された後、すぐにアニメーション処理に進む
+                // phaseTimerをリセットして、アニメーション処理を確実に開始する
+                phaseTimer = 0.0f;
+                // returnしない（通常の戦闘と同じ処理に進む）
+            } else {
+                return;  // 2秒経過するまではreturn
+            }
         }
-        return;
+        // pendingDamagesが追加された後は通常の戦闘と同じ処理
     }
     
     auto stats = battleLogic->getStats();
     bool isVictory = (stats.playerWins > stats.enemyWins);
     bool isDefeat = (stats.enemyWins > stats.playerWins);
     
+    // 住民戦の場合は、pendingDamagesが空でない場合のみ勝利とみなす
+    if (enemy->isResident()) {
+        isVictory = !pendingDamages.empty();
+        isDefeat = false;
+    }
+    
     // ダメージリストの準備（初回のみ）
-    if (pendingDamages.empty()) {
+    // 住民戦の場合はprocessResidentTurnでpendingDamagesに追加するので、prepareDamageListは呼ばない
+    if (pendingDamages.empty() && !enemy->isResident()) {
         float multiplier = isDesperateMode ? 1.5f : (stats.hasThreeWinStreak ? BattleConstants::THREE_WIN_STREAK_MULTIPLIER : 1.0f);
         prepareDamageList(multiplier);
         damageAppliedInAnimation = false;
         currentExecutingTurn = 0;
         executeDelayTimer = 0.0f;
         
-        // 呪文で勝利したターンがある場合、自動で呪文を選択して処理
-        while (!spellWinTurns.empty() && !waitingForSpellSelection) {
+        // 呪文で勝利したターンがある場合、自動で呪文を選択して処理（住民戦では不要）
+        while (!spellWinTurns.empty() && !waitingForSpellSelection && !enemy->isResident()) {
             // HPの状態に応じて自動で呪文を選択
             float hpRatio = static_cast<float>(player->getHp()) / static_cast<float>(player->getMaxHp());
             SpellType selectedSpell = SpellType::ATTACK; // デフォルトは攻撃魔法
@@ -2512,7 +2563,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         // 呪文で勝利したターンが全て処理され、かつpendingDamagesが空の場合、
         // ダミーのダメージエントリを追加してアニメーションを実行できるようにする
         // （ただし、ステータス上昇呪文や回復呪文の場合はアニメーションをスキップ）
-        if (pendingDamages.empty() && spellWinTurns.empty() && isVictory) {
+        // 住民戦の場合は不要（processResidentTurnでpendingDamagesに追加される）
+        if (pendingDamages.empty() && spellWinTurns.empty() && isVictory && !enemy->isResident()) {
             BattleLogic::DamageInfo dummyDamage;
             dummyDamage.damage = 0;  // ダメージは適用しない（アニメーションのみ実行）
             dummyDamage.isPlayerHit = false;
@@ -2528,6 +2580,18 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         // 最初のアニメーションを開始（pendingDamagesに追加された後）
         if (!pendingDamages.empty()) {
             animationController->resetResultAnimation();
+        }
+    } else if (enemy->isResident() && !pendingDamages.empty()) {
+        // 住民戦の場合、processResidentTurnでpendingDamagesに追加された後、
+        // すぐにアニメーション処理に進む（通常の戦闘のprepareDamageList後の処理は不要）
+        // processResidentTurnで既にresetResultAnimation()を呼んでいるが、
+        // 念のため初期化状態を確認して、必要に応じてリセットする
+        if (currentExecutingTurn == 0 && !damageAppliedInAnimation) {
+            // 既にprocessResidentTurnでresetResultAnimation()を呼んでいるので、
+            // ここでは初期化のみ行う（重複してresetResultAnimation()を呼ばない）
+            damageAppliedInAnimation = false;
+            currentExecutingTurn = 0;
+            executeDelayTimer = 0.0f;
         }
     }
     
@@ -2549,9 +2613,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         float animDuration = isCounterRush ? 0.3f : 1.0f;
         
         // アニメーション更新（現在のダメージ用）
+        bool hasThreeWinStreak = enemy->isResident() ? false : stats.hasThreeWinStreak;
         animationController->updateResultCharacterAnimation(
             deltaTime, isVictory, isDefeat, resultState.resultAnimationTimer,
-            damageAppliedInAnimation, stats.hasThreeWinStreak,
+            damageAppliedInAnimation, hasThreeWinStreak,
             animStartTime, animDuration);
         }
         
@@ -2666,10 +2731,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
     if (resultState.resultAnimationTimer < shakeDuration && !resultState.resultShakeActive && currentExecutingTurn == 0) {
         resultState.resultShakeActive = true;
-        if (stats.playerWins > stats.enemyWins) {
+        if (isVictory) {
             float intensity = isDesperateMode ? BattleConstants::DESPERATE_VICTORY_SHAKE_INTENSITY : BattleConstants::VICTORY_SHAKE_INTENSITY;
             effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
-        } else if (stats.enemyWins > stats.playerWins) {
+        } else if (isDefeat) {
             float intensity = isDesperateMode ? BattleConstants::DESPERATE_DEFEAT_SHAKE_INTENSITY : BattleConstants::DEFEAT_SHAKE_INTENSITY;
             effectManager->triggerScreenShake(intensity, shakeDuration, false, true);
         } else {
@@ -2680,21 +2745,37 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     
     // 全ダメージ適用完了後、戦闘終了判定
     if (currentExecutingTurn >= pendingDamages.size()) {
-        constexpr float animTotalDuration = 0.5f + 1.0f; // 1.5秒
-        // 最後のダメージ完了時点から、さらに1.5秒待機（合計3秒）
-        constexpr float finalWaitDuration = animTotalDuration * 2.0f; // 3.0秒
-        // タイマーが一定時間経過したらフェーズ遷移（フォールバック：最大4秒待機）
-        constexpr float maxWaitTime = 4.0f;
+        // 住民戦の場合は短い待機時間、通常の戦闘は長い待機時間
+        float finalWaitDuration;
+        float maxWaitTime;
+        if (enemy->isResident()) {
+            // 住民戦：アニメーション完了後、1秒待機
+            finalWaitDuration = 0.5f + 1.0f; // 1.5秒
+            maxWaitTime = 2.0f;
+        } else {
+            // 通常の戦闘：アニメーション完了後、さらに1.5秒待機（合計3秒）
+            constexpr float animTotalDuration = 0.5f + 1.0f; // 1.5秒
+            finalWaitDuration = animTotalDuration * 2.0f; // 3.0秒
+            maxWaitTime = 4.0f;
+        }
+        
         if (resultState.resultAnimationTimer >= finalWaitDuration || phaseTimer >= maxWaitTime) {
             updateStatus();
             
             if (enemy->getIsAlive() && player->getIsAlive()) {
-                if (isDesperateMode) {
-                    battleLogic->setDesperateMode(false);
-                    battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                if (enemy->isResident()) {
+                    // 住民戦の場合は次のターンへ
+                    currentPhase = BattlePhase::COMMAND_SELECT;
+                    battleLogic->setCommandTurnCount(1);
+                    initializeCommandSelection();
+                } else {
+                    if (isDesperateMode) {
+                        battleLogic->setDesperateMode(false);
+                        battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                    }
+                    currentPhase = BattlePhase::COMMAND_SELECT;
+                    initializeCommandSelection();
                 }
-                currentPhase = BattlePhase::COMMAND_SELECT;
-                initializeCommandSelection();
             } else {
                 checkBattleEnd();
                 // checkBattleEnd()でフェーズが変更された場合は、ここで処理を終了（リセット処理は行わない）
@@ -2716,12 +2797,19 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         updateStatus();
         
         if (enemy->getIsAlive() && player->getIsAlive()) {
-            if (isDesperateMode) {
-                battleLogic->setDesperateMode(false);
-                battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+            if (enemy->isResident()) {
+                // 住民戦の場合は次のターンへ
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                battleLogic->setCommandTurnCount(1);
+                initializeCommandSelection();
+            } else {
+                if (isDesperateMode) {
+                    battleLogic->setDesperateMode(false);
+                    battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
+                }
+                currentPhase = BattlePhase::COMMAND_SELECT;
+                initializeCommandSelection();
             }
-            currentPhase = BattlePhase::COMMAND_SELECT;
-            initializeCommandSelection();
         } else {
             checkBattleEnd();
             // checkBattleEnd()でフェーズが変更された場合は、ここで処理を終了（リセット処理は行わない）

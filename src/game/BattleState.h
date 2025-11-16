@@ -224,7 +224,7 @@ private:
     // 住民との戦闘用メソッド
     void processResidentTurn(int playerCommand, int residentCommand);
     int generateResidentCommand();  /**< @brief 住民のコマンドを生成（怯える70%、助けを呼ぶ30%） */
-    int judgeResidentTurn(int playerCommand, int residentCommand);  /**< @brief 住民との戦闘の判定（特殊ルール） */
+    int judgeResidentTurn(int playerCommand, int residentCommand) const;  /**< @brief 住民との戦闘の判定（特殊ルール） */
     std::string getResidentCommandName(int command);  /**< @brief 住民のコマンド名を取得 */
     std::string getPlayerCommandNameForResident(int command);  /**< @brief プレイヤーのコマンド名を取得（住民戦用） */
 };
