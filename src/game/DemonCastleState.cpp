@@ -15,6 +15,10 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
       isTalkingToDemon(false), dialogueStep(0), hasReceivedEvilQuest(false),
       playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState),
       pendingDialogue(false) {
+    isFadingOut = false;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = 0.5f;
     
     if (fromCastleState) {
         demonDialogues = {
@@ -46,6 +50,8 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
 }
 
 void DemonCastleState::enter() {
+    startFadeIn(0.5f);
+    
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
@@ -61,6 +67,18 @@ void DemonCastleState::exit() {
 void DemonCastleState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
+    
+    // フェード更新処理
+    updateFade(deltaTime);
+    
+    // フェードアウト完了後、状態遷移
+    if (isFadingOut && fadeTimer >= fadeDuration) {
+        if (stateManager) {
+            TownState::s_fromDemonCastle = true;
+            auto townState = std::make_unique<TownState>(player);
+            stateManager->changeState(std::move(townState));
+        }
+    }
 }
 
 void DemonCastleState::render(Graphics& graphics) {
@@ -100,6 +118,9 @@ void DemonCastleState::render(Graphics& graphics) {
     }
     
     ui.render(graphics);
+    
+    // フェードオーバーレイを描画
+    renderFade(graphics);
     
     graphics.present();
 }
@@ -178,10 +199,9 @@ void DemonCastleState::interactWithDemon() {
 }
 
 void DemonCastleState::exitToTown() {
-    if (stateManager) {
-        TownState::s_fromDemonCastle = true;
-        auto townState = std::make_unique<TownState>(player);
-        stateManager->changeState(std::move(townState));
+    // フェードアウト開始（完了時に状態遷移）
+    if (!isFading()) {
+        startFadeOut(0.5f);
     }
 }
 
@@ -207,10 +227,9 @@ void DemonCastleState::nextDialogue() {
                 stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
             }
         } else {
-            if (stateManager) {
-                TownState::s_fromDemonCastle = true;
-                auto townState = std::make_unique<TownState>(player);
-                stateManager->changeState(std::move(townState));
+            // フェードアウト開始（完了時に状態遷移）
+            if (!isFading()) {
+                startFadeOut(0.5f);
             }
         }
     } else {

@@ -11,6 +11,8 @@
 #include "../ui/UI.h"
 #include "../entities/Player.h"
 #include <memory>
+#include <functional>
+#include <SDL2/SDL.h>
 
 /**
  * @brief ゲーム状態の種類
@@ -50,6 +52,13 @@ public:
     
 protected:
     GameStateManager* stateManager = nullptr;
+    
+    // フェード機能
+    bool isFadingOut;  /**< @brief フェードアウト中か */
+    bool isFadingIn;  /**< @brief フェードイン中か */
+    float fadeTimer;  /**< @brief フェードタイマー（秒） */
+    float fadeDuration;  /**< @brief フェード時間（秒） */
+    std::function<void()> fadeOutCompleteCallback;  /**< @brief フェードアウト完了時のコールバック */
     
 public:
     /**
@@ -124,6 +133,49 @@ public:
      */
     void drawPlayer(Graphics& graphics, int playerX, int playerY, int tileSize, 
                    Uint8 r = 0, Uint8 g = 255, Uint8 b = 0, Uint8 a = 255);
+    
+    /**
+     * @brief フェードアウトの開始
+     * @param duration フェード時間（秒）
+     * @param onComplete フェード完了時のコールバック（オプション）
+     */
+    void startFadeOut(float duration = 0.5f, std::function<void()> onComplete = nullptr);
+    
+    /**
+     * @brief フェードインの開始
+     * @param duration フェード時間（秒）
+     */
+    void startFadeIn(float duration = 0.5f);
+    
+    /**
+     * @brief フェードの更新処理（update()内で呼び出す）
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
+    void updateFade(float deltaTime);
+    
+    /**
+     * @brief フェードの描画処理（render()内で呼び出す）
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
+    void renderFade(Graphics& graphics);
+    
+    /**
+     * @brief フェード中かどうか
+     * @return フェード中かどうか
+     */
+    bool isFading() const { return isFadingOut || isFadingIn; }
+    
+    /**
+     * @brief フェードアウト中かどうか
+     * @return フェードアウト中かどうか
+     */
+    bool getIsFadingOut() const { return isFadingOut; }
+    
+    /**
+     * @brief フェードイン中かどうか
+     * @return フェードイン中かどうか
+     */
+    bool getIsFadingIn() const { return isFadingIn; }
     
     /**
      * @brief 入力処理テンプレート

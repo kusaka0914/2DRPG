@@ -88,17 +88,10 @@ void SDL2Game::setDebugStartState(const std::string& state) {
 }
 
 void SDL2Game::initializeGame() {
-    std::string playerName;
-    if (debugStartState.empty()) {
-    std::cout << "勇者の名前を入力してください: ";
-    std::getline(std::cin, playerName);
-    } else {
-        playerName = "デバッガー";
-        std::cout << "デバッグモード: " << debugStartState << " から開始します" << std::endl;
-    }
+    std::string playerName = "勇者";
     
-    if (playerName.empty()) {
-        playerName = "勇者";
+    if (!debugStartState.empty()) {
+        std::cout << "デバッグモード: " << debugStartState << " から開始します" << std::endl;
     }
     
     player = std::make_shared<Player>(playerName);
@@ -225,6 +218,8 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/UI/defend.png", "command_defend");
     graphics.loadTexture("assets/textures/UI/magic.png", "command_magic");
     graphics.loadTexture("assets/textures/UI/vs.png", "vs_image");
+    graphics.loadTexture("assets/textures/UI/title_logo.png", "title_logo");
+    graphics.loadTexture("assets/textures/UI/title_bg.png", "title_bg");
     // オブジェクト画像
     graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     graphics.loadTexture("assets/textures/objects/desk.png", "desk");

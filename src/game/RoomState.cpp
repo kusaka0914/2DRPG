@@ -16,6 +16,10 @@ RoomState::RoomState(std::shared_ptr<Player> player)
       hasOpenedChest(false), bedTexture(nullptr), houseTileTexture(nullptr),
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       pendingWelcomeMessage(false), pendingMessage("") {
+    isFadingOut = false;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = 0.5f;
     if (s_roomFirstTime) {
         playerX = 3;
         playerY = 2;
@@ -27,6 +31,7 @@ RoomState::RoomState(std::shared_ptr<Player> player)
 }
 
 void RoomState::enter() {
+    startFadeIn(0.5f);
     
     if (s_roomFirstTime) {
         pendingWelcomeMessage = true;
@@ -42,6 +47,23 @@ void RoomState::exit() {
 void RoomState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
+    
+    // フェード更新処理
+    updateFade(deltaTime);
+    
+    // フェードアウト完了後、状態遷移
+    if (isFadingOut && fadeTimer >= fadeDuration) {
+        if (s_roomFirstTime) {
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<CastleState>(player, false));
+                s_roomFirstTime = false;
+            }
+        } else {
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<TownState>(player));
+            }
+        }
+    }
     
     if (nightTimerActive) {
         nightTimer -= deltaTime;
@@ -124,7 +146,10 @@ void RoomState::render(Graphics& graphics) {
         CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
         CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
     }
-        
+    
+    // フェードオーバーレイを描画
+    renderFade(graphics);
+    
     graphics.present();
 }
 
@@ -133,13 +158,9 @@ void RoomState::handleInput(const InputManager& input) {
         [this, &input]() { handleMovement(input); },
         [this]() { checkInteraction(); },
         [this]() { 
-            
-            if (s_roomFirstTime) {
-                stateManager->changeState(std::make_unique<CastleState>(player));
-                s_roomFirstTime = false;
-            }
-            else {
-                stateManager->changeState(std::make_unique<TownState>(player));
+            // フェードアウト開始（完了時に状態遷移）
+            if (!isFading()) {
+                startFadeOut(0.5f);
             }
         },
         [this]() { return isNearObject(doorX, doorY); },
@@ -364,11 +385,16 @@ void RoomState::interactWithChest() {
 void RoomState::exitToTown() {
     if (s_roomFirstTime) {
         showMessage("城に向かいます...");
-        stateManager->changeState(std::make_unique<CastleState>(player, false));
-        s_roomFirstTime = false;
+        // フェードアウト開始（完了時に状態遷移）
+        if (!isFading()) {
+            startFadeOut(0.5f);
+        }
     } else {
         showMessage("町に向かいます...");
-        stateManager->changeState(std::make_unique<TownState>(player));
+        // フェードアウト開始（完了時に状態遷移）
+        if (!isFading()) {
+            startFadeOut(0.5f);
+        }
     }
 }
 

@@ -16,6 +16,10 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
       moveTimer(0), dialogueStep(0), isTalkingToKing(false),
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       fromNightState(fromNightState), pendingDialogue(false) {
+    isFadingOut = false;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = 0.5f;
     
     if (fromNightState) {
         kingDialogues = {
@@ -31,7 +35,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     else if (s_castleFirstTime) {
         kingDialogues = {
         "よく来てくれた勇者よ",
-        "実はな、最近街の住民が夜間に失踪する事件が多発しているんだ。",
+        "実はな、最近夜間に街の住民が失踪する事件が多発しているんだ。",
         "この件、わしは魔王の仕業なのではないかと睨んでおる。",
         "どうか魔王を倒し、この街を守ってくれないか。",
         "勇者よ、よろしく頼む。"
@@ -48,6 +52,8 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 }
 
 void CastleState::enter() {
+    startFadeIn(0.5f);
+    
     if (s_castleFirstTime || fromNightState) {
         pendingDialogue = true;
     }
@@ -60,6 +66,23 @@ void CastleState::exit() {
 void CastleState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
+    
+    // フェード更新処理
+    updateFade(deltaTime);
+    
+    // フェードアウト完了後、状態遷移
+    if (isFadingOut && fadeTimer >= fadeDuration) {
+        if (fromNightState && allDefeated) {
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<DemonCastleState>(player, true));
+            }
+        } else if (s_castleFirstTime) {
+            if (stateManager) {
+                stateManager->changeState(std::make_unique<DemonCastleState>(player));
+                s_castleFirstTime = false;
+            }
+        }
+    }
     
     if (nightTimerActive) {
         nightTimer -= deltaTime;
@@ -125,6 +148,10 @@ void CastleState::render(Graphics& graphics) {
         CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
         CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
     }
+    
+    // フェードオーバーレイを描画
+    renderFade(graphics);
+    
     graphics.present();
 }
 
@@ -135,8 +162,9 @@ void CastleState::handleInput(const InputManager& input) {
         if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             if (fromNightState && allDefeated) {
                 clearMessage();
-                if (stateManager) {
-                    stateManager->changeState(std::make_unique<DemonCastleState>(player, true));
+                // フェードアウト開始（完了時に状態遷移）
+                if (!isFading()) {
+                    startFadeOut(0.5f);
                 }
                 return;
             }
@@ -283,9 +311,9 @@ void CastleState::nextDialogue() {
         clearMessage();
 
         
-        if (stateManager && s_castleFirstTime) {
-            stateManager->changeState(std::make_unique<DemonCastleState>(player));
-            s_castleFirstTime = false; // 静的変数を更新
+        // フェードアウト開始（完了時に状態遷移）
+        if (!isFading() && s_castleFirstTime) {
+            startFadeOut(0.5f);
         }
     } else {
         showCurrentDialogue();

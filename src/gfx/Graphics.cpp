@@ -65,6 +65,9 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
     // デフォルト描画色設定
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     
+    // アルファブレンディングを有効化（フェードエフェクト用）
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    
     return true;
 }
 

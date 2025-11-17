@@ -1,6 +1,7 @@
 #include "GameState.h"
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 GameStateManager::GameStateManager() : shouldChangeState(false) {
 }
@@ -221,5 +222,69 @@ void GameState::drawCharacterWithTexture(Graphics& graphics, SDL_Texture* textur
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, true);
         graphics.setDrawColor(0, 0, 0, 255);
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, false);
+    }
+}
+
+void GameState::startFadeOut(float duration, std::function<void()> onComplete) {
+    isFadingOut = true;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = duration;
+    fadeOutCompleteCallback = onComplete;
+}
+
+void GameState::startFadeIn(float duration) {
+    isFadingIn = true;
+    isFadingOut = false;
+    fadeTimer = 0.0f;
+    fadeDuration = duration;
+    fadeOutCompleteCallback = nullptr;
+}
+
+void GameState::updateFade(float deltaTime) {
+    if (isFadingOut) {
+        fadeTimer += deltaTime;
+        if (fadeTimer >= fadeDuration) {
+            // フェードアウト完了
+            if (fadeOutCompleteCallback) {
+                fadeOutCompleteCallback();
+            }
+            // isFadingOutはexit()が呼ばれるまでtrueのままにしておく（遷移前の描画で完全に黒いオーバーレイを描画するため）
+        }
+    } else if (isFadingIn) {
+        fadeTimer += deltaTime;
+        if (fadeTimer >= fadeDuration) {
+            isFadingIn = false;
+        }
+    }
+}
+
+void GameState::renderFade(Graphics& graphics) {
+    if (isFadingOut) {
+        float fadeProgress = std::min(1.0f, fadeTimer / fadeDuration);
+        Uint8 alpha = static_cast<Uint8>(fadeProgress * 255.0f);
+        
+        // アルファブレンディングを有効化して描画
+        SDL_SetRenderDrawBlendMode(graphics.getRenderer(), SDL_BLENDMODE_BLEND);
+        graphics.setDrawColor(0, 0, 0, alpha);
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        
+        // フェードアウト完了後は完全に黒いオーバーレイを描画（状態遷移まで）
+        if (fadeTimer >= fadeDuration) {
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        }
+    } else if (isFadingIn) {
+        float fadeProgress = std::min(1.0f, fadeTimer / fadeDuration);
+        Uint8 alpha = static_cast<Uint8>((1.0f - fadeProgress) * 255.0f); // 255から0へ
+        
+        // アルファブレンディングを有効化して描画
+        SDL_SetRenderDrawBlendMode(graphics.getRenderer(), SDL_BLENDMODE_BLEND);
+        graphics.setDrawColor(0, 0, 0, alpha);
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        graphics.drawRect(0, 0, screenWidth, screenHeight, true);
     }
 } 
