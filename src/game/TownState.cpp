@@ -43,11 +43,26 @@ void TownState::enter() {
     nightTimerActive = s_nightTimerActive;
     nightTimer = s_nightTimer;
     
+    // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
+    if (!player->hasSeenTownExplanation && showGameExplanation) {
+        explanationStep = 0;
+    }
+    
     // 現在のStateの状態を保存
     saveCurrentState(player);
     
     if (s_fromDemonCastle) {
-        startNightTimer();
+        // 説明UIを既に見た場合は表示しない
+        // 説明UIが完了していない場合は最初から始める
+        if (!player->hasSeenTownExplanation) {
+            if (!showGameExplanation || gameExplanationTexts.empty()) {
+                startNightTimer();
+            } else {
+                // 既に説明UIが設定されている場合でも、最初から始める
+                explanationStep = 0;
+                showGameExplanation = true;
+            }
+        }
         s_fromDemonCastle = false; // フラグをリセット
     }
     
@@ -160,6 +175,18 @@ void TownState::render(Graphics& graphics) {
         }
     }
     
+    // 説明UIが設定されている場合は表示
+    // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
+    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    // uiJustInitializedがfalseの場合でも、showGameExplanationがtrueでメッセージが表示されていない場合は表示する
+    else if (showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0 && !isShowingMessage && messageBoard) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    
     switch (currentLocation) {
         case TownLocation::SQUARE:
             graphics.setDrawColor(128, 128, 128, 255); // 石畳風
@@ -223,6 +250,9 @@ void TownState::handleInput(const InputManager& input) {
                 showGameExplanation = false;
                 explanationStep = 0;
                 clearMessage();
+                
+                // 説明UIが完全に終わったことを記録
+                player->hasSeenTownExplanation = true;
                 
                 // 街の説明が終わった時はタイマーを起動しない
                 // タイマーは初勝利後の説明がFieldStateで終わったときに起動される
@@ -847,6 +877,10 @@ nlohmann::json TownState::toJson() const {
     j["playerY"] = playerY;
     j["showGameExplanation"] = showGameExplanation;
     j["explanationStep"] = explanationStep;
+    // gameExplanationTextsも保存（説明UIが途中で中断された場合に備えて）
+    if (!gameExplanationTexts.empty()) {
+        j["gameExplanationTexts"] = gameExplanationTexts;
+    }
     return j;
 }
 
@@ -855,6 +889,20 @@ void TownState::fromJson(const nlohmann::json& j) {
     if (j.contains("playerY")) playerY = j["playerY"];
     if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
     if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
+    // gameExplanationTextsも復元
+    if (j.contains("gameExplanationTexts") && j["gameExplanationTexts"].is_array()) {
+        gameExplanationTexts.clear();
+        for (const auto& text : j["gameExplanationTexts"]) {
+            gameExplanationTexts.push_back(text.get<std::string>());
+        }
+    }
+    
+    // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
+    // これはenter()でも実行されるが、fromJson()の後にも実行されるようにする
+    // ただし、enter()で処理されるので、ここではコメントアウト
+    // if (!player->hasSeenTownExplanation && showGameExplanation) {
+    //     explanationStep = 0;
+    // }
 }
 
 void TownState::checkRoomEntrance() {

@@ -88,7 +88,7 @@ void GameOverState::handleInput(const InputManager& input) {
                         } else {
                             // 通常の敵との戦闘を再開
                             auto enemy = std::make_unique<Enemy>(battleEnemyType);
-                            // 敵のレベルを目標レベルまで上げる
+                        // 敵のレベルを目標レベルまで上げる
                             enemy->setLevel(battleEnemyLevel);
                             stateManager->changeState(std::make_unique<BattleState>(player, std::move(enemy)));
                         }

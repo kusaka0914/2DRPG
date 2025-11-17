@@ -1127,6 +1127,9 @@ void BattleState::handleInput(const InputManager& input) {
                 showGameExplanation = false;
                 explanationStep = 0;
                 clearExplanationMessage();
+                
+                // 説明UIが完全に終わったことを記録
+                player->hasSeenBattleExplanation = true;
             } else {
                 showExplanationMessage(gameExplanationTexts[explanationStep]);
             }
@@ -1315,26 +1318,26 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             
             if (roll <= successRate) {
                 // 攻撃成功
-                int baseAttack = player->getTotalAttack();
-                int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
-                
-                BattleLogic::DamageInfo damageInfo;
-                damageInfo.damage = damage;
-                damageInfo.isPlayerHit = false;
-                damageInfo.isDraw = false;
-                damageInfo.playerDamage = 0;
-                damageInfo.enemyDamage = damage;
-                damageInfo.commandType = BattleConstants::COMMAND_ATTACK;
-                damageInfo.isCounterRush = false;
-                damageInfo.skipAnimation = false;
-                
-                pendingDamages.push_back(damageInfo);
-                damageAppliedInAnimation = false;
-                currentExecutingTurn = 0;
-                executeDelayTimer = 0.0f;
-                
-                // アニメーションを開始
-                animationController->resetResultAnimation();
+            int baseAttack = player->getTotalAttack();
+            int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
+            
+            BattleLogic::DamageInfo damageInfo;
+            damageInfo.damage = damage;
+            damageInfo.isPlayerHit = false;
+            damageInfo.isDraw = false;
+            damageInfo.playerDamage = 0;
+            damageInfo.enemyDamage = damage;
+            damageInfo.commandType = BattleConstants::COMMAND_ATTACK;
+            damageInfo.isCounterRush = false;
+            damageInfo.skipAnimation = false;
+            
+            pendingDamages.push_back(damageInfo);
+            damageAppliedInAnimation = false;
+            currentExecutingTurn = 0;
+            executeDelayTimer = 0.0f;
+            
+            // アニメーションを開始
+            animationController->resetResultAnimation();
             } else {
                 // 攻撃失敗（メンタルが低くてためらった）
                 addBattleLog("住民を倒すのをためらいました。");
@@ -2245,13 +2248,17 @@ void BattleState::initializeCommandSelection() {
     isShowingOptions = false;
     
     // 初回の戦闘時のみ説明を開始（住民戦以外、静的変数で管理）
+    // また、説明UIを既に見た場合は表示しない
     static bool s_firstBattle = true;
-    if (s_firstBattle && !enemy->isResident()) {
+    if (s_firstBattle && !enemy->isResident() && !player->hasSeenBattleExplanation) {
         setupGameExplanation();
         showGameExplanation = true;
         explanationStep = 0;
         s_firstBattle = false;
         // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+    } else if (player->hasSeenBattleExplanation) {
+        // 既に見た場合は、静的変数も更新
+        s_firstBattle = false;
     }
     
     // 住民戦の場合は住民のコマンドを事前に生成して、それに基づいて様子を表示
@@ -2786,9 +2793,9 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
                             phaseTimer = 0.0f;
                         } else {
                             // それ以外の場合は結果フェーズに遷移
-                            currentPhase = BattlePhase::JUDGE_RESULT;
-                            judgeDisplayTimer = 0.0f;
-                            phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
+                        currentPhase = BattlePhase::JUDGE_RESULT;
+                        judgeDisplayTimer = 0.0f;
+                        phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
                         }
                     } else {
                         currentJudgingTurnIndex++;

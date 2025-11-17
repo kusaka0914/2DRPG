@@ -95,26 +95,43 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 void FieldState::enter() {
     loadFieldImages();
     
-    // 初回のみ説明を表示するフラグを設定（render()で実際に表示）
+    // 初回フィールド説明を表示するかチェック
+    // 説明UIを既に見た場合は表示しない
+    // fromJson()で復元された場合、showGameExplanationがfalseになっている可能性があるので、常にチェック
+    if (!player->hasSeenFieldExplanation) {
+        if (!showGameExplanation || gameExplanationTexts.empty()) {
+            setupGameExplanation(false);  // 初回フィールド説明
+        }
+        showGameExplanation = true;
+        explanationStep = 0;  // 確実に0に設定
+    }
+    
     // 初勝利後の説明を表示するかチェック（レベル2になった場合）
+    // ただし、セーブデータから復元された場合は既に表示済みとみなす
+    // また、説明UIを既に見た場合は表示しない
     static bool s_firstVictoryExplanationShown = false;
-    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2) {
+    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2 && !showGameExplanation && !player->hasSeenFieldFirstVictoryExplanation) {
         setupGameExplanation(true);  // 初勝利後の説明
         showGameExplanation = true;
         explanationStep = 0;
+        s_firstVictoryExplanationShown = true;
+    } else if (showGameExplanation || player->hasSeenFieldFirstVictoryExplanation) {
+        // セーブデータから復元された場合、または既に見た場合は既に表示済みとみなす
         s_firstVictoryExplanationShown = true;
     }
 
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
     
+    // 目標レベルが設定されていない場合は初期化（初回フィールドに入った場合など）
+    if (TownState::s_targetLevel == 0) {
+        TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
+    }
+    
     // デバッグ出力
     std::cout << "FieldState: 静的変数から読み込み - Timer: " << nightTimer 
-              << ", Active: " << (nightTimerActive ? "true" : "false") << std::endl;
-
-    // タイマー情報も含めてautosave
-    // 現在のStateの状態を保存
-    saveCurrentState(player);
+              << ", Active: " << (nightTimerActive ? "true" : "false") 
+              << ", TargetLevel: " << TownState::s_targetLevel << std::endl;
     
     if (shouldRelocateMonster) {
         relocateMonsterSpawnPoint(lastBattleX, lastBattleY);
@@ -125,10 +142,12 @@ void FieldState::enter() {
         TownState::s_levelGoalAchieved = true;
     }
     
-    if (TownState::s_levelGoalAchieved && nightTimerActive) {
-        nightTimer = 0.0f;
-        TownState::s_nightTimer = 0.0f;
-    }
+    // 目標レベル達成済みでタイマーがアクティブな場合、タイマーを0に設定
+    // ただし、これはupdate()で処理されるべきなので、enter()では設定しない
+    // if (TownState::s_levelGoalAchieved && nightTimerActive) {
+    //     nightTimer = 0.0f;
+    //     TownState::s_nightTimer = 0.0f;
+    // }
     
     // static bool openingShown = false;
     // if (!openingShown) {
@@ -241,26 +260,21 @@ void FieldState::render(Graphics& graphics) {
         uiJustInitialized = true;
     }
     
-    if (uiJustInitialized && firstEnter) {
-        // 初勝利後の説明が既に表示されている場合は、初回フィールド説明をスキップ
-        if (!showGameExplanation) {
-            setupGameExplanation(false);  // 初回フィールド説明
-            showGameExplanation = true;
-            explanationStep = 0;
-            if (!gameExplanationTexts.empty()) {
-                showMessage(gameExplanationTexts[0]);
-                isShowingMessage = true;
-            }
-        }
-        firstEnter = false;
+    // 説明UIが設定されている場合は表示
+    // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
+    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    // uiJustInitializedがfalseの場合でも、showGameExplanationがtrueでメッセージが表示されていない場合は表示する
+    else if (showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0 && !isShowingMessage && messageBoard) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
     }
     
-    // 初勝利後の説明が設定されている場合は表示
-    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty()) {
-        if (explanationStep == 0) {
-            showMessage(gameExplanationTexts[0]);
-            isShowingMessage = true;
-        }
+    // firstEnterフラグを更新（説明UI表示の判定には使用しない）
+    if (uiJustInitialized && firstEnter) {
+        firstEnter = false;
     }
     
     graphics.setDrawColor(34, 139, 34, 255);
@@ -285,6 +299,7 @@ void FieldState::render(Graphics& graphics) {
     ui.render(graphics);
     
     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, showGameExplanation);
+    // 目標レベルは説明UIが表示されていても表示する（showGameExplanationパラメータは不要）
     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
     CommonUI::drawTrustLevels(graphics, player, nightTimerActive, showGameExplanation);
     
@@ -303,10 +318,23 @@ void FieldState::handleInput(const InputManager& input) {
                 explanationStep = 0;
                 clearMessage();
                 
+                // 説明UIが完全に終わったことを記録
+                if (!gameExplanationTexts.empty()) {
+                    if (gameExplanationTexts[0].find("初勝利") != std::string::npos) {
+                        // 初勝利後の説明
+                        player->hasSeenFieldFirstVictoryExplanation = true;
+                    } else {
+                        // 初回フィールド説明
+                        player->hasSeenFieldExplanation = true;
+                    }
+                }
+                
                 // 初勝利後の説明が終わった場合、タイマーを起動
                 // 初勝利後の説明かどうかは、説明テキストの最初が「初勝利」で始まるかで判定
+                // ただし、タイマーが既にアクティブな場合は設定しない（セーブデータから復元された場合など）
                 if (!gameExplanationTexts.empty() && 
-                    gameExplanationTexts[0].find("初勝利") != std::string::npos) {
+                    gameExplanationTexts[0].find("初勝利") != std::string::npos &&
+                    !nightTimerActive) {
                     nightTimerActive = true;
                     nightTimer = 900.0f;  // 15分 = 900秒（NIGHT_TIMER_DURATIONと同じ値）
                     TownState::s_nightTimerActive = true;
@@ -854,6 +882,10 @@ nlohmann::json FieldState::toJson() const {
     j["playerY"] = playerY;
     j["showGameExplanation"] = showGameExplanation;
     j["explanationStep"] = explanationStep;
+    // gameExplanationTextsも保存（説明UIが途中で中断された場合に備えて）
+    if (!gameExplanationTexts.empty()) {
+        j["gameExplanationTexts"] = gameExplanationTexts;
+    }
     return j;
 }
 
@@ -862,4 +894,11 @@ void FieldState::fromJson(const nlohmann::json& j) {
     if (j.contains("playerY")) playerY = j["playerY"];
     if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
     if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
+    // gameExplanationTextsも復元
+    if (j.contains("gameExplanationTexts") && j["gameExplanationTexts"].is_array()) {
+        gameExplanationTexts.clear();
+        for (const auto& text : j["gameExplanationTexts"]) {
+            gameExplanationTexts.push_back(text.get<std::string>());
+        }
+    }
 } 

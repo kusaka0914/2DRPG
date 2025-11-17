@@ -60,6 +60,17 @@ private:
     std::vector<std::pair<int, int>> killedResidents; // 倒した住民の位置
 
 public:
+    // 説明UIの完了状態
+    bool hasSeenTownExplanation;      /**< @brief 街の説明UIを見たか */
+    bool hasSeenFieldExplanation;     /**< @brief フィールドの説明UIを見たか */
+    bool hasSeenFieldFirstVictoryExplanation;  /**< @brief フィールドの初勝利後の説明UIを見たか */
+    bool hasSeenBattleExplanation;   /**< @brief 戦闘の説明UIを見たか */
+    
+    // ストーリーメッセージUIの完了状態
+    bool hasSeenRoomStory;           /**< @brief 部屋のストーリーメッセージUIを見たか */
+    bool hasSeenCastleStory;         /**< @brief 王様の城のストーリーメッセージUIを見たか */
+    bool hasSeenDemonCastleStory;    /**< @brief 魔王の城のストーリーメッセージUIを見たか */
+    
     /**
      * @brief コンストラクタ
      * @param name プレイヤー名

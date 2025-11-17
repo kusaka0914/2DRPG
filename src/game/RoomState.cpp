@@ -37,7 +37,8 @@ void RoomState::enter() {
     // 現在のStateの状態を保存
     saveCurrentState(player);
     
-    if (s_roomFirstTime) {
+    // ストーリーメッセージUIを既に見た場合は表示しない
+    if (s_roomFirstTime && !player->hasSeenRoomStory) {
         pendingWelcomeMessage = true;
     } else {
         pendingMessage = "自室に戻りました。";
@@ -105,6 +106,7 @@ void RoomState::render(Graphics& graphics) {
         if (pendingWelcomeMessage) {
             showWelcomeMessage();
             pendingWelcomeMessage = false;
+            // ストーリーメッセージUIが表示されたことを記録（メッセージが閉じられた時に完了とみなす）
         } else if (!pendingMessage.empty()) {
             showMessage(pendingMessage);
             pendingMessage.clear();
@@ -153,7 +155,7 @@ void RoomState::render(Graphics& graphics) {
     
     // フェードオーバーレイを描画
     renderFade(graphics);
-    
+        
     graphics.present();
 }
 
@@ -411,6 +413,10 @@ void RoomState::showMessage(const std::string& message) {
 }
 
 void RoomState::clearMessage() {
+    // ストーリーメッセージUIが表示されていた場合、完了したことを記録
+    if (s_roomFirstTime && !player->hasSeenRoomStory) {
+        player->hasSeenRoomStory = true;
+    }
     GameState::clearMessage(messageBoard, isShowingMessage);
 }
 

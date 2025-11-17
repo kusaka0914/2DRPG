@@ -147,29 +147,29 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
             graphics->drawTexture(playerCmdImage, imageX, imageY, displayWidth, displayHeight);
         } else {
             // フォールバック：テキスト表示
-            SDL_Texture* playerCmdTexture = graphics->createTextTexture(playerCmd, "default", playerCmdColor);
-            if (playerCmdTexture) {
-                int textWidth, textHeight;
-                SDL_QueryTexture(playerCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
-                
-                int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-                int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-                
-                int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
-                int bgX = cmdTextX - padding;
-                int bgY = cmdTextY - padding;
-                int bgWidth = scaledWidth + padding * 2;
-                int bgHeight = scaledHeight + padding * 2;
-                
-                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-                graphics->setDrawColor(255, 255, 255, 255);
-                graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-                
-                graphics->drawTexture(playerCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
-                SDL_DestroyTexture(playerCmdTexture);
-            } else {
-                graphics->drawText(playerCmd, cmdTextX, cmdTextY, "default", playerCmdColor);
+        SDL_Texture* playerCmdTexture = graphics->createTextTexture(playerCmd, "default", playerCmdColor);
+        if (playerCmdTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(playerCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+            int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+            
+            int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
+            int bgX = cmdTextX - padding;
+            int bgY = cmdTextY - padding;
+            int bgWidth = scaledWidth + padding * 2;
+            int bgHeight = scaledHeight + padding * 2;
+            
+            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
+            graphics->setDrawColor(255, 255, 255, 255);
+            graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
+            
+            graphics->drawTexture(playerCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
+            SDL_DestroyTexture(playerCmdTexture);
+        } else {
+            graphics->drawText(playerCmd, cmdTextX, cmdTextY, "default", playerCmdColor);
             }
         }
     }
@@ -281,29 +281,29 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
                     graphics->drawTexture(enemyCmdImage, imageX, imageY, displayWidth, displayHeight);
                 } else {
                     // フォールバック：テキスト表示
-                    SDL_Texture* enemyCmdTexture = graphics->createTextTexture(enemyCmd, "default", enemyCmdColor);
-                    if (enemyCmdTexture) {
-                        int textWidth, textHeight;
-                        SDL_QueryTexture(enemyCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
-                        
-                        int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-                        int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
-                        
-                        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
-                        int bgX = cmdTextX - padding;
-                        int bgY = cmdTextY - padding;
-                        int bgWidth = scaledWidth + padding * 2;
-                        int bgHeight = scaledHeight + padding * 2;
-                        
-                        graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                        graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
-                        graphics->setDrawColor(255, 255, 255, 255);
-                        graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
-                        
-                        graphics->drawTexture(enemyCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
-                        SDL_DestroyTexture(enemyCmdTexture);
-                    } else {
-                        graphics->drawText(enemyCmd, cmdTextX, cmdTextY, "default", enemyCmdColor);
+                SDL_Texture* enemyCmdTexture = graphics->createTextTexture(enemyCmd, "default", enemyCmdColor);
+                if (enemyCmdTexture) {
+                    int textWidth, textHeight;
+                    SDL_QueryTexture(enemyCmdTexture, nullptr, nullptr, &textWidth, &textHeight);
+                    
+                    int scaledWidth = static_cast<int>(textWidth * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                    int scaledHeight = static_cast<int>(textHeight * BattleConstants::JUDGE_COMMAND_TEXT_SCALE);
+                    
+                    int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_LARGE;
+                    int bgX = cmdTextX - padding;
+                    int bgY = cmdTextY - padding;
+                    int bgWidth = scaledWidth + padding * 2;
+                    int bgHeight = scaledHeight + padding * 2;
+                    
+                    graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                    graphics->drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                    graphics->setDrawColor(255, 255, 255, 255);
+                    graphics->drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                    
+                    graphics->drawTexture(enemyCmdTexture, cmdTextX, cmdTextY, scaledWidth, scaledHeight);
+                    SDL_DestroyTexture(enemyCmdTexture);
+                } else {
+                    graphics->drawText(enemyCmd, cmdTextX, cmdTextY, "default", enemyCmdColor);
                     }
                 }
             }
@@ -416,7 +416,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     if (params.residentTurnCount > 0) {
         renderTurnNumber(params.residentTurnCount, 10, params.isDesperateMode);
     } else {
-        renderTurnNumber(params.currentSelectingTurn + 1, params.commandTurnCount, params.isDesperateMode);
+    renderTurnNumber(params.currentSelectingTurn + 1, params.commandTurnCount, params.isDesperateMode);
     }
     
     // 選択済みコマンドを表示（ボタンの上）
@@ -554,16 +554,16 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
             graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
         } else {
             // フォールバック：テキスト表示
-            int textX = startX + (buttonWidth / 2) - 50;
-            int textY = buttonY + (buttonHeight / 2) - 15;
-            
-            if (isSelected) {
-                graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+        int textX = startX + (buttonWidth / 2) - 50;
+        int textY = buttonY + (buttonHeight / 2) - 15;
+        
+        if (isSelected) {
+            graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
                 graphics->drawText(commandName, textX, textY, "default", textColor);
-            } else {
+        } else {
                 graphics->drawText(commandName, textX, textY, "default", textColor);
-            }
         }
+    }
     }
     
     // 住民戦の場合は「Qで戻る」を表示しない
@@ -810,43 +810,43 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     
     // 住民戦の場合はプレイヤーのHP表示をスキップ
     if (!enemy->isResident()) {
-        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-        SDL_Texture* playerHpTexture = graphics->createTextTexture(playerHpText, "default", whiteColor);
-        if (playerHpTexture) {
+    std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
+    SDL_Texture* playerHpTexture = graphics->createTextTexture(playerHpText, "default", whiteColor);
+    if (playerHpTexture) {
+        int textWidth, textHeight;
+        SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
+        int bgX = playerX - 100 - padding;
+        int bgY = playerY - playerHeight / 2 - 40 - padding;
+        graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
+        graphics->setDrawColor(255, 255, 255, 255);
+        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
+        SDL_DestroyTexture(playerHpTexture);
+    }
+    graphics->drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+    
+    // ステータス上昇呪文の状態を表示（HPの下）
+    if (player->hasNextTurnBonusActive()) {
+        float multiplier = player->getNextTurnMultiplier();
+        int turns = player->getNextTurnBonusTurns();
+        // 倍率を文字列に変換（小数点以下1桁まで表示）
+        int multiplierInt = static_cast<int>(multiplier * 10);
+        std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
+        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
+        SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
+        SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
+        if (statusTexture) {
             int textWidth, textHeight;
-            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
+            SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
             int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 - 40 - padding;
+            int bgY = playerY - playerHeight / 2 + padding;
             graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
             graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics->setDrawColor(255, 255, 255, 255);
+            graphics->setDrawColor(255, 255, 100, 255);
             graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(playerHpTexture);
+            SDL_DestroyTexture(statusTexture);
         }
-        graphics->drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
-        
-        // ステータス上昇呪文の状態を表示（HPの下）
-        if (player->hasNextTurnBonusActive()) {
-            float multiplier = player->getNextTurnMultiplier();
-            int turns = player->getNextTurnBonusTurns();
-            // 倍率を文字列に変換（小数点以下1桁まで表示）
-            int multiplierInt = static_cast<int>(multiplier * 10);
-            std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
-            std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
-            SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
-            SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
-            if (statusTexture) {
-                int textWidth, textHeight;
-                SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
-                int bgX = playerX - 100 - padding;
-                int bgY = playerY - playerHeight / 2 + padding;
-                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-                graphics->setDrawColor(255, 255, 100, 255);
-                graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-                SDL_DestroyTexture(statusTexture);
-            }
-            graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
+        graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
         }
     }
     
@@ -892,18 +892,18 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     }
     
     if (hasHint) {
-        SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", whiteColor);
-        if (hintTexture) {
-            int hintWidth, hintHeight;
-            SDL_QueryTexture(hintTexture, nullptr, nullptr, &hintWidth, &hintHeight);
-            int hintBgX = enemyX - 100 - padding;
-            int hintBgY = enemyY - enemyHeight / 2 - 40 - padding;
-            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, true);
-            graphics->setDrawColor(255, 255, 255, 255);
-            graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
-            graphics->drawText(hintText, enemyX - 100, enemyY - enemyHeight / 2 - 40, "default", whiteColor);
-            SDL_DestroyTexture(hintTexture);
+            SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", whiteColor);
+            if (hintTexture) {
+                int hintWidth, hintHeight;
+                SDL_QueryTexture(hintTexture, nullptr, nullptr, &hintWidth, &hintHeight);
+                int hintBgX = enemyX - 100 - padding;
+                int hintBgY = enemyY - enemyHeight / 2 - 40 - padding;
+                graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, true);
+                graphics->setDrawColor(255, 255, 255, 255);
+                graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
+                graphics->drawText(hintText, enemyX - 100, enemyY - enemyHeight / 2 - 40, "default", whiteColor);
+                SDL_DestroyTexture(hintTexture);
         }
     }
     

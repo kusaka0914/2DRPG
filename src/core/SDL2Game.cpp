@@ -142,7 +142,7 @@ void SDL2Game::initializeGame() {
         
         // 保存されたゲーム状態を取得
         const nlohmann::json* savedState = player->getSavedGameState();
-        if (savedState && savedState->contains("stateType")) {
+        if (savedState && !savedState->is_null() && savedState->contains("stateType")) {
             StateType savedStateType = static_cast<StateType>((*savedState)["stateType"]);
             
             // 保存されたStateに応じて適切なStateを作成

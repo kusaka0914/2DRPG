@@ -5,13 +5,21 @@
 #include <fstream>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include <cstdio>
 
 Player::Player(const std::string& name)
     : Character(name, 30, 20, 8, 3, 1), inventory(20), equipmentManager(),
       playerStats(std::make_unique<PlayerStats>()),
       playerStory(std::make_unique<PlayerStory>(name)),
       playerTrust(std::make_unique<PlayerTrust>(50, true)),
-      isNightTime(false), currentNight(0) {
+      isNightTime(false), currentNight(0),
+      hasSeenTownExplanation(false),
+      hasSeenFieldExplanation(false),
+      hasSeenFieldFirstVictoryExplanation(false),
+      hasSeenBattleExplanation(false),
+      hasSeenRoomStory(false),
+      hasSeenCastleStory(false),
+      hasSeenDemonCastleStory(false) {
     addStartingItems();
 }
 
@@ -276,16 +284,36 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     j["nightTimer"] = nightTimer;
     j["nightTimerActive"] = nightTimerActive;
     
+    // 説明UIの完了状態
+    j["hasSeenTownExplanation"] = hasSeenTownExplanation;
+    j["hasSeenFieldExplanation"] = hasSeenFieldExplanation;
+    j["hasSeenFieldFirstVictoryExplanation"] = hasSeenFieldFirstVictoryExplanation;
+    j["hasSeenBattleExplanation"] = hasSeenBattleExplanation;
+    
+    // ストーリーメッセージUIの完了状態
+    j["hasSeenRoomStory"] = hasSeenRoomStory;
+    j["hasSeenCastleStory"] = hasSeenCastleStory;
+    j["hasSeenDemonCastleStory"] = hasSeenDemonCastleStory;
+    
+    // 目標レベルと夜の回数（静的変数の状態を保存）
+    j["targetLevel"] = TownState::s_targetLevel;
+    j["nightCount"] = TownState::s_nightCount;
+    
     // ゲーム状態情報（外部から設定される）
     if (savedGameState) {
         j["gameState"] = *savedGameState;
     }
     
-    // JSONファイルに書き込み
-    std::ofstream file(savePath);
+    // JSONファイルに書き込み（既存ファイルを上書き）
+    // まず既存ファイルを削除してから新しく作成（macOSの自動リネームを防ぐため）
+    std::remove(savePath.c_str());
+    
+    std::ofstream file(savePath, std::ios::trunc);
     if (file.is_open()) {
         file << j.dump(4); // インデント4で整形して出力
         file.close();
+    } else {
+        std::cerr << "Error: Could not open file for writing: " << savePath << std::endl;
     }
 }
 
@@ -370,8 +398,23 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         if (j.contains("nightTimer")) nightTimer = j["nightTimer"];
         if (j.contains("nightTimerActive")) nightTimerActive = j["nightTimerActive"];
         
+        // 説明UIの完了状態
+        if (j.contains("hasSeenTownExplanation")) hasSeenTownExplanation = j["hasSeenTownExplanation"];
+        if (j.contains("hasSeenFieldExplanation")) hasSeenFieldExplanation = j["hasSeenFieldExplanation"];
+        if (j.contains("hasSeenFieldFirstVictoryExplanation")) hasSeenFieldFirstVictoryExplanation = j["hasSeenFieldFirstVictoryExplanation"];
+        if (j.contains("hasSeenBattleExplanation")) hasSeenBattleExplanation = j["hasSeenBattleExplanation"];
+        
+        // ストーリーメッセージUIの完了状態
+        if (j.contains("hasSeenRoomStory")) hasSeenRoomStory = j["hasSeenRoomStory"];
+        if (j.contains("hasSeenCastleStory")) hasSeenCastleStory = j["hasSeenCastleStory"];
+        if (j.contains("hasSeenDemonCastleStory")) hasSeenDemonCastleStory = j["hasSeenDemonCastleStory"];
+        
+        // 目標レベルと夜の回数（静的変数の状態を復元）
+        if (j.contains("targetLevel")) TownState::s_targetLevel = j["targetLevel"];
+        if (j.contains("nightCount")) TownState::s_nightCount = j["nightCount"];
+        
         // ゲーム状態情報
-        if (j.contains("gameState")) {
+        if (j.contains("gameState") && !j["gameState"].is_null()) {
             savedGameState = std::make_unique<nlohmann::json>(j["gameState"]);
         }
         

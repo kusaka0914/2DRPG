@@ -55,10 +55,16 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 void CastleState::enter() {
     startFadeIn(0.5f);
     
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenCastleStory && isTalkingToKing) {
+        dialogueStep = 0;
+    }
+    
     // 現在のStateの状態を保存
     saveCurrentState(player);
     
-    if (s_castleFirstTime || fromNightState) {
+    // ストーリーメッセージUIを既に見た場合は表示しない
+    if ((s_castleFirstTime || fromNightState) && !player->hasSeenCastleStory) {
         pendingDialogue = true;
     }
 }
@@ -312,6 +318,11 @@ void CastleState::nextDialogue() {
         hasReceivedQuest = true;
         shouldGoToDemonCastle = true;
         
+        // ストーリーメッセージUIが完全に終わったことを記録
+        if ((s_castleFirstTime || fromNightState) && !player->hasSeenCastleStory) {
+            player->hasSeenCastleStory = true;
+        }
+        
         clearMessage();
 
         
@@ -369,6 +380,11 @@ void CastleState::fromJson(const nlohmann::json& j) {
     if (j.contains("guardRightDefeated")) guardRightDefeated = j["guardRightDefeated"];
     if (j.contains("allDefeated")) allDefeated = j["allDefeated"];
     if (j.contains("castleFirstTime")) s_castleFirstTime = j["castleFirstTime"];
+    
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenCastleStory && isTalkingToKing) {
+        dialogueStep = 0;
+    }
     
     // 会話の状態を復元
     if (isTalkingToKing && dialogueStep < kingDialogues.size()) {

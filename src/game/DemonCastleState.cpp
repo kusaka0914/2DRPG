@@ -55,10 +55,16 @@ void DemonCastleState::enter() {
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenDemonCastleStory && isTalkingToDemon) {
+        dialogueStep = 0;
+    }
+    
     // 現在のStateの状態を保存
     saveCurrentState(player);
     
-    if (s_demonCastleFirstTime || fromCastleState) {
+    // ストーリーメッセージUIを既に見た場合は表示しない
+    if ((s_demonCastleFirstTime || fromCastleState) && !player->hasSeenDemonCastleStory) {
         pendingDialogue = true;
     }
 }
@@ -221,6 +227,11 @@ void DemonCastleState::nextDialogue() {
         isTalkingToDemon = false;
         hasReceivedEvilQuest = true;
         
+        // ストーリーメッセージUIが完全に終わったことを記録
+        if ((s_demonCastleFirstTime || fromCastleState) && !player->hasSeenDemonCastleStory) {
+            player->hasSeenDemonCastleStory = true;
+        }
+        
         clearMessage();
         
         if (fromCastleState) {
@@ -275,6 +286,11 @@ void DemonCastleState::fromJson(const nlohmann::json& j) {
     if (j.contains("isTalkingToDemon")) isTalkingToDemon = j["isTalkingToDemon"];
     if (j.contains("fromCastleState")) fromCastleState = j["fromCastleState"];
     if (j.contains("demonCastleFirstTime")) s_demonCastleFirstTime = j["demonCastleFirstTime"];
+    
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenDemonCastleStory && isTalkingToDemon) {
+        dialogueStep = 0;
+    }
     
     // 会話の状態を復元
     if (isTalkingToDemon && dialogueStep < demonDialogues.size()) {
