@@ -52,6 +52,15 @@ private:
     bool nightTimerActive;
     float nightTimer;
     const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
+    
+    // メッセージ表示
+    Label* messageBoard;
+    bool isShowingMessage;
+    
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
 
 public:
     /**
@@ -108,8 +117,9 @@ public:
 private:
     /**
      * @brief UIのセットアップ
+     * @param graphics グラフィックスオブジェクトへの参照
      */
-    void setupUI();
+    void setupUI(Graphics& graphics);
     
     /**
      * @brief 移動処理
@@ -184,4 +194,21 @@ private:
      * @param graphics グラフィックスオブジェクトへの参照
      */
     void drawFieldGate(Graphics& graphics);
+    
+    /**
+     * @brief ゲーム説明のセットアップ
+     * @param isFirstVictory 初勝利後の説明かどうか（falseの場合は初回フィールド説明）
+     */
+    void setupGameExplanation(bool isFirstVictory = false);
+    
+    /**
+     * @brief メッセージの表示
+     * @param message 表示するメッセージ
+     */
+    void showMessage(const std::string& message);
+    
+    /**
+     * @brief メッセージのクリア
+     */
+    void clearMessage();
 }; 

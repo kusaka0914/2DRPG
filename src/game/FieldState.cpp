@@ -11,6 +11,7 @@
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <random>
+#include <vector>
 
 static int s_staticPlayerX = 25;  // 街の入り口の近く：25
 static int s_staticPlayerY = 8;   // 16の中央：8
@@ -21,7 +22,9 @@ static bool saved = TownState::saved;
 FieldState::FieldState(std::shared_ptr<Player> player)
     : player(player), storyBox(nullptr), hasMoved(false),
       moveTimer(0), nightTimerActive(false), nightTimer(0.0f),
-      shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0) {
+      shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0),
+      messageBoard(nullptr), isShowingMessage(false),
+      showGameExplanation(false), explanationStep(0) {
     
     static std::vector<std::vector<MapTile>> staticTerrainMap;
     static bool mapGenerated = false;
@@ -90,8 +93,17 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 }
 
 void FieldState::enter() {
-    setupUI();
     loadFieldImages();
+    
+    // 初回のみ説明を表示するフラグを設定（render()で実際に表示）
+    // 初勝利後の説明を表示するかチェック（レベル2になった場合）
+    static bool s_firstVictoryExplanationShown = false;
+    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2) {
+        setupGameExplanation(true);  // 初勝利後の説明
+        showGameExplanation = true;
+        explanationStep = 0;
+        s_firstVictoryExplanationShown = true;
+    }
 
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
@@ -222,23 +234,96 @@ void FieldState::update(float deltaTime) {
 }
 
 void FieldState::render(Graphics& graphics) {
+    bool uiJustInitialized = false;
+    if (!messageBoard) {
+        setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    
+    if (uiJustInitialized && firstEnter) {
+        // 初勝利後の説明が既に表示されている場合は、初回フィールド説明をスキップ
+        if (!showGameExplanation) {
+            setupGameExplanation(false);  // 初回フィールド説明
+            showGameExplanation = true;
+            explanationStep = 0;
+            if (!gameExplanationTexts.empty()) {
+                showMessage(gameExplanationTexts[0]);
+                isShowingMessage = true;
+            }
+        }
+        firstEnter = false;
+    }
+    
+    // 初勝利後の説明が設定されている場合は表示
+    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty()) {
+        if (explanationStep == 0) {
+            showMessage(gameExplanationTexts[0]);
+            isShowingMessage = true;
+        }
+    }
+    
     graphics.setDrawColor(34, 139, 34, 255);
     graphics.clear();
     
     drawMap(graphics);
     drawPlayer(graphics);
     
+    if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto mbConfig = config.getMessageBoardConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
+        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true);
+        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height);
+    }
+    
     ui.render(graphics);
     
-    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, showGameExplanation);
     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, showGameExplanation);
     
     graphics.present();
 }
 
 void FieldState::handleInput(const InputManager& input) {
     ui.handleInput(input);
+    
+    if (showGameExplanation) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            explanationStep++;
+            
+            if (explanationStep >= gameExplanationTexts.size()) {
+                showGameExplanation = false;
+                explanationStep = 0;
+                clearMessage();
+                
+                // 初勝利後の説明が終わった場合、タイマーを起動
+                // 初勝利後の説明かどうかは、説明テキストの最初が「初勝利」で始まるかで判定
+                if (!gameExplanationTexts.empty() && 
+                    gameExplanationTexts[0].find("初勝利") != std::string::npos) {
+                    nightTimerActive = true;
+                    nightTimer = 900.0f;  // 15分 = 900秒（NIGHT_TIMER_DURATIONと同じ値）
+                    TownState::s_nightTimerActive = true;
+                    TownState::s_nightTimer = 900.0f;
+                }
+            } else {
+                showMessage(gameExplanationTexts[explanationStep]);
+            }
+        }
+        return; // 説明中は他の操作を無効化
+    }
+    
+    if (isShowingMessage) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            clearMessage();
+        }
+        return; // メッセージ表示中は他の操作を無効化
+    }
     
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
@@ -255,10 +340,22 @@ void FieldState::handleInput(const InputManager& input) {
     handleMovement(input);
 }
 
-void FieldState::setupUI() {
+void FieldState::setupUI(Graphics& graphics) {
     ui.clear();
     // StoryMessageBoxは無効化
     storyBox = nullptr;
+    
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto mbConfig = config.getMessageBoardConfig();
+    
+    int textX, textY;
+    config.calculatePosition(textX, textY, mbConfig.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    
+    auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
+    messageBoardLabel->setColor(mbConfig.text.color);
+    messageBoardLabel->setText("");
+    messageBoard = messageBoardLabel.get(); // ポインタを保存
+    ui.addElement(std::move(messageBoardLabel));
 }
 
 void FieldState::handleMovement(const InputManager& input) {
@@ -715,4 +812,33 @@ void FieldState::drawFieldGate(Graphics& graphics) {
         graphics.setDrawColor(0, 0, 0, 255);
         graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
     }
+}
+
+void FieldState::setupGameExplanation(bool isFirstVictory) {
+    gameExplanationTexts.clear();
+    
+    if (isFirstVictory) {
+        // 初勝利後の説明
+        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！");
+        gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
+        gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。");
+        gameExplanationTexts.push_back("タイマーが0になるまでに目標レベルに達してください！");
+        gameExplanationTexts.push_back("ではまた夜の街でお会いしましょう！頑張って！");
+    } else {
+        // 初回フィールド説明
+        gameExplanationTexts.push_back("ここがフィールドです。たくさんモンスターがいますね。");
+        gameExplanationTexts.push_back("モンスターの上に表示されているのがモンスターのレベルです。");
+        gameExplanationTexts.push_back("そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。");
+        gameExplanationTexts.push_back("自分のレベルに合わせて戦うモンスターを選びましょう。");
+        gameExplanationTexts.push_back("そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。");
+        gameExplanationTexts.push_back("まずはモンスターがいる場所に移動してみてください。");
+    }
+}
+
+void FieldState::showMessage(const std::string& message) {
+    GameState::showMessage(message, messageBoard, isShowingMessage);
+}
+
+void FieldState::clearMessage() {
+    GameState::clearMessage(messageBoard, isShowingMessage);
 } 

@@ -191,19 +191,19 @@ void BattleLogic::generateEnemyCommands() {
     int attackProb, defendProb, spellProb;
     switch (enemyBehaviorType) {
         case EnemyBehaviorType::ATTACK_TYPE:
-            attackProb = 60;
+            attackProb = 65;
             defendProb = 10;
-            spellProb = 30;
+            spellProb = 25;
             break;
         case EnemyBehaviorType::DEFEND_TYPE:
-            attackProb = 30;
-            defendProb = 60;
+            attackProb = 25;
+            defendProb = 65;
             spellProb = 10;
             break;
         case EnemyBehaviorType::SPELL_TYPE:
             attackProb = 10;
-            defendProb = 30;
-            spellProb = 60;
+            defendProb = 25;
+            spellProb = 65;
             break;
     }
     
@@ -308,11 +308,11 @@ std::string BattleLogic::getBehaviorTypeName(EnemyBehaviorType type) {
 std::string BattleLogic::getBehaviorTypeHint(EnemyBehaviorType type) {
     switch (type) {
         case EnemyBehaviorType::ATTACK_TYPE:
-            return "気性が荒いみたいだ";
+            return "攻撃型みたいだ";
         case EnemyBehaviorType::DEFEND_TYPE:
-            return "臆病みたいだ";
+            return "防御型みたいだ";
         case EnemyBehaviorType::SPELL_TYPE:
-            return "近づきたくないようだ";
+            return "呪文型みたいだ";
     }
     return "";
 }

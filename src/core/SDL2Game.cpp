@@ -6,9 +6,12 @@
 #include "../game/NightState.h"
 #include "../game/DemonCastleState.h"
 #include "../game/FieldState.h"
+#include "../game/BattleState.h"
+#include "../entities/Enemy.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
 #include <string>
+#include <memory>
 
 SDL2Game::SDL2Game() : isRunning(false), uiConfigCheckTimer(0.0f), debugStartState("") {
 }
@@ -109,13 +112,17 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<DemonCastleState>(player, false));
         } else if (debugStartState == "field") {
             stateManager.changeState(std::make_unique<FieldState>(player));
+        } else if (debugStartState == "battle") {
+            // バトルから開始（スライムとの戦闘）
+            auto enemy = std::make_unique<Enemy>(EnemyType::SLIME);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
         } else {
             std::cerr << "警告: 不明なデバッグ状態 '" << debugStartState << "'。メインメニューから開始します。" << std::endl;
-            std::cerr << "利用可能な状態: room, town, night, castle, demon, field" << std::endl;
+            std::cerr << "利用可能な状態: room, town, night, castle, demon, field, battle" << std::endl;
             stateManager.changeState(std::make_unique<MainMenuState>(player));
         }
     } else {
-    stateManager.changeState(std::make_unique<MainMenuState>(player));
+        stateManager.changeState(std::make_unique<MainMenuState>(player));
     }
 }
 

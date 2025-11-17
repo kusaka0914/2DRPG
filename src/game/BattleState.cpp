@@ -27,7 +27,9 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       currentResidentPlayerCommand(-1), currentResidentCommand(-1),
       cachedResidentBehaviorHint(""), cachedResidentCommand(-1),
       residentTurnCount(0),
-      residentAttackFailed(false) {
+      residentAttackFailed(false),
+      showGameExplanation(false), explanationStep(0),
+      explanationMessageBoard(nullptr) {
     
     battle = std::make_unique<Battle>(player.get(), this->enemy.get());
     
@@ -382,6 +384,9 @@ void BattleState::render(Graphics& graphics) {
         battleLogLabel->setText(battleLog);
     }
     
+    // 初回の戦闘時のみ説明を開始（UI初期化後、住民戦以外）
+    // ただし、COMMAND_SELECTフェーズで設定するので、ここでは設定しない
+    
     // JUDGE_RESULTフェーズではrenderResultAnnouncement()内で背景画像を描画するため、ここでは処理しない
     if (currentPhase == BattlePhase::JUDGE_RESULT || 
         currentPhase == BattlePhase::DESPERATE_JUDGE_RESULT) {
@@ -570,6 +575,13 @@ void BattleState::render(Graphics& graphics) {
     if ((currentPhase == BattlePhase::COMMAND_SELECT || 
          currentPhase == BattlePhase::DESPERATE_COMMAND_SELECT) && 
         isShowingOptions) {
+        // 説明が設定されていない場合は設定する（初回の戦闘時のみ、住民戦以外）
+        if (showGameExplanation && !enemy->isResident() && explanationMessageBoard && explanationMessageBoard->getText().empty()) {
+            if (!gameExplanationTexts.empty() && explanationStep == 0) {
+                showExplanationMessage(gameExplanationTexts[0]);
+            }
+        }
+        
         BattleUI::CommandSelectRenderParams params;
         params.currentSelectingTurn = currentSelectingTurn;
         params.commandTurnCount = battleLogic->getCommandTurnCount();
@@ -585,6 +597,39 @@ void BattleState::render(Graphics& graphics) {
             params.residentTurnCount = 0;  // 通常戦の場合は0
         }
         battleUI->renderCommandSelectionUI(params);
+        
+        // 説明UIを表示（初回の戦闘時のみ、住民戦以外）
+        if (showGameExplanation && !enemy->isResident() && explanationMessageBoard && !explanationMessageBoard->getText().empty()) {
+            auto& config = UIConfig::UIConfigManager::getInstance();
+            auto mbConfig = config.getMessageBoardConfig();
+            
+            int bgX = 20;  // 左下に配置
+            int bgHeight = 60;  // 2行分の高さ
+            int bgY = graphics.getScreenHeight() - bgHeight - 20;  // 画面下部から20px上
+            int bgWidth = graphics.getScreenWidth() / 2;
+            
+            graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒色
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+            graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight);
+        }
+        
+        // 古いUI要素を非表示にする（テキストを空にする）
+        if (battleLogLabel) {
+            battleLogLabel->setText("");
+        }
+        if (playerStatusLabel) {
+            playerStatusLabel->setText("");
+        }
+        if (enemyStatusLabel) {
+            enemyStatusLabel->setText("");
+        }
+        if (messageLabel) {
+            messageLabel->setText("");
+        }
+        
+        // UIを描画（説明メッセージボードを含む）
+        ui.render(graphics);
         
         // if (nightTimerActive) {
         //     CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
@@ -1071,6 +1116,23 @@ void BattleState::render(Graphics& graphics) {
 void BattleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
+    // 説明表示中の処理
+    if (showGameExplanation && (currentPhase == BattlePhase::COMMAND_SELECT || 
+                                currentPhase == BattlePhase::DESPERATE_COMMAND_SELECT)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            explanationStep++;
+            
+            if (explanationStep >= gameExplanationTexts.size()) {
+                showGameExplanation = false;
+                explanationStep = 0;
+                clearExplanationMessage();
+            } else {
+                showExplanationMessage(gameExplanationTexts[explanationStep]);
+            }
+        }
+        return; // 説明中は他の操作を無効化
+    }
+    
     if (isShowingOptions) {
         handleOptionSelection(input);
         return;
@@ -1126,6 +1188,17 @@ void BattleState::setupUI(Graphics& graphics) {
     messageLabelPtr->setColor(battleConfig.message.color);
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
+    
+    // 説明用メッセージボード（左下に配置）
+    auto mbConfig = config.getMessageBoardConfig();
+    int explanationX = 30;  // 左下に配置（背景の内側に配置）
+    int bgHeight = 60;  // 2行分の高さ
+    int explanationY = graphics.getScreenHeight() - bgHeight - 10;  // 画面下部から背景の内側に配置
+    auto explanationLabelPtr = std::make_unique<Label>(explanationX, explanationY, "", "default");
+    explanationLabelPtr->setColor(mbConfig.text.color);
+    explanationLabelPtr->setText("");
+    explanationMessageBoard = explanationLabelPtr.get();
+    ui.addElement(std::move(explanationLabelPtr));
 }
 
 void BattleState::updateStatus() {
@@ -2170,6 +2243,16 @@ void BattleState::initializeCommandSelection() {
     currentSelectingTurn = 0;
     isShowingOptions = false;
     
+    // 初回の戦闘時のみ説明を開始（住民戦以外、静的変数で管理）
+    static bool s_firstBattle = true;
+    if (s_firstBattle && !enemy->isResident()) {
+        setupGameExplanation();
+        showGameExplanation = true;
+        explanationStep = 0;
+        s_firstBattle = false;
+        // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+    }
+    
     // 住民戦の場合は住民のコマンドを事前に生成して、それに基づいて様子を表示
     // これにより、予測表示と実際のコマンドが一致する
     // ただし、50%の確率で「様子が伺えない」と表示し、どちらのコマンドを使うかわからないようにする
@@ -2298,6 +2381,38 @@ std::pair<int, int> BattleState::calculateCurrentWinLoss() const {
     }
     
     return std::make_pair(playerWins, enemyWins);
+}
+
+void BattleState::setupGameExplanation() {
+    gameExplanationTexts.clear();
+    std::string enemyName = enemy->getTypeName();
+    gameExplanationTexts.push_back(enemyName + "との戦闘が始まりました！");
+    gameExplanationTexts.push_back("戦闘は全てコマンドで行います。中央を見てください！\nこのコマンドには攻撃、防御、呪文の3種類があります。");
+    gameExplanationTexts.push_back("3すくみの関係になっていて、上部の図のように攻撃は呪文に強い、\n呪文は防御に強い、防御は攻撃に強いという特徴を持っています。");
+    gameExplanationTexts.push_back("そして敵には行動パターンが存在しています。\n攻撃型、防御型、呪文型の3種類で、どれをよく使うかというものです。");
+    gameExplanationTexts.push_back("つまり攻撃型の敵に対しては\n防御コマンドを使うと効果的だということですね！");
+    gameExplanationTexts.push_back("では相手の型はどこに書いているかというと・・・");
+    gameExplanationTexts.push_back("実は戦闘開始時は書いていないんですね！");
+    gameExplanationTexts.push_back("その代わり、敵の名前の下に〜型ではないようだと書いてますね！\nこれで敵の型が2種類に絞れるというわけです。");
+    gameExplanationTexts.push_back("実際の相手の行動を見て、どちらの型なのかを見極めてください！");
+    gameExplanationTexts.push_back("でも型を1つに絞って表示してくれないのは少し意地悪ですね。\n実は自分の体力が7割を切った際に相手の型が表示されます。");
+    gameExplanationTexts.push_back("それまでは予測して戦ってみてくださいね。");
+    gameExplanationTexts.push_back("最後に左上のターンについて説明します。");
+    gameExplanationTexts.push_back("本作の戦闘は最初に3ターン分の行動を選択するようになっています。\nそして勝った回数が多い方が一方的にそのターン数だけ攻撃できます！");
+    gameExplanationTexts.push_back("なので勝ちまくれば無傷で戦闘を終了させることもできるんですね。\nでも逆に一発逆転されるってことも・・・？賭けみたいですね！");
+    gameExplanationTexts.push_back("長くなってしまいましたが一旦実際に戦ってみましょう！");
+}
+
+void BattleState::showExplanationMessage(const std::string& message) {
+    if (explanationMessageBoard) {
+        explanationMessageBoard->setText(message);
+    }
+}
+
+void BattleState::clearExplanationMessage() {
+    if (explanationMessageBoard) {
+        explanationMessageBoard->setText("");
+    }
 }
 
 void BattleState::renderRockPaperScissorsImage(Graphics& graphics) {

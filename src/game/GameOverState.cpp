@@ -80,19 +80,17 @@ void GameOverState::handleInput(const InputManager& input) {
                         
                         // 住民戦の場合は住民の情報を復元して再戦
                         if (isResidentBattle) {
-                            Enemy enemy(EnemyType::SLIME);
-                            enemy.setName(residentName);
-                            enemy.setResidentTextureIndex(residentTextureIndex);
-                            enemy.setResidentPosition(residentX, residentY);
-                            stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
+                            auto enemy = std::make_unique<Enemy>(EnemyType::SLIME);
+                            enemy->setName(residentName);
+                            enemy->setResidentTextureIndex(residentTextureIndex);
+                            enemy->setResidentPosition(residentX, residentY);
+                            stateManager->changeState(std::make_unique<BattleState>(player, std::move(enemy)));
                         } else {
                             // 通常の敵との戦闘を再開
-                            Enemy enemy(battleEnemyType);
+                            auto enemy = std::make_unique<Enemy>(battleEnemyType);
                             // 敵のレベルを目標レベルまで上げる
-                            while (enemy.getLevel() < battleEnemyLevel) {
-                                enemy.levelUp();
-                            }
-                            stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy)));
+                            enemy->setLevel(battleEnemyLevel);
+                            stateManager->changeState(std::make_unique<BattleState>(player, std::move(enemy)));
                         }
                     } else {
                         stateManager->changeState(std::make_unique<FieldState>(player));

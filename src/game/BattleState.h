@@ -112,6 +112,12 @@ private:
     bool isShowingOptions;
     bool isShowingMessage;
     
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
+    Label* explanationMessageBoard;  // 説明用メッセージボード（左下に表示）
+    
     // 戦闘ロジック（単一責任の原則）
     std::unique_ptr<BattleLogic> battleLogic;
     
@@ -180,6 +186,9 @@ private:
     void addBattleLog(const std::string& message);
     void showMessage(const std::string& message);
     void hideMessage();
+    void setupGameExplanation();
+    void showExplanationMessage(const std::string& message);
+    void clearExplanationMessage();
     void loadBattleImages();
     void showSpellMenu();
     void handleSpellSelection(int spellChoice);

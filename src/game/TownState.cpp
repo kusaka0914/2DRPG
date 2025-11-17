@@ -220,10 +220,8 @@ void TownState::handleInput(const InputManager& input) {
                 explanationStep = 0;
                 clearMessage();
                 
-                nightTimerActive = true;
-                nightTimer = NIGHT_TIMER_DURATION;
-                s_nightTimerActive = true;
-                s_nightTimer = NIGHT_TIMER_DURATION;
+                // 街の説明が終わった時はタイマーを起動しない
+                // タイマーは初勝利後の説明がFieldStateで終わったときに起動される
                 
             } else {
                 showMessage(gameExplanationTexts[explanationStep]);
