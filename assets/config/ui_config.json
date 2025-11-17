@@ -16,7 +16,9 @@
         "absoluteY": 500
       },
       "color": [255, 255, 255, 255]
-    }
+    },
+    "backgroundColor": [0, 0, 0, 255],
+    "borderColor": [255, 255, 255, 255]
   },
   "commonUI": {
     "nightTimer": {
@@ -53,6 +55,9 @@
       },
       "color": [255, 255, 255, 255]
     },
+    "targetLevelAchievedColor": [0, 255, 0, 255],
+    "targetLevelRemainingColor": [255, 255, 0, 255],
+    "targetLevelLineSpacing": 20,
     "trustLevels": {
       "position": {
         "useRelative": false,
@@ -70,6 +75,8 @@
       },
       "color": [255, 255, 255, 255]
     },
+    "trustLevelsLineSpacing1": 20,
+    "trustLevelsLineSpacing2": 40,
     "gameControllerStatus": {
       "position": {
         "useRelative": false,
@@ -78,7 +85,11 @@
       },
       "width": 80,
       "height": 20
-    }
+    },
+    "gameControllerStatusColor": [0, 255, 0, 255],
+    "backgroundColor": [0, 0, 0, 255],
+    "borderColor": [255, 255, 255, 255],
+    "backgroundAlpha": 200
   },
   "mainMenu": {
     "title": {
@@ -109,6 +120,14 @@
       "hoverColor": [0, 150, 0, 255],
       "pressedColor": [0, 50, 0, 255],
       "textColor": [255, 255, 255, 255]
+    },
+    "startGameText": {
+      "position": {
+        "useRelative": true,
+        "offsetX": 0,
+        "offsetY": 100
+      },
+      "color": [255, 255, 255, 255]
     }
   },
   "battle": {
@@ -163,7 +182,7 @@
     "enemyHp": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
+        "absoluteX": 900,
         "absoluteY": 120
       },
       "color": [255, 255, 255, 255]
@@ -171,8 +190,8 @@
     "enemyPosition": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
-        "absoluteY": 150
+        "absoluteX": 900,
+        "absoluteY": 350
       },
       "width": 100,
       "height": 100
@@ -180,11 +199,32 @@
     "playerPosition": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
+        "absoluteX": 150,
         "absoluteY": 300
       },
       "width": 60,
       "height": 60
+    },
+    "explanationMessageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 30,
+          "absoluteY": 580
+        },
+        "color": [255, 255, 255, 255]
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "room": {
@@ -205,13 +245,15 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "howToOperateBackground": {
       "position": {
         "useRelative": false,
-        "absoluteX": 190,
-        "absoluteY": 10
+        "absoluteX": 30,
+        "absoluteY": 30
       },
       "width": 395,
       "height": 70
@@ -219,8 +261,8 @@
     "howToOperateText": {
       "position": {
         "useRelative": false,
-        "absoluteX": 205,
-        "absoluteY": 25
+        "absoluteX": 45,
+        "absoluteY": 45
       },
       "color": [255, 255, 255, 255]
     }
@@ -261,7 +303,9 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "demonCastle": {
@@ -282,7 +326,9 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "gameOver": {
@@ -355,6 +401,14 @@
       "width": 65,
       "height": 40
     },
+    "nightDisplayText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 20,
+        "absoluteY": 15
+      },
+      "color": [255, 255, 255, 255]
+    },
     "nightOperationBackground": {
       "position": {
         "useRelative": false,
@@ -363,6 +417,14 @@
       },
       "width": 205,
       "height": 40
+    },
+    "nightOperationText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 95,
+        "absoluteY": 15
+      },
+      "color": [255, 255, 255, 255]
     },
     "messageBoard": {
       "background": {
@@ -381,7 +443,9 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "field": {

@@ -47,6 +47,8 @@ namespace UIConfig {
     struct UIMessageBoardConfig {
         UIRectConfig background;
         UITextConfig text;
+        SDL_Color backgroundColor;    // 背景色（黒）
+        SDL_Color borderColor;         // ボーダー色（白）
     };
     
     struct UICommonUIConfig {
@@ -54,9 +56,18 @@ namespace UIConfig {
         UITextConfig nightTimerText;
         UIRectConfig targetLevel;
         UITextConfig targetLevelText;
+        SDL_Color targetLevelAchievedColor;      // 目標達成時の緑色
+        SDL_Color targetLevelRemainingColor;     // 残りレベルの黄色
+        int targetLevelLineSpacing;              // 行間オフセット
         UIRectConfig trustLevels;
         UITextConfig trustLevelsText;
+        int trustLevelsLineSpacing1;             // 2行目のオフセット
+        int trustLevelsLineSpacing2;             // 3行目のオフセット
         UIRectConfig gameControllerStatus;
+        SDL_Color gameControllerStatusColor;     // ゲームコントローラー状態の緑色
+        SDL_Color backgroundColor;                // 背景色（黒）
+        SDL_Color borderColor;                    // ボーダー色（白）
+        Uint8 backgroundAlpha;                     // 背景の透明度
     };
     
     // MainMenuState用
@@ -64,6 +75,7 @@ namespace UIConfig {
         UITextConfig title;
         UITextConfig playerInfo;
         UIButtonConfig adventureButton;
+        UITextConfig startGameText;               // "START GAME : PRESS ENTER"テキスト
     };
     
     // BattleState用
@@ -81,6 +93,7 @@ namespace UIConfig {
         UIPosition playerPosition;   // プレイヤーの画像位置
         int playerWidth;             // プレイヤーの画像幅
         int playerHeight;            // プレイヤーの画像高さ
+        UIMessageBoardConfig explanationMessageBoard;  // 説明用メッセージボード
     };
     
     // RoomState用
@@ -124,7 +137,9 @@ namespace UIConfig {
     // NightState用
     struct UINightConfig {
         UIRectConfig nightDisplayBackground;      // 夜の表示背景
+        UITextConfig nightDisplayText;            // 夜の表示テキスト
         UIRectConfig nightOperationBackground;    // 夜の操作用背景
+        UITextConfig nightOperationText;           // 夜の操作テキスト
         UIMessageBoardConfig messageBoard;         // メッセージボード
     };
     

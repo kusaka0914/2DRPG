@@ -101,7 +101,7 @@ void GameOverState::render(Graphics& graphics) {
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         } else {
             // フォールバック：黒背景
-            graphics.setDrawColor(0, 0, 0, 255);
+    graphics.setDrawColor(0, 0, 0, 255);
             graphics.drawRect(0, 0, screenWidth, screenHeight, true);
         }
         

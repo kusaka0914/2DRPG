@@ -96,11 +96,18 @@ void RoomState::render(Graphics& graphics) {
     if (!playerTexture) {
         loadTextures(graphics);
     }
+    
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!messageBoard) {
-    setupUI(graphics);
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
+        setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
     if (uiJustInitialized) {
         if (pendingWelcomeMessage) {
@@ -126,10 +133,11 @@ void RoomState::render(Graphics& graphics) {
         
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, roomConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        auto mbConfig = config.getMessageBoardConfig();
         
-        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
         graphics.drawRect(bgX, bgY, roomConfig.messageBoard.background.width, roomConfig.messageBoard.background.height, true);
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
         graphics.drawRect(bgX, bgY, roomConfig.messageBoard.background.width, roomConfig.messageBoard.background.height);
     }
 
@@ -191,7 +199,7 @@ void RoomState::setupUI(Graphics& graphics) {
     config.calculatePosition(howToX, howToY, roomConfig.howToOperateText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     auto howtooperateLabel = std::make_unique<Label>(howToX, howToY, "", "default");
     howtooperateLabel->setColor(roomConfig.howToOperateText.color);
-    howtooperateLabel->setText("移動: 矢印キー\n調べる/ドアに入る/次のメッセージ: Enter");
+    howtooperateLabel->setText("移動: W/A/S/D\n調べる/ドアに入る/次のメッセージ: Enter");
     howtooperateBoard = howtooperateLabel.get(); // ポインタを保存
     ui.addElement(std::move(howtooperateLabel));
 }

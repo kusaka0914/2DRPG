@@ -94,21 +94,27 @@ void MainMenuState::render(Graphics& graphics) {
     }
     
     // "START GAME : PRESS ENTER" テキストを表示
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto mainMenuConfig = config.getMainMenuConfig();
+    
     int screenWidth = graphics.getScreenWidth();
     int screenHeight = graphics.getScreenHeight();
     std::string startText = "START GAME : PRESS ENTER";
-    SDL_Color textColor = {255, 255, 255, 255}; // 白
-    SDL_Texture* startTexture = graphics.createTextTexture(startText, "default", textColor);
+    int textX, textY;
+    config.calculatePosition(textX, textY, mainMenuConfig.startGameText.position, screenWidth, screenHeight);
+    SDL_Texture* startTexture = graphics.createTextTexture(startText, "default", mainMenuConfig.startGameText.color);
     if (startTexture) {
         int textWidth, textHeight;
         SDL_QueryTexture(startTexture, nullptr, nullptr, &textWidth, &textHeight);
-        int textX = (screenWidth - textWidth) / 2; // 中央
-        int textY = screenHeight - 100; // 画面下部から100px上
+        // 中央揃えの場合は、計算されたX座標を中央に調整
+        if (mainMenuConfig.startGameText.position.useRelative && mainMenuConfig.startGameText.position.offsetX == 0.0f) {
+            textX = (screenWidth - textWidth) / 2;
+        }
         graphics.drawTexture(startTexture, textX, textY, textWidth, textHeight);
         SDL_DestroyTexture(startTexture);
     } else {
         // フォールバック：通常のテキスト描画
-        graphics.drawText(startText, screenWidth / 2, screenHeight - 100, "default", textColor);
+        graphics.drawText(startText, textX, textY, "default", mainMenuConfig.startGameText.color);
     }
     
     ui.render(graphics);

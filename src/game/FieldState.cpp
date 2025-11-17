@@ -254,11 +254,17 @@ void FieldState::update(float deltaTime) {
 }
 
 void FieldState::render(Graphics& graphics) {
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!messageBoard) {
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
     // 説明UIが設定されている場合は表示
     // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
@@ -290,9 +296,9 @@ void FieldState::render(Graphics& graphics) {
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         
-        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
         graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true);
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
         graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height);
     }
     

@@ -273,6 +273,16 @@ void NightState::update(float deltaTime) {
         moveTimer -= deltaTime;
         ui.update(deltaTime);
         
+        // ホットリロード対応
+        static bool lastReloadState = false;
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        bool currentReloadState = config.checkAndReloadConfig();
+        
+        if (!lastReloadState && currentReloadState) {
+            setupUI();
+        }
+        lastReloadState = currentReloadState;
+        
         updateGuards(deltaTime);
         
         // ゲーム進行チェック
@@ -532,27 +542,36 @@ void NightState::setupUI() {
     try {
         ui.clear();
         
-        // メッセージボード（画面中央下部）- TownStateと同じ仕様
-        auto messageBoardLabel = std::make_unique<Label>(210, 500, "", "default");
-        messageBoardLabel->setColor({255, 255, 255, 255}); // 白文字
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto nightConfig = config.getNightConfig();
+        
+        // メッセージボード（画面中央下部）
+        int messageX, messageY;
+        config.calculatePosition(messageX, messageY, nightConfig.messageBoard.text.position, 1100, 650);
+        auto messageBoardLabel = std::make_unique<Label>(messageX, messageY, "", "default");
+        messageBoardLabel->setColor(nightConfig.messageBoard.text.color);
         messageBoardLabel->setText("");
         messageBoard = messageBoardLabel.get(); // ポインタを保存
         ui.addElement(std::move(messageBoardLabel));
         
-        auto nightDisplayLabel = std::make_unique<Label>(20, 15, "", "default");
-        nightDisplayLabel->setColor({255, 255, 255, 255}); // 白文字
+        // 夜の表示ラベル
+        int nightDisplayX, nightDisplayY;
+        config.calculatePosition(nightDisplayX, nightDisplayY, nightConfig.nightDisplayText.position, 1100, 650);
+        auto nightDisplayLabel = std::make_unique<Label>(nightDisplayX, nightDisplayY, "", "default");
+        nightDisplayLabel->setColor(nightConfig.nightDisplayText.color);
         nightDisplayLabel->setText("");
         this->nightDisplayLabel = nightDisplayLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightDisplayLabel));
 
-        auto nightOperationLabel = std::make_unique<Label>(95, 15, "", "default");
-        nightOperationLabel->setColor({255, 255, 255, 255}); // 白文字
-        nightOperationLabel->setText("住民と話す: Enter");
+        // 夜の操作ラベル
+        int nightOperationX, nightOperationY;
+        config.calculatePosition(nightOperationX, nightOperationY, nightConfig.nightOperationText.position, 1100, 650);
+        auto nightOperationLabel = std::make_unique<Label>(nightOperationX, nightOperationY, "住民と話す: Enter", "default");
+        nightOperationLabel->setColor(nightConfig.nightOperationText.color);
         this->nightOperationLabel = nightOperationLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightOperationLabel));
         
         // 説明用メッセージボード（TownStateと同じ仕様）
-        auto& config = UIConfig::UIConfigManager::getInstance();
         auto mbConfig = config.getMessageBoardConfig();
         
         int textX, textY;

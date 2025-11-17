@@ -121,11 +121,17 @@ void CastleState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!messageBoard) {
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
     if (uiJustInitialized && pendingDialogue) {
         startDialogue();
@@ -145,10 +151,11 @@ void CastleState::render(Graphics& graphics) {
         
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, castleConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        auto mbConfig = config.getMessageBoardConfig();
         
-        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
         graphics.drawRect(bgX, bgY, castleConfig.messageBoard.background.width, castleConfig.messageBoard.background.height, true);
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
         graphics.drawRect(bgX, bgY, castleConfig.messageBoard.background.width, castleConfig.messageBoard.background.height);
     }
     
