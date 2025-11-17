@@ -113,7 +113,8 @@ void FieldState::enter() {
               << ", Active: " << (nightTimerActive ? "true" : "false") << std::endl;
 
     // タイマー情報も含めてautosave
-    player->saveGame("autosave.dat", nightTimer, nightTimerActive);
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
     
     if (shouldRelocateMonster) {
         relocateMonsterSpawnPoint(lastBattleX, lastBattleY);
@@ -450,6 +451,9 @@ void FieldState::checkEncounter() {
                     lastBattleX = playerX;
                     lastBattleY = playerY;
                     shouldRelocateMonster = true;
+                    
+                    // 戦闘に入る前にフィールドの状態を保存
+                    saveCurrentState(player);
                     
                     auto battleState = std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy));
                     stateManager->changeState(std::move(battleState));
@@ -841,4 +845,21 @@ void FieldState::showMessage(const std::string& message) {
 
 void FieldState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json FieldState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::FIELD);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["showGameExplanation"] = showGameExplanation;
+    j["explanationStep"] = explanationStep;
+    return j;
+}
+
+void FieldState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
+    if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
 } 

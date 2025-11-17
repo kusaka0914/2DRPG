@@ -7,6 +7,7 @@
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 static bool s_roomFirstTime = true;
 
@@ -32,6 +33,9 @@ RoomState::RoomState(std::shared_ptr<Player> player)
 
 void RoomState::enter() {
     startFadeIn(0.5f);
+    
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
     
     if (s_roomFirstTime) {
         pendingWelcomeMessage = true;
@@ -408,4 +412,19 @@ void RoomState::showMessage(const std::string& message) {
 
 void RoomState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json RoomState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::ROOM);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["roomFirstTime"] = s_roomFirstTime;
+    return j;
+}
+
+void RoomState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("roomFirstTime")) s_roomFirstTime = j["roomFirstTime"];
 } 

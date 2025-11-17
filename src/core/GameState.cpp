@@ -1,7 +1,10 @@
 #include "GameState.h"
+#include "../entities/Player.h"
+#include "../game/TownState.h"
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 GameStateManager::GameStateManager() : shouldChangeState(false) {
 }
@@ -70,6 +73,19 @@ void GameState::clearMessage(Label* messageBoard, bool& isShowingMessage) {
     if (messageBoard) {
         messageBoard->setText("");
         isShowingMessage = false;
+    }
+}
+
+void GameState::saveCurrentState(std::shared_ptr<Player> player) {
+    if (player && stateManager) {
+        GameState* currentState = stateManager->getCurrentState();
+        if (currentState) {
+            nlohmann::json stateJson = currentState->toJson();
+            player->setSavedGameState(stateJson);
+            float nightTimer = TownState::s_nightTimer;
+            bool nightTimerActive = TownState::s_nightTimerActive;
+            player->saveGame("autosave.json", nightTimer, nightTimerActive);
+        }
     }
 }
 

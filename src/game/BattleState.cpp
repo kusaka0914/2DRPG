@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cmath> // abs関数のために追加
 #include <iostream> // デバッグ情報のために追加
+#include <nlohmann/json.hpp>
 
 BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy)
     : player(player), enemy(std::move(enemy)), currentPhase(BattlePhase::INTRO),

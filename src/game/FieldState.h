@@ -104,6 +104,18 @@ public:
     StateType getType() const override { return StateType::FIELD; }
     
     /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
+    
+    /**
      * @brief オープニングストーリーの表示
      */
     void showOpeningStory();

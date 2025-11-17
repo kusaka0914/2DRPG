@@ -1,8 +1,10 @@
 #include "Inventory.h"
 #include "../entities/Player.h"
+#include "ItemFactory.h"
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 Inventory::Inventory(int maxSlots) : maxSlots(maxSlots) {
     slots.resize(maxSlots);
@@ -185,65 +187,49 @@ bool Inventory::canStackWith(const Item* item1, const Item* item2) const {
            item1->getType() == item2->getType();
 }
 
-void Inventory::saveToFile(std::ofstream& file) {
-    file.write(reinterpret_cast<const char*>(&maxSlots), sizeof(maxSlots));
+nlohmann::json Inventory::toJson() const {
+    nlohmann::json j;
+    j["maxSlots"] = maxSlots;
+    j["slots"] = nlohmann::json::array();
     
     for (int i = 0; i < maxSlots; ++i) {
-        bool hasItem = (slots[i].item != nullptr);
-        file.write(reinterpret_cast<const char*>(&hasItem), sizeof(hasItem));
-        
-        if (hasItem) {
-            ItemType itemType = slots[i].item->getType();
-            file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
-            
-            std::string itemName = slots[i].item->getName();
-            int nameLength = itemName.length();
-            file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
-            file.write(itemName.c_str(), nameLength);
-            
-            file.write(reinterpret_cast<const char*>(&slots[i].quantity), sizeof(slots[i].quantity));
+        nlohmann::json slotJson;
+        if (slots[i].item) {
+            slotJson["hasItem"] = true;
+            slotJson["itemName"] = slots[i].item->getName();
+            slotJson["itemType"] = static_cast<int>(slots[i].item->getType());
+            slotJson["quantity"] = slots[i].quantity;
+        } else {
+            slotJson["hasItem"] = false;
         }
+        j["slots"].push_back(slotJson);
     }
+    
+    return j;
 }
 
-void Inventory::loadFromFile(std::ifstream& file) {
-    file.read(reinterpret_cast<char*>(&maxSlots), sizeof(maxSlots));
-    slots.resize(maxSlots);
+void Inventory::fromJson(const nlohmann::json& j) {
+    if (j.contains("maxSlots")) {
+        maxSlots = j["maxSlots"];
+        slots.resize(maxSlots);
+    }
     
-    for (int i = 0; i < maxSlots; ++i) {
-        bool hasItem;
-        file.read(reinterpret_cast<char*>(&hasItem), sizeof(hasItem));
-        
-        if (hasItem) {
-            ItemType itemType;
-            file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
-            
-            int nameLength;
-            file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-            char* nameBuffer = new char[nameLength + 1];
-            file.read(nameBuffer, nameLength);
-            nameBuffer[nameLength] = '\0';
-            std::string itemName(nameBuffer);
-            delete[] nameBuffer;
-            
-            file.read(reinterpret_cast<char*>(&slots[i].quantity), sizeof(slots[i].quantity));
-            
-            switch (itemType) {
-                case ItemType::CONSUMABLE:
-                    slots[i].item = std::make_unique<ConsumableItem>(ConsumableType::YAKUSOU);
-                    break;
-                case ItemType::WEAPON:
-                    slots[i].item = std::make_unique<Weapon>(WeaponType::COPPER_SWORD);
-                    break;
-                case ItemType::ARMOR:
-                    slots[i].item = std::make_unique<Armor>(ArmorType::LEATHER_ARMOR);
-                    break;
-                default:
-                    slots[i].item = nullptr;
-                    break;
+    if (j.contains("slots") && j["slots"].is_array()) {
+        for (size_t i = 0; i < j["slots"].size() && i < static_cast<size_t>(maxSlots); ++i) {
+            const auto& slotJson = j["slots"][i];
+            if (slotJson.contains("hasItem") && slotJson["hasItem"].get<bool>()) {
+                std::string itemName = slotJson["itemName"];
+                ItemType itemType = static_cast<ItemType>(slotJson["itemType"]);
+                int quantity = slotJson["quantity"];
+                
+                auto item = ItemFactory::createItemByName(itemName, itemType);
+                if (item) {
+                    slots[i].item = std::move(item);
+                    slots[i].quantity = quantity;
+                }
+            } else {
+                slots[i] = InventorySlot();
             }
-        } else {
-            slots[i] = InventorySlot();
         }
     }
 } 

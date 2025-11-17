@@ -7,6 +7,7 @@
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 static bool s_castleFirstTime = true;
 
@@ -53,6 +54,9 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 
 void CastleState::enter() {
     startFadeIn(0.5f);
+    
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
     
     if (s_castleFirstTime || fromNightState) {
         pendingDialogue = true;
@@ -332,6 +336,44 @@ void CastleState::showMessage(const std::string& message) {
 
 void CastleState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json CastleState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::CASTLE);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["dialogueStep"] = dialogueStep;
+    j["hasReceivedQuest"] = hasReceivedQuest;
+    j["isTalkingToKing"] = isTalkingToKing;
+    j["shouldGoToDemonCastle"] = shouldGoToDemonCastle;
+    j["fromNightState"] = fromNightState;
+    j["kingDefeated"] = kingDefeated;
+    j["guardLeftDefeated"] = guardLeftDefeated;
+    j["guardRightDefeated"] = guardRightDefeated;
+    j["allDefeated"] = allDefeated;
+    j["castleFirstTime"] = s_castleFirstTime;
+    return j;
+}
+
+void CastleState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("dialogueStep")) dialogueStep = j["dialogueStep"];
+    if (j.contains("hasReceivedQuest")) hasReceivedQuest = j["hasReceivedQuest"];
+    if (j.contains("isTalkingToKing")) isTalkingToKing = j["isTalkingToKing"];
+    if (j.contains("shouldGoToDemonCastle")) shouldGoToDemonCastle = j["shouldGoToDemonCastle"];
+    if (j.contains("fromNightState")) fromNightState = j["fromNightState"];
+    if (j.contains("kingDefeated")) kingDefeated = j["kingDefeated"];
+    if (j.contains("guardLeftDefeated")) guardLeftDefeated = j["guardLeftDefeated"];
+    if (j.contains("guardRightDefeated")) guardRightDefeated = j["guardRightDefeated"];
+    if (j.contains("allDefeated")) allDefeated = j["allDefeated"];
+    if (j.contains("castleFirstTime")) s_castleFirstTime = j["castleFirstTime"];
+    
+    // 会話の状態を復元
+    if (isTalkingToKing && dialogueStep < kingDialogues.size()) {
+        pendingDialogue = true;
+    }
 }
 
 void CastleState::drawCastle(Graphics& graphics) {

@@ -50,6 +50,24 @@ public:
     
     virtual StateType getType() const = 0;
     
+    /**
+     * @brief 状態をJSON形式に変換（オプショナル）
+     * @return JSONオブジェクト（実装されていない場合は空のJSON）
+     */
+    virtual nlohmann::json toJson() const { return nlohmann::json(); }
+    
+    /**
+     * @brief JSON形式から状態を復元（オプショナル）
+     * @param j JSONオブジェクト
+     */
+    virtual void fromJson(const nlohmann::json& j) {}
+    
+    /**
+     * @brief 現在のStateの状態を保存（共通ヘルパー関数）
+     * @param player プレイヤーへの共有ポインタ
+     */
+    void saveCurrentState(std::shared_ptr<Player> player);
+    
 protected:
     GameStateManager* stateManager = nullptr;
     

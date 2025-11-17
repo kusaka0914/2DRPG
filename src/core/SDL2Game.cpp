@@ -9,6 +9,7 @@
 #include "../game/BattleState.h"
 #include "../entities/Enemy.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/GameState.h"
 #include <iostream>
 #include <string>
 #include <memory>
@@ -57,6 +58,21 @@ void SDL2Game::handleEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
+            // 終了前にセーブ
+            if (player) {
+                float nightTimer = TownState::s_nightTimer;
+                bool nightTimerActive = TownState::s_nightTimerActive;
+                // 現在のStateの状態を取得して保存
+                GameState* currentState = stateManager.getCurrentState();
+                if (currentState) {
+                    // BattleStateの場合は保存しない（直前のフィールド状態が既に保存されている）
+                    if (currentState->getType() != StateType::BATTLE) {
+                        nlohmann::json stateJson = currentState->toJson();
+                        player->setSavedGameState(stateJson);
+                    }
+                }
+                player->saveGame("autosave.json", nightTimer, nightTimerActive);
+            }
             isRunning = false;
             break;
         }
@@ -65,6 +81,21 @@ void SDL2Game::handleEvents() {
     }
     
     if (inputManager.isKeyJustPressed(InputKey::ESCAPE)) {
+        // 終了前にセーブ
+        if (player) {
+            float nightTimer = TownState::s_nightTimer;
+            bool nightTimerActive = TownState::s_nightTimerActive;
+            // 現在のStateの状態を取得して保存
+            GameState* currentState = stateManager.getCurrentState();
+            if (currentState) {
+                // BattleStateの場合は保存しない（直前のフィールド状態が既に保存されている）
+                if (currentState->getType() != StateType::BATTLE) {
+                    nlohmann::json stateJson = currentState->toJson();
+                    player->setSavedGameState(stateJson);
+                }
+            }
+            player->saveGame("autosave.json", nightTimer, nightTimerActive);
+        }
         isRunning = false;
         return;
     }
@@ -99,6 +130,65 @@ void SDL2Game::initializeGame() {
     
     player = std::make_shared<Player>(playerName);
     
+    // セーブファイルからロードを試みる
+    float nightTimer = 0.0f;
+    bool nightTimerActive = false;
+    bool loaded = player->autoLoad(nightTimer, nightTimerActive);
+    
+    if (loaded) {
+        // セーブファイルからロード成功
+        TownState::s_nightTimer = nightTimer;
+        TownState::s_nightTimerActive = nightTimerActive;
+        
+        // 保存されたゲーム状態を取得
+        const nlohmann::json* savedState = player->getSavedGameState();
+        if (savedState && savedState->contains("stateType")) {
+            StateType savedStateType = static_cast<StateType>((*savedState)["stateType"]);
+            
+            // 保存されたStateに応じて適切なStateを作成
+            switch (savedStateType) {
+                case StateType::ROOM: {
+                    auto roomState = std::make_unique<RoomState>(player);
+                    roomState->fromJson(*savedState);
+                    stateManager.changeState(std::move(roomState));
+                    break;
+                }
+                case StateType::TOWN: {
+                    auto townState = std::make_unique<TownState>(player);
+                    townState->fromJson(*savedState);
+                    stateManager.changeState(std::move(townState));
+                    break;
+                }
+                case StateType::CASTLE: {
+                    bool fromNightState = (*savedState).contains("fromNightState") ? (*savedState)["fromNightState"].get<bool>() : false;
+                    auto castleState = std::make_unique<CastleState>(player, fromNightState);
+                    castleState->fromJson(*savedState);
+                    stateManager.changeState(std::move(castleState));
+                    break;
+                }
+                case StateType::DEMON_CASTLE: {
+                    bool fromCastleState = (*savedState).contains("fromCastleState") ? (*savedState)["fromCastleState"].get<bool>() : false;
+                    auto demonState = std::make_unique<DemonCastleState>(player, fromCastleState);
+                    demonState->fromJson(*savedState);
+                    stateManager.changeState(std::move(demonState));
+                    break;
+                }
+                case StateType::FIELD: {
+                    auto fieldState = std::make_unique<FieldState>(player);
+                    fieldState->fromJson(*savedState);
+                    stateManager.changeState(std::move(fieldState));
+                    break;
+                }
+                default:
+                    // その他のStateはメインメニューから開始
+                    stateManager.changeState(std::make_unique<MainMenuState>(player));
+                    break;
+            }
+            return; // セーブファイルから復元したので、デバッグモードや通常の開始処理はスキップ
+        }
+    }
+    
+    // セーブファイルがない、またはデバッグモードの場合
     if (!debugStartState.empty()) {
         if (debugStartState == "room") {
             stateManager.changeState(std::make_unique<RoomState>(player));

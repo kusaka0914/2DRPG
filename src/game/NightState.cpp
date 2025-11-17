@@ -194,7 +194,8 @@ void NightState::enter() {
         lastNight = currentNight;
     }
         
-        player->autoSave();
+        // 現在のStateの状態を保存
+        saveCurrentState(player);
         
         setupUI();
         if (nightDisplayLabel) {
@@ -586,6 +587,9 @@ void NightState::executeResidentChoice(int choice) {
         residentEnemy.setResidentPosition(currentTargetX, currentTargetY);
         
         if (stateManager) {
+            // 戦闘に入る前にNightStateの状態を保存
+            saveCurrentState(player);
+            
             stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(residentEnemy)));
         }
         return;
@@ -856,7 +860,8 @@ void NightState::handleResidentKilled(int x, int y) {
     // （handleInput()でshowReturnToTownMessageフラグが設定され、街に戻る処理が実行される）
     
     // メンタルや信頼度の変動をセーブ
-    player->autoSave();
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
     
     checkGameProgress();
 } 

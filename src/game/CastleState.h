@@ -10,6 +10,7 @@
 #include "../entities/Player.h"
 #include "../core/GameUtils.h"
 #include <memory>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief 城の状態を担当するクラス
@@ -113,6 +114,18 @@ public:
      * @return 状態タイプ（CASTLE）
      */
     StateType getType() const override { return StateType::CASTLE; }
+    
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
     
 private:
     /**

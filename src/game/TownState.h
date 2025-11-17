@@ -14,6 +14,7 @@
 #include "NightState.h"
 #include <memory>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief NPCの種類
@@ -115,6 +116,18 @@ public:
     void handleInput(const InputManager& input) override;
     
     StateType getType() const override { return StateType::TOWN; }
+    
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
     
     // 夜のタイマー関連
     void startNightTimer();

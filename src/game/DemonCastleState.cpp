@@ -55,6 +55,9 @@ void DemonCastleState::enter() {
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
+    
     if (s_demonCastleFirstTime || fromCastleState) {
         pendingDialogue = true;
     }
@@ -249,6 +252,34 @@ void DemonCastleState::showMessage(const std::string& message) {
 
 void DemonCastleState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json DemonCastleState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::DEMON_CASTLE);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["dialogueStep"] = dialogueStep;
+    j["hasReceivedEvilQuest"] = hasReceivedEvilQuest;
+    j["isTalkingToDemon"] = isTalkingToDemon;
+    j["fromCastleState"] = fromCastleState;
+    j["demonCastleFirstTime"] = s_demonCastleFirstTime;
+    return j;
+}
+
+void DemonCastleState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("dialogueStep")) dialogueStep = j["dialogueStep"];
+    if (j.contains("hasReceivedEvilQuest")) hasReceivedEvilQuest = j["hasReceivedEvilQuest"];
+    if (j.contains("isTalkingToDemon")) isTalkingToDemon = j["isTalkingToDemon"];
+    if (j.contains("fromCastleState")) fromCastleState = j["fromCastleState"];
+    if (j.contains("demonCastleFirstTime")) s_demonCastleFirstTime = j["demonCastleFirstTime"];
+    
+    // 会話の状態を復元
+    if (isTalkingToDemon && dialogueStep < demonDialogues.size()) {
+        pendingDialogue = true;
+    }
 }
 
 void DemonCastleState::drawDemonCastle(Graphics& graphics) {

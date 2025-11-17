@@ -54,6 +54,7 @@ set(SOURCES
     src/items/Item.cpp
     src/items/Inventory.cpp
     src/items/Equipment.cpp
+    src/items/ItemFactory.cpp
     src/ui/UI.cpp
     src/ui/CommonUI.cpp
     src/utils/MapTerrain.cpp

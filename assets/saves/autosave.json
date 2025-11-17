@@ -1,0 +1,119 @@
+{
+    "attack": 10,
+    "currentNight": 1,
+    "defense": 4,
+    "demonTrust": 50,
+    "equipment": {
+        "equipment": {
+            "accessory": {
+                "hasEquipment": false
+            },
+            "armor": {
+                "hasEquipment": true,
+                "itemName": "ぬののふく",
+                "itemType": 2
+            },
+            "shield": {
+                "hasEquipment": false
+            },
+            "weapon": {
+                "hasEquipment": true,
+                "itemName": "たけのぼう",
+                "itemType": 1
+            }
+        }
+    },
+    "evilActions": 0,
+    "exp": 0,
+    "gameState": {
+        "playerX": 3,
+        "playerY": 2,
+        "roomFirstTime": true,
+        "stateType": 5
+    },
+    "gold": 5,
+    "goodActions": 0,
+    "hp": 35,
+    "inventory": {
+        "maxSlots": 20,
+        "slots": [
+            {
+                "hasItem": true,
+                "itemName": "やくそう",
+                "itemType": 0,
+                "quantity": 3
+            },
+            {
+                "hasItem": true,
+                "itemName": "せいすい",
+                "itemType": 0,
+                "quantity": 2
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            },
+            {
+                "hasItem": false
+            }
+        ]
+    },
+    "killedResidents": [],
+    "kingTrust": 53,
+    "level": 2,
+    "maxHp": 35,
+    "maxMp": 21,
+    "mental": 100,
+    "mp": 21,
+    "name": "勇者",
+    "nightTimer": 0.0,
+    "nightTimerActive": false,
+    "trustLevel": 50
+}

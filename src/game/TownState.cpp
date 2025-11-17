@@ -8,6 +8,7 @@
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 bool TownState::s_nightTimerActive = false;
 float TownState::s_nightTimer = 0.0f;
@@ -41,6 +42,9 @@ void TownState::enter() {
     
     nightTimerActive = s_nightTimerActive;
     nightTimer = s_nightTimer;
+    
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
     
     if (s_fromDemonCastle) {
         startNightTimer();
@@ -834,6 +838,23 @@ void TownState::showMessage(const std::string& message) {
 
 void TownState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json TownState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::TOWN);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["showGameExplanation"] = showGameExplanation;
+    j["explanationStep"] = explanationStep;
+    return j;
+}
+
+void TownState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
+    if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
 }
 
 void TownState::checkRoomEntrance() {

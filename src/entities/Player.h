@@ -15,6 +15,7 @@
 #include "../items/Inventory.h"
 #include "../items/Equipment.h"
 #include <map>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief 魔法の種類
@@ -47,6 +48,9 @@ private:
     
     // 信頼度管理（単一責任の原則）
     std::unique_ptr<PlayerTrust> playerTrust;
+    
+    // セーブされたゲーム状態（オプショナル）
+    std::unique_ptr<nlohmann::json> savedGameState;
     
     // 夜間システム
     bool isNightTime; // 夜間かどうか
@@ -499,6 +503,18 @@ public:
      * @return 読み込みが成功したか
      */
     bool autoLoad(float& nightTimer, bool& nightTimerActive);
+    
+    /**
+     * @brief セーブされたゲーム状態の設定
+     * @param stateJson ゲーム状態のJSONオブジェクト
+     */
+    void setSavedGameState(const nlohmann::json& stateJson);
+    
+    /**
+     * @brief セーブされたゲーム状態の取得
+     * @return ゲーム状態のJSONオブジェクト（存在しない場合はnullptr）
+     */
+    const nlohmann::json* getSavedGameState() const;
     
     /**
      * @brief レベルの設定

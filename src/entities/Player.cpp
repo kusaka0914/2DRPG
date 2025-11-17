@@ -1,7 +1,10 @@
 #include "Player.h"
+#include "../game/TownState.h"
 #include <iostream>
 #include <random>
 #include <fstream>
+#include <vector>
+#include <nlohmann/json.hpp>
 
 Player::Player(const std::string& name)
     : Character(name, 30, 20, 8, 3, 1), inventory(20), equipmentManager(),
@@ -223,121 +226,181 @@ void Player::toggleNightTime() {
 // 新しいパラメータ変更メソッド
 
 void Player::saveGame(const std::string& filename, float nightTimer, bool nightTimerActive) {
-    std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        return;
-    }
+    // assets/saves/ディレクトリに保存
+    std::string savePath = "assets/saves/" + filename;
+    nlohmann::json j;
     
     // 基本ステータス
-    file.write(reinterpret_cast<const char*>(&level), sizeof(level));
-    file.write(reinterpret_cast<const char*>(&exp), sizeof(exp));
-    file.write(reinterpret_cast<const char*>(&hp), sizeof(hp));
-    file.write(reinterpret_cast<const char*>(&mp), sizeof(mp));
-    file.write(reinterpret_cast<const char*>(&maxHp), sizeof(maxHp));
-    file.write(reinterpret_cast<const char*>(&maxMp), sizeof(maxMp));
-    int attackValue = getAttack();
-    file.write(reinterpret_cast<const char*>(&attackValue), sizeof(attackValue));
-    int defenseValue = getDefense();
-    file.write(reinterpret_cast<const char*>(&defenseValue), sizeof(defenseValue));
+    j["level"] = level;
+    j["exp"] = exp;
+    j["hp"] = hp;
+    j["mp"] = mp;
+    j["maxHp"] = maxHp;
+    j["maxMp"] = maxMp;
+    j["attack"] = getAttack();
+    j["defense"] = getDefense();
     
+    // 拡張ステータス
     auto& extStats = playerStats->getExtendedStats();
-    file.write(reinterpret_cast<const char*>(&extStats.gold), sizeof(extStats.gold));
-    file.write(reinterpret_cast<const char*>(&extStats.mental), sizeof(extStats.mental));
-    file.write(reinterpret_cast<const char*>(&extStats.demonTrust), sizeof(extStats.demonTrust));
-    file.write(reinterpret_cast<const char*>(&extStats.kingTrust), sizeof(extStats.kingTrust));
-    auto trustData = playerTrust->getTrustData();
-    file.write(reinterpret_cast<const char*>(&trustData.trustLevel), sizeof(trustData.trustLevel));
-    file.write(reinterpret_cast<const char*>(&trustData.evilActions), sizeof(trustData.evilActions));
-    file.write(reinterpret_cast<const char*>(&trustData.goodActions), sizeof(trustData.goodActions));
+    j["gold"] = extStats.gold;
+    j["mental"] = extStats.mental;
+    j["demonTrust"] = extStats.demonTrust;
+    j["kingTrust"] = extStats.kingTrust;
     
-    file.write(reinterpret_cast<const char*>(&currentNight), sizeof(currentNight));
-    int killedResidentsSize = killedResidents.size();
-    file.write(reinterpret_cast<const char*>(&killedResidentsSize), sizeof(killedResidentsSize));
+    // 信頼度データ
+    auto trustData = playerTrust->getTrustData();
+    j["trustLevel"] = trustData.trustLevel;
+    j["evilActions"] = trustData.evilActions;
+    j["goodActions"] = trustData.goodActions;
+    
+    // 夜の情報
+    j["currentNight"] = currentNight;
+    j["killedResidents"] = nlohmann::json::array();
     for (const auto& pos : killedResidents) {
-        file.write(reinterpret_cast<const char*>(&pos.first), sizeof(pos.first));
-        file.write(reinterpret_cast<const char*>(&pos.second), sizeof(pos.second));
+        nlohmann::json resident;
+        resident["x"] = pos.first;
+        resident["y"] = pos.second;
+        j["killedResidents"].push_back(resident);
     }
     
-    int nameLength = name.length();
-    file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
-    file.write(name.c_str(), nameLength);
+    // 名前
+    j["name"] = name;
     
-    inventory.saveToFile(file);
-    equipmentManager.saveToFile(file);
-
-    file.write(reinterpret_cast<const char*>(&nightTimer), sizeof(nightTimer));
-    file.write(reinterpret_cast<const char*>(&nightTimerActive), sizeof(nightTimerActive));
+    // インベントリ
+    j["inventory"] = inventory.toJson();
     
-    file.close();
+    // 装備
+    j["equipment"] = equipmentManager.toJson();
+    
+    // タイマー情報
+    j["nightTimer"] = nightTimer;
+    j["nightTimerActive"] = nightTimerActive;
+    
+    // ゲーム状態情報（外部から設定される）
+    if (savedGameState) {
+        j["gameState"] = *savedGameState;
+    }
+    
+    // JSONファイルに書き込み
+    std::ofstream file(savePath);
+    if (file.is_open()) {
+        file << j.dump(4); // インデント4で整形して出力
+        file.close();
+    }
 }
 
 bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nightTimerActive) {
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
+    // assets/saves/ディレクトリから読み込み（複数の候補を試す）
+    std::vector<std::string> candidates = {
+        "assets/saves/" + filename,           // assets/saves/autosave.json
+        "../assets/saves/" + filename,        // ../assets/saves/autosave.json (buildディレクトリから実行)
+        filename,                              // 直接指定されたパス（後方互換性のため）
+        "autosave.dat"                         // 古いバイナリ形式（後方互換性のため）
+    };
+    
+    std::ifstream file;
+    bool fileFound = false;
+    for (const auto& path : candidates) {
+        file.open(path);
+        if (file.is_open()) {
+            fileFound = true;
+            break;
+        }
+    }
+    
+    if (!fileFound) {
         return false;
     }
     
-    // 基本ステータス
-    file.read(reinterpret_cast<char*>(&level), sizeof(level));
-    file.read(reinterpret_cast<char*>(&exp), sizeof(exp));
-    file.read(reinterpret_cast<char*>(&hp), sizeof(hp));
-    file.read(reinterpret_cast<char*>(&mp), sizeof(mp));
-    file.read(reinterpret_cast<char*>(&maxHp), sizeof(maxHp));
-    file.read(reinterpret_cast<char*>(&maxMp), sizeof(maxMp));
-    int attackValue;
-    file.read(reinterpret_cast<char*>(&attackValue), sizeof(attackValue));
-    setAttack(attackValue);
-    int defenseValue;
-    file.read(reinterpret_cast<char*>(&defenseValue), sizeof(defenseValue));
-    setDefense(defenseValue);
-    
-    auto& extStats = playerStats->getExtendedStats();
-    file.read(reinterpret_cast<char*>(&extStats.gold), sizeof(extStats.gold));
-    file.read(reinterpret_cast<char*>(&extStats.mental), sizeof(extStats.mental));
-    file.read(reinterpret_cast<char*>(&extStats.demonTrust), sizeof(extStats.demonTrust));
-    file.read(reinterpret_cast<char*>(&extStats.kingTrust), sizeof(extStats.kingTrust));
-    PlayerTrust::TrustData trustData;
-    file.read(reinterpret_cast<char*>(&trustData.trustLevel), sizeof(trustData.trustLevel));
-    file.read(reinterpret_cast<char*>(&trustData.evilActions), sizeof(trustData.evilActions));
-    file.read(reinterpret_cast<char*>(&trustData.goodActions), sizeof(trustData.goodActions));
-    playerTrust->setTrustData(trustData);
-    
-    file.read(reinterpret_cast<char*>(&currentNight), sizeof(currentNight));
-    int killedResidentsSize;
-    file.read(reinterpret_cast<char*>(&killedResidentsSize), sizeof(killedResidentsSize));
-    killedResidents.clear();
-    for (int i = 0; i < killedResidentsSize; ++i) {
-        int x, y;
-        file.read(reinterpret_cast<char*>(&x), sizeof(x));
-        file.read(reinterpret_cast<char*>(&y), sizeof(y));
-        killedResidents.push_back({x, y});
+    try {
+        nlohmann::json j;
+        file >> j;
+        
+        // 基本ステータス
+        if (j.contains("level")) level = j["level"];
+        if (j.contains("exp")) exp = j["exp"];
+        if (j.contains("hp")) hp = j["hp"];
+        if (j.contains("mp")) mp = j["mp"];
+        if (j.contains("maxHp")) maxHp = j["maxHp"];
+        if (j.contains("maxMp")) maxMp = j["maxMp"];
+        if (j.contains("attack")) setAttack(j["attack"]);
+        if (j.contains("defense")) setDefense(j["defense"]);
+        
+        // 拡張ステータス
+        auto& extStats = playerStats->getExtendedStats();
+        if (j.contains("gold")) extStats.gold = j["gold"];
+        if (j.contains("mental")) extStats.mental = j["mental"];
+        if (j.contains("demonTrust")) extStats.demonTrust = j["demonTrust"];
+        if (j.contains("kingTrust")) extStats.kingTrust = j["kingTrust"];
+        
+        // 信頼度データ
+        if (j.contains("trustLevel") && j.contains("evilActions") && j.contains("goodActions")) {
+            PlayerTrust::TrustData trustData;
+            trustData.trustLevel = j["trustLevel"];
+            trustData.evilActions = j["evilActions"];
+            trustData.goodActions = j["goodActions"];
+            playerTrust->setTrustData(trustData);
+        }
+        
+        // 夜の情報
+        if (j.contains("currentNight")) currentNight = j["currentNight"];
+        if (j.contains("killedResidents") && j["killedResidents"].is_array()) {
+            killedResidents.clear();
+            for (const auto& resident : j["killedResidents"]) {
+                if (resident.contains("x") && resident.contains("y")) {
+                    killedResidents.push_back({resident["x"], resident["y"]});
+                }
+            }
+        }
+        
+        // 名前
+        if (j.contains("name")) name = j["name"];
+        
+        // インベントリ
+        if (j.contains("inventory")) {
+            inventory.fromJson(j["inventory"]);
+        }
+        
+        // 装備
+        if (j.contains("equipment")) {
+            equipmentManager.fromJson(j["equipment"]);
+        }
+        
+        // タイマー情報
+        if (j.contains("nightTimer")) nightTimer = j["nightTimer"];
+        if (j.contains("nightTimerActive")) nightTimerActive = j["nightTimerActive"];
+        
+        // ゲーム状態情報
+        if (j.contains("gameState")) {
+            savedGameState = std::make_unique<nlohmann::json>(j["gameState"]);
+        }
+        
+        file.close();
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading game: " << e.what() << std::endl;
+        file.close();
+        return false;
     }
-    
-    int nameLength;
-    file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-    char* nameBuffer = new char[nameLength + 1];
-    file.read(nameBuffer, nameLength);
-    nameBuffer[nameLength] = '\0';
-    name = std::string(nameBuffer);
-    delete[] nameBuffer;
-    
-    inventory.loadFromFile(file);
-    equipmentManager.loadFromFile(file);
-
-    file.read(reinterpret_cast<char*>(&nightTimer), sizeof(nightTimer));
-    file.read(reinterpret_cast<char*>(&nightTimerActive), sizeof(nightTimerActive));
-    
-    file.close();
-    return true;
 }
 
 void Player::autoSave() {
     // タイマー情報も含めてセーブ
-    saveGame("autosave.dat");
+    float nightTimer = TownState::s_nightTimer;
+    bool nightTimerActive = TownState::s_nightTimerActive;
+    saveGame("autosave.json", nightTimer, nightTimerActive);
 }
 
 bool Player::autoLoad(float& nightTimer, bool& nightTimerActive) {
-    return loadGame("autosave.dat", nightTimer, nightTimerActive);
+    return loadGame("autosave.json", nightTimer, nightTimerActive);
+}
+
+void Player::setSavedGameState(const nlohmann::json& stateJson) {
+    savedGameState = std::make_unique<nlohmann::json>(stateJson);
+}
+
+const nlohmann::json* Player::getSavedGameState() const {
+    return savedGameState.get();
 }
 
 std::string Player::getSpellName(SpellType spell) {
