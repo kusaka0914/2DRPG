@@ -13,13 +13,14 @@ Player::Player(const std::string& name)
       playerStory(std::make_unique<PlayerStory>(name)),
       playerTrust(std::make_unique<PlayerTrust>(50, true)),
       isNightTime(false), currentNight(0),
-      hasSeenTownExplanation(false),
-      hasSeenFieldExplanation(false),
-      hasSeenFieldFirstVictoryExplanation(false),
-      hasSeenBattleExplanation(false),
-      hasSeenRoomStory(false),
-      hasSeenCastleStory(false),
-      hasSeenDemonCastleStory(false) {
+             hasSeenTownExplanation(false),
+             hasSeenFieldExplanation(false),
+             hasSeenFieldFirstVictoryExplanation(false),
+             hasSeenBattleExplanation(false),
+             hasSeenNightExplanation(false),
+             hasSeenRoomStory(false),
+             hasSeenCastleStory(false),
+             hasSeenDemonCastleStory(false) {
     addStartingItems();
 }
 
@@ -289,6 +290,7 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     j["hasSeenFieldExplanation"] = hasSeenFieldExplanation;
     j["hasSeenFieldFirstVictoryExplanation"] = hasSeenFieldFirstVictoryExplanation;
     j["hasSeenBattleExplanation"] = hasSeenBattleExplanation;
+    j["hasSeenNightExplanation"] = hasSeenNightExplanation;
     
     // ストーリーメッセージUIの完了状態
     j["hasSeenRoomStory"] = hasSeenRoomStory;
@@ -403,6 +405,7 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         if (j.contains("hasSeenFieldExplanation")) hasSeenFieldExplanation = j["hasSeenFieldExplanation"];
         if (j.contains("hasSeenFieldFirstVictoryExplanation")) hasSeenFieldFirstVictoryExplanation = j["hasSeenFieldFirstVictoryExplanation"];
         if (j.contains("hasSeenBattleExplanation")) hasSeenBattleExplanation = j["hasSeenBattleExplanation"];
+        if (j.contains("hasSeenNightExplanation")) hasSeenNightExplanation = j["hasSeenNightExplanation"];
         
         // ストーリーメッセージUIの完了状態
         if (j.contains("hasSeenRoomStory")) hasSeenRoomStory = j["hasSeenRoomStory"];

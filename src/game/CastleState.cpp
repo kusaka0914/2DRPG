@@ -24,7 +24,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     
     if (fromNightState) {
         kingDialogues = {
-            "住人を襲っていた犯人はやはりお主であったか、、我が街の完敗である。\nさあ、お主の好きにするがいい。"
+            "住民を襲っていた犯人はやはりお主であったか、、我が街の完敗である。\nさあ、お主の好きにするがいい。"
         };
         kingDefeated = false;
         guardLeftDefeated = false;

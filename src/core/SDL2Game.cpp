@@ -179,6 +179,12 @@ void SDL2Game::initializeGame() {
                     stateManager.changeState(std::move(fieldState));
                     break;
                 }
+                case StateType::NIGHT: {
+                    auto nightState = std::make_unique<NightState>(player);
+                    nightState->fromJson(*savedState);
+                    stateManager.changeState(std::move(nightState));
+                    break;
+                }
                 default:
                     // その他のStateはメインメニューから開始
                     stateManager.changeState(std::make_unique<MainMenuState>(player));
@@ -314,6 +320,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/UI/attack.png", "command_attack");
     graphics.loadTexture("assets/textures/UI/defend.png", "command_defend");
     graphics.loadTexture("assets/textures/UI/magic.png", "command_magic");
+    graphics.loadTexture("assets/textures/UI/hide.png", "command_hide");
     graphics.loadTexture("assets/textures/UI/vs.png", "vs_image");
     graphics.loadTexture("assets/textures/UI/title_logo.png", "title_logo");
     graphics.loadTexture("assets/textures/UI/title_bg.png", "title_bg");

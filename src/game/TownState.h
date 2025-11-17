@@ -87,7 +87,7 @@ private:
     // 夜の街へのタイマー機能
     bool nightTimerActive;
     float nightTimer;
-    const float NIGHT_TIMER_DURATION = 900.0f; // 15分 = 900秒
+    const float NIGHT_TIMER_DURATION = 120.0f; // 2分 = 120秒
     
     // ショップ関連
     std::vector<std::unique_ptr<Item>> shopItems;

@@ -67,6 +67,12 @@ private:
     Label* messageBoard;
     bool isShowingMessage;
     
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
+    Label* explanationMessageBoard;  // 説明用メッセージボード（左下に表示）
+    
     // 住民襲撃時の選択肢表示
     bool isShowingResidentChoice;
     bool isShowingMercyChoice;
@@ -151,6 +157,18 @@ public:
      * @return 状態タイプ（NIGHT）
      */
     StateType getType() const override { return StateType::NIGHT; }
+    
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
     
     /**
      * @brief 倒した住民の位置を取得
@@ -365,4 +383,20 @@ private:
      * @brief 選択肢表示の更新
      */
     void updateChoiceDisplay();
+    
+    /**
+     * @brief ゲーム説明のセットアップ
+     */
+    void setupGameExplanation();
+    
+    /**
+     * @brief 説明メッセージの表示
+     * @param message 表示するメッセージ
+     */
+    void showExplanationMessage(const std::string& message);
+    
+    /**
+     * @brief 説明メッセージのクリア
+     */
+    void clearExplanationMessage();
 }; 

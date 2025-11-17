@@ -1699,7 +1699,21 @@ void BattleState::endBattle() {
             if (enemy->getType() == EnemyType::DEMON_LORD) {
                 stateManager->changeState(std::make_unique<EndingState>(player));
             } else {
-                stateManager->changeState(std::make_unique<FieldState>(player));
+                // 目標レベルに達した場合は夜の街に遷移
+                // update()で既にs_levelGoalAchievedがtrueになっている可能性があるため、
+                // 目標レベルに達しているかどうかのみをチェック
+                if (player->getLevel() >= TownState::s_targetLevel) {
+                    // まだs_levelGoalAchievedがfalseの場合のみ設定
+                    if (!TownState::s_levelGoalAchieved) {
+                        TownState::s_levelGoalAchieved = true;
+                    }
+                    // 夜の街に遷移
+                    stateManager->changeState(std::make_unique<NightState>(player));
+                    player->setCurrentNight(player->getCurrentNight() + 1);
+                    TownState::s_nightCount++;
+                } else {
+                    stateManager->changeState(std::make_unique<FieldState>(player));
+                }
             }
         }
     }

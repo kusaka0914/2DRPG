@@ -10,6 +10,7 @@
 #include "../io/InputManager.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <random>
 #include <algorithm>
@@ -30,6 +31,7 @@ NightState::NightState(std::shared_ptr<Player> player)
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
       messageBoard(nullptr), nightDisplayLabel(nullptr), nightOperationLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
       selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), shouldReturnToTown(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      showGameExplanation(false), explanationStep(0), explanationMessageBoard(nullptr),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
       guardHp() {
@@ -187,10 +189,19 @@ void NightState::enter() {
     
     // 新しい夜に入る時は、1夜に倒した人数をリセット
     // （前回の夜から戻ってきた場合はリセットしない）
+    // fromJson()で復元された場合は、residentsKilledは既に復元されているのでリセットしない
     static int lastNight = -1;
     int currentNight = player->getCurrentNight();
+    // fromJson()で復元された場合は、residentsKilledは既に復元されているので、
+    // lastNightを更新するだけでリセットしない
+    // ただし、fromJson()が呼ばれたかどうかは判定できないため、
+    // residentsKilledが0でない場合は復元されたものとみなす
     if (lastNight != currentNight) {
-        residentsKilled = 0;
+        // residentsKilledが0の場合は新しい夜なのでリセット
+        // 0でない場合はfromJson()で復元されたものなのでリセットしない
+        if (residentsKilled == 0) {
+            residentsKilled = 0;  // 明示的に0に設定（既に0だが、意図を明確にする）
+        }
         lastNight = currentNight;
     }
         
@@ -231,8 +242,19 @@ void NightState::enter() {
         killedResidentPositions = playerKilledResidents;
         totalResidentsKilled = playerKilledResidents.size();
         
-        // メッセージ表示（住民を倒した処理でメッセージが表示されていない場合のみ）
-        if (!residentKilledInBattle && !isShowingMessage) {
+        // 初回の夜の街説明を表示するかチェック
+        // 説明UIを既に見た場合は表示しない
+        if (!player->hasSeenNightExplanation) {
+            if (!showGameExplanation || gameExplanationTexts.empty()) {
+                setupGameExplanation();
+            }
+            showGameExplanation = true;
+            explanationStep = 0;
+            // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+        }
+        
+        // メッセージ表示（住民を倒した処理でメッセージが表示されていない場合、かつ説明UIが表示されていない場合のみ）
+        if (!residentKilledInBattle && !isShowingMessage && !showGameExplanation) {
             showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
         }
     } catch (const std::exception& e) {
@@ -261,6 +283,13 @@ void NightState::update(float deltaTime) {
 
 void NightState::render(Graphics& graphics) {
     try {
+        bool uiJustInitialized = false;
+        if (!explanationMessageBoard) {
+            // setupUI()が呼ばれていない場合は、ここで呼ぶ
+            setupUI();
+            uiJustInitialized = true;
+        }
+        
         if (!playerTexture) {
             loadTextures(graphics);
         }
@@ -329,7 +358,27 @@ void NightState::render(Graphics& graphics) {
             graphics.drawRect(bgX, bgY, nightConfig.messageBoard.background.width, nightConfig.messageBoard.background.height);
         }
         
+        // 説明UIが設定されている場合は表示
+        // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
+        if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0) {
+            showExplanationMessage(gameExplanationTexts[0]);
+        }
+        // uiJustInitializedがfalseの場合でも、showGameExplanationがtrueでメッセージが表示されていない場合は表示する
+        else if (showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0 && explanationMessageBoard && explanationMessageBoard->getText().empty()) {
+            showExplanationMessage(gameExplanationTexts[0]);
+        }
         
+        if (showGameExplanation && explanationMessageBoard && !explanationMessageBoard->getText().empty()) {
+            auto mbConfig = config.getMessageBoardConfig();
+            
+            int bgX, bgY;
+            config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+            
+            graphics.setDrawColor(0, 0, 0, 255); // 黒色
+            graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true);
+            graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+            graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height);
+        }
         
         ui.render(graphics);
         
@@ -340,6 +389,25 @@ void NightState::render(Graphics& graphics) {
 
 void NightState::handleInput(const InputManager& input) {
     ui.handleInput(input);
+    
+    // 説明表示中の処理
+    if (showGameExplanation) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            explanationStep++;
+            
+            if (explanationStep >= gameExplanationTexts.size()) {
+                showGameExplanation = false;
+                explanationStep = 0;
+                clearExplanationMessage();
+                
+                // 説明UIが完全に終わったことを記録
+                player->hasSeenNightExplanation = true;
+            } else {
+                showExplanationMessage(gameExplanationTexts[explanationStep]);
+            }
+        }
+        return; // 説明中は他の操作を無効化
+    }
     
     if (isShowingResidentChoice && !isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::UP) || input.isKeyJustPressed(InputKey::W)) {
@@ -382,7 +450,7 @@ void NightState::handleInput(const InputManager& input) {
                 // 街に戻るメッセージを表示
                 int currentNight = player->getCurrentNight();
                 if (currentNight < 4) {
-                    showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+                    showMessage("住民を3人倒しました。これ以上は危険です。\n街に戻ります。");
                     // 次のEnterで街に戻る処理を実行するフラグを設定
                     shouldReturnToTown = true;
                 } else {
@@ -475,9 +543,22 @@ void NightState::setupUI() {
 
         auto nightOperationLabel = std::make_unique<Label>(95, 15, "", "default");
         nightOperationLabel->setColor({255, 255, 255, 255}); // 白文字
-        nightOperationLabel->setText("住人を倒す: Enter");
+        nightOperationLabel->setText("住民と話す: Enter");
         this->nightOperationLabel = nightOperationLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightOperationLabel));
+        
+        // 説明用メッセージボード（TownStateと同じ仕様）
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto mbConfig = config.getMessageBoardConfig();
+        
+        int textX, textY;
+        config.calculatePosition(textX, textY, mbConfig.text.position, 1100, 650);  // 画面サイズは固定値（実際の画面サイズはrender()で取得可能だが、ここでは固定値を使用）
+        
+        auto explanationLabelPtr = std::make_unique<Label>(textX, textY, "", "default");
+        explanationLabelPtr->setColor(mbConfig.text.color);
+        explanationLabelPtr->setText("");
+        explanationMessageBoard = explanationLabelPtr.get();
+        ui.addElement(std::move(explanationLabelPtr));
     } catch (const std::exception& e) {
     }
 }
@@ -507,7 +588,7 @@ void NightState::attackResident(int x, int y) {
     if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
         int currentNight = player->getCurrentNight();
         if (currentNight < 4) {
-            showMessage("住人を3人倒しました。これ以上は危険です。\n街に戻ります。");
+            showMessage("住民を3人倒しました。これ以上は危険です。\n街に戻ります。");
         } else {
             showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
         }
@@ -815,8 +896,8 @@ std::string NightState::getResidentName(int x, int y) const {
     };
     
     std::vector<std::string> residentNames = {
-        "町の住人1", "町の住人2", "町の住人3", "町の住人4", "町の住人5", "町の住人6",
-        "町の住人7", "町の住人8", "町の住人9", "町の住人10", "町の住人11", "町の住人12"
+        "町の住民1", "町の住民2", "町の住民3", "町の住民4", "町の住民5", "町の住民6",
+        "町の住民7", "町の住民8", "町の住民9", "町の住民10", "町の住民11", "町の住民12"
     };
     
     for (size_t i = 0; i < allPositions.size() && i < residentNames.size(); ++i) {
@@ -1090,7 +1171,7 @@ void NightState::checkGameProgress() {
     if (!allResidentsKilled && residents.empty()) {
         allResidentsKilled = true;
         canAttackGuards = true;
-        showMessage("住人を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。");
+        showMessage("住民を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。");
     }
     
     if (allResidentsKilled && !allGuardsKilled && guards.empty()) {
@@ -1134,4 +1215,172 @@ void NightState::enterCastle() {
     if (stateManager) {
         stateManager->changeState(std::make_unique<CastleState>(player, true));
     }
-} 
+}
+
+void NightState::setupGameExplanation() {
+    gameExplanationTexts.clear();
+    gameExplanationTexts.push_back("目標レベル到達おめでとう！素晴らしい戦いだったよ！");
+    gameExplanationTexts.push_back("さて、次は夜の街だね。ここからが堕天勇者としての最大の見せ場だよ。");
+    gameExplanationTexts.push_back("なんてったってこれから街を滅ぼすんだからね。");
+    gameExplanationTexts.push_back("じゃあまず家の前に住民が立っているのは見える？");
+    gameExplanationTexts.push_back("合計12人いるみたい。\n警戒されずに倒せるのが一夜にせいぜい3人だから、滅ぼすためには四夜必要だね。");
+    gameExplanationTexts.push_back("本題、夜の街で行うことは衛兵に見つからずに住民を倒すことだよ。");
+    gameExplanationTexts.push_back("衛兵は各家を巡回しているから、衛兵がちょうどいないタイミングで住民に話しかけるんだ。");
+    gameExplanationTexts.push_back("話しかけるのは住民の前でEnterだよ。");
+    gameExplanationTexts.push_back("そうすると住民と戦うかどうか選択できるんだ。");
+    gameExplanationTexts.push_back("基本的には戦うを選択して住民をどんどん倒していくよ。");
+    gameExplanationTexts.push_back("ここでさっき説明を飛ばした、メンタル、魔王からの信頼について説明していくよ。");
+    gameExplanationTexts.push_back("メンタルっていうのは君の精神状態だよ。\n住民を倒していくうちにメンタルが下がっていくんだ。\n倒し慣れると楽しくなって逆に上がるって人もいるみたいだけどね。");
+    gameExplanationTexts.push_back("メンタルが下がると住民との戦闘で攻撃の命中率が下がってしまうんだ。");
+    gameExplanationTexts.push_back("メンタルを回復するには住民と戦わないを選択するといいよ。\nその代わり魔王からの信頼が下がるから注意してね。");
+    gameExplanationTexts.push_back("魔王からの信頼は住民を倒すことで上がっていくよ。");
+    gameExplanationTexts.push_back("でもこの時王様からの信頼は下がっちゃうから、\n日中にモンスターを倒して王様からの信頼をあげて、\n夜は住民を倒して魔王からの信頼をあげて、というのを繰り返してバランスを保つのが重要だよ。");
+    gameExplanationTexts.push_back("一旦説明は以上だよ！とりあえず住民と戦ってみよう！");
+}
+
+void NightState::showExplanationMessage(const std::string& message) {
+    if (explanationMessageBoard) {
+        explanationMessageBoard->setText(message);
+    }
+}
+
+void NightState::clearExplanationMessage() {
+    if (explanationMessageBoard) {
+        explanationMessageBoard->setText("");
+    }
+}
+
+nlohmann::json NightState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::NIGHT);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["isStealthMode"] = isStealthMode;
+    j["stealthLevel"] = stealthLevel;
+    j["residentsKilled"] = residentsKilled;
+    j["totalResidentsKilled"] = totalResidentsKilled;
+    j["allResidentsKilled"] = allResidentsKilled;
+    j["allGuardsKilled"] = allGuardsKilled;
+    j["canAttackGuards"] = canAttackGuards;
+    j["canEnterCastle"] = canEnterCastle;
+    j["showResidentKilledMessage"] = showResidentKilledMessage;
+    j["showReturnToTownMessage"] = showReturnToTownMessage;
+    j["shouldReturnToTown"] = shouldReturnToTown;
+    j["isShowingResidentChoice"] = isShowingResidentChoice;
+    j["isShowingMercyChoice"] = isShowingMercyChoice;
+    j["selectedChoice"] = selectedChoice;
+    j["currentTargetX"] = currentTargetX;
+    j["currentTargetY"] = currentTargetY;
+    
+    // 住民の位置を保存
+    nlohmann::json residentsJson = nlohmann::json::array();
+    for (const auto& pos : residents) {
+        nlohmann::json posJson;
+        posJson["x"] = pos.first;
+        posJson["y"] = pos.second;
+        residentsJson.push_back(posJson);
+    }
+    j["residents"] = residentsJson;
+    
+    // 衛兵の位置を保存
+    nlohmann::json guardsJson = nlohmann::json::array();
+    for (const auto& pos : guards) {
+        nlohmann::json posJson;
+        posJson["x"] = pos.first;
+        posJson["y"] = pos.second;
+        guardsJson.push_back(posJson);
+    }
+    j["guards"] = guardsJson;
+    
+    // 倒した住民の位置を保存
+    nlohmann::json killedResidentsJson = nlohmann::json::array();
+    for (const auto& pos : killedResidentPositions) {
+        nlohmann::json posJson;
+        posJson["x"] = pos.first;
+        posJson["y"] = pos.second;
+        killedResidentsJson.push_back(posJson);
+    }
+    j["killedResidentPositions"] = killedResidentsJson;
+    
+    // 衛兵のHPを保存
+    nlohmann::json guardHpJson = nlohmann::json::array();
+    for (int hp : guardHp) {
+        guardHpJson.push_back(hp);
+    }
+    j["guardHp"] = guardHpJson;
+    
+    return j;
+}
+
+void NightState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("isStealthMode")) isStealthMode = j["isStealthMode"];
+    if (j.contains("stealthLevel")) stealthLevel = j["stealthLevel"];
+    if (j.contains("residentsKilled")) residentsKilled = j["residentsKilled"];
+    if (j.contains("totalResidentsKilled")) totalResidentsKilled = j["totalResidentsKilled"];
+    if (j.contains("allResidentsKilled")) allResidentsKilled = j["allResidentsKilled"];
+    if (j.contains("allGuardsKilled")) allGuardsKilled = j["allGuardsKilled"];
+    if (j.contains("canAttackGuards")) canAttackGuards = j["canAttackGuards"];
+    if (j.contains("canEnterCastle")) canEnterCastle = j["canEnterCastle"];
+    if (j.contains("showResidentKilledMessage")) showResidentKilledMessage = j["showResidentKilledMessage"];
+    if (j.contains("showReturnToTownMessage")) showReturnToTownMessage = j["showReturnToTownMessage"];
+    if (j.contains("shouldReturnToTown")) shouldReturnToTown = j["shouldReturnToTown"];
+    if (j.contains("isShowingResidentChoice")) isShowingResidentChoice = j["isShowingResidentChoice"];
+    if (j.contains("isShowingMercyChoice")) isShowingMercyChoice = j["isShowingMercyChoice"];
+    if (j.contains("selectedChoice")) selectedChoice = j["selectedChoice"];
+    if (j.contains("currentTargetX")) currentTargetX = j["currentTargetX"];
+    if (j.contains("currentTargetY")) currentTargetY = j["currentTargetY"];
+    if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
+    if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
+    // gameExplanationTextsも復元
+    if (j.contains("gameExplanationTexts") && j["gameExplanationTexts"].is_array()) {
+        gameExplanationTexts.clear();
+        for (const auto& text : j["gameExplanationTexts"]) {
+            gameExplanationTexts.push_back(text.get<std::string>());
+        }
+    }
+    
+    // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
+    if (!player->hasSeenNightExplanation && showGameExplanation) {
+        explanationStep = 0;
+    }
+    
+    // 住民の位置を復元
+    if (j.contains("residents") && j["residents"].is_array()) {
+        residents.clear();
+        for (const auto& posJson : j["residents"]) {
+            int x = posJson["x"];
+            int y = posJson["y"];
+            residents.push_back({x, y});
+        }
+    }
+    
+    // 衛兵の位置を復元
+    if (j.contains("guards") && j["guards"].is_array()) {
+        guards.clear();
+        for (const auto& posJson : j["guards"]) {
+            int x = posJson["x"];
+            int y = posJson["y"];
+            guards.push_back({x, y});
+        }
+    }
+    
+    // 倒した住民の位置を復元
+    if (j.contains("killedResidentPositions") && j["killedResidentPositions"].is_array()) {
+        killedResidentPositions.clear();
+        for (const auto& posJson : j["killedResidentPositions"]) {
+            int x = posJson["x"];
+            int y = posJson["y"];
+            killedResidentPositions.push_back({x, y});
+        }
+    }
+    
+    // 衛兵のHPを復元
+    if (j.contains("guardHp") && j["guardHp"].is_array()) {
+        guardHp.clear();
+        for (const auto& hpJson : j["guardHp"]) {
+            guardHp.push_back(hpJson.get<int>());
+        }
+    }
+}
