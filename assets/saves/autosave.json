@@ -2,7 +2,7 @@
     "attack": 8,
     "currentNight": 0,
     "defense": 3,
-    "demonTrust": 60,
+    "demonTrust": 50,
     "equipment": {
         "equipment": {
             "accessory": {
@@ -25,107 +25,7 @@
     },
     "evilActions": 0,
     "exp": 0,
-    "gameState": {
-        "allGuardsKilled": false,
-        "allResidentsKilled": false,
-        "canAttackGuards": false,
-        "canEnterCastle": false,
-        "currentTargetX": 0,
-        "currentTargetY": 0,
-        "guardHp": [
-            2,
-            2,
-            2,
-            2
-        ],
-        "guards": [
-            {
-                "x": 17,
-                "y": 7
-            },
-            {
-                "x": 5,
-                "y": 5
-            },
-            {
-                "x": 17,
-                "y": 13
-            },
-            {
-                "x": 21,
-                "y": 5
-            }
-        ],
-        "isShowingMercyChoice": false,
-        "isShowingResidentChoice": false,
-        "isStealthMode": true,
-        "killedResidentPositions": [
-            {
-                "x": 19,
-                "y": 14
-            },
-            {
-                "x": 19,
-                "y": 14
-            }
-        ],
-        "playerX": 24,
-        "playerY": 14,
-        "residents": [
-            {
-                "x": 3,
-                "y": 7
-            },
-            {
-                "x": 7,
-                "y": 6
-            },
-            {
-                "x": 11,
-                "y": 8
-            },
-            {
-                "x": 5,
-                "y": 10
-            },
-            {
-                "x": 19,
-                "y": 8
-            },
-            {
-                "x": 23,
-                "y": 6
-            },
-            {
-                "x": 27,
-                "y": 7
-            },
-            {
-                "x": 6,
-                "y": 13
-            },
-            {
-                "x": 24,
-                "y": 13
-            },
-            {
-                "x": 3,
-                "y": 14
-            },
-            {
-                "x": 20,
-                "y": 4
-            }
-        ],
-        "residentsKilled": 1,
-        "selectedChoice": 0,
-        "shouldReturnToTown": false,
-        "showResidentKilledMessage": false,
-        "showReturnToTownMessage": false,
-        "stateType": 6,
-        "stealthLevel": 1,
-        "totalResidentsKilled": 2
-    },
+    "gameState": null,
     "gold": 0,
     "goodActions": 0,
     "hasSeenBattleExplanation": false,
@@ -208,21 +108,12 @@
             }
         ]
     },
-    "killedResidents": [
-        {
-            "x": 19,
-            "y": 14
-        },
-        {
-            "x": 19,
-            "y": 14
-        }
-    ],
-    "kingTrust": 40,
+    "killedResidents": [],
+    "kingTrust": 50,
     "level": 1,
     "maxHp": 30,
     "maxMp": 20,
-    "mental": 80,
+    "mental": 100,
     "mp": 20,
     "name": "勇者",
     "nightCount": 0,

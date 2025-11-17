@@ -44,9 +44,97 @@ void GameOverState::update(float deltaTime) {
 }
 
 void GameOverState::render(Graphics& graphics) {
-    // 黒い背景
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(0, 0, 1100, 650, true);
+    int screenWidth = graphics.getScreenWidth();
+    int screenHeight = graphics.getScreenHeight();
+    
+    // 通常戦の場合はbattle_bg.pngを背景に、住民戦の場合は黒背景
+    if (!isResidentBattle) {
+        // 通常戦：battle_bg.pngを背景に表示
+        SDL_Texture* bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        } else {
+            // フォールバック：黒背景
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        }
+        
+        // 画面の中心にplayer_defeat.pngを表示
+        SDL_Texture* defeatTexture = graphics.getTexture("player_defeat");
+        if (!defeatTexture) {
+            defeatTexture = graphics.loadTexture("assets/textures/characters/player_defeat.png", "player_defeat");
+        }
+        if (defeatTexture) {
+            int imgWidth, imgHeight;
+            SDL_QueryTexture(defeatTexture, nullptr, nullptr, &imgWidth, &imgHeight);
+            
+            // アスペクト比を維持しながら適切なサイズで表示
+            int baseSize = 300; // ベースサイズ
+            float aspectRatio = static_cast<float>(imgWidth) / static_cast<float>(imgHeight);
+            int displayWidth, displayHeight;
+            if (imgWidth > imgHeight) {
+                displayWidth = baseSize;
+                displayHeight = static_cast<int>(baseSize / aspectRatio);
+            } else {
+                displayHeight = baseSize;
+                displayWidth = static_cast<int>(baseSize * aspectRatio);
+            }
+            
+            // 画面の中心に配置
+            int centerX = screenWidth / 2;
+            int centerY = screenHeight / 2;
+            int imageX = centerX - displayWidth / 2;
+            int imageY = centerY - displayHeight / 2;
+            
+            graphics.drawTexture(defeatTexture, imageX, imageY, displayWidth, displayHeight);
+        }
+    } else {
+        // 住民戦：night_bg.pngを背景に表示
+        SDL_Texture* bgTexture = graphics.getTexture("night_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/night_bg.png", "night_bg");
+        }
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        } else {
+            // フォールバック：黒背景
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        }
+        
+        // 画面の中心にplayer_captured.pngを表示
+        SDL_Texture* capturedTexture = graphics.getTexture("player_captured");
+        if (!capturedTexture) {
+            capturedTexture = graphics.loadTexture("assets/textures/characters/player_captured.png", "player_captured");
+        }
+        if (capturedTexture) {
+            int imgWidth, imgHeight;
+            SDL_QueryTexture(capturedTexture, nullptr, nullptr, &imgWidth, &imgHeight);
+            
+            // アスペクト比を維持しながら適切なサイズで表示
+            int baseSize = 300; // ベースサイズ
+            float aspectRatio = static_cast<float>(imgWidth) / static_cast<float>(imgHeight);
+            int displayWidth, displayHeight;
+            if (imgWidth > imgHeight) {
+                displayWidth = baseSize;
+                displayHeight = static_cast<int>(baseSize / aspectRatio);
+            } else {
+                displayHeight = baseSize;
+                displayWidth = static_cast<int>(baseSize * aspectRatio);
+            }
+            
+            // 画面の中心に配置
+            int centerX = screenWidth / 2;
+            int centerY = screenHeight / 2;
+            int imageX = centerX - displayWidth / 2;
+            int imageY = centerY - displayHeight / 2;
+            
+            graphics.drawTexture(capturedTexture, imageX, imageY, displayWidth, displayHeight);
+        }
+    }
     
     ui.render(graphics);
     

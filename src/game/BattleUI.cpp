@@ -972,6 +972,10 @@ SDL_Texture* BattleUI::getCommandTexture(const std::string& commandName) const {
         return graphics->getTexture("command_magic");
     } else if (commandName == "身を隠す") {
         return graphics->getTexture("command_hide");
+    } else if (commandName == "怯える") {
+        return graphics->getTexture("command_fear");
+    } else if (commandName == "助けを呼ぶ") {
+        return graphics->getTexture("command_help");
     }
     return nullptr;
 }

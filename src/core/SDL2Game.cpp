@@ -264,6 +264,8 @@ float SDL2Game::calculateDeltaTime() {
 void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/characters/player.png", "player");
     graphics.loadTexture("assets/textures/characters/player_field.png", "player_field");
+    graphics.loadTexture("assets/textures/characters/player_defeat.png", "player_defeat");
+    graphics.loadTexture("assets/textures/characters/player_captured.png", "player_captured");
     graphics.loadTexture("assets/textures/characters/king.png", "king");
     graphics.loadTexture("assets/textures/characters/guard.png", "guard");
     graphics.loadTexture("assets/textures/characters/demon.png", "demon");
@@ -321,6 +323,8 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/UI/defend.png", "command_defend");
     graphics.loadTexture("assets/textures/UI/magic.png", "command_magic");
     graphics.loadTexture("assets/textures/UI/hide.png", "command_hide");
+    graphics.loadTexture("assets/textures/UI/fear.png", "command_fear");
+    graphics.loadTexture("assets/textures/UI/help.png", "command_help");
     graphics.loadTexture("assets/textures/UI/vs.png", "vs_image");
     graphics.loadTexture("assets/textures/UI/title_logo.png", "title_logo");
     graphics.loadTexture("assets/textures/UI/title_bg.png", "title_bg");

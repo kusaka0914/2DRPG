@@ -294,6 +294,10 @@ void NightState::render(Graphics& graphics) {
             loadTextures(graphics);
         }
         
+        // 画面をクリア（前の画面の描画を消すため）
+        graphics.setDrawColor(30, 30, 50, 255); // 夜の街の背景色
+        graphics.clear();
+        
         drawMap(graphics);
         drawBuildings(graphics);
         
