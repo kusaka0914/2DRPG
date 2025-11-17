@@ -2807,9 +2807,39 @@ void BattleState::updateJudgePhase(float deltaTime, bool isDesperateMode) {
                             phaseTimer = 0.0f;
                         } else {
                             // それ以外の場合は結果フェーズに遷移
-                        currentPhase = BattlePhase::JUDGE_RESULT;
-                        judgeDisplayTimer = 0.0f;
-                        phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
+                            // ただし、「助けを呼ぶ」の場合は即座にゲームオーバー
+                            if (currentResidentCommand == BattleConstants::RESIDENT_COMMAND_CALL_HELP &&
+                                currentResidentPlayerCommand == BattleConstants::COMMAND_ATTACK) {
+                                // 攻撃 + 助けを呼ぶ → 即座にゲームオーバー
+                                if (stateManager) {
+                                    stateManager->changeState(std::make_unique<GameOverState>(
+                                        player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                                        true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
+                                }
+                                return;
+                            }
+                            
+                            // 「怯える」かつ「攻撃」の場合は即座にprocessResidentTurnを呼ぶ
+                            if (currentResidentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID &&
+                                currentResidentPlayerCommand == BattleConstants::COMMAND_ATTACK) {
+                                // 結果フェーズに遷移してから即座に処理を開始
+                                currentPhase = BattlePhase::JUDGE_RESULT;
+                                judgeDisplayTimer = 0.0f;
+                                phaseTimer = 0.0f;
+                                // 即座にprocessResidentTurnを呼ぶ（2秒待たない）
+                                processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+                                // processResidentTurnでGameOverStateに遷移した場合は、ここで処理を終了
+                                if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                                    return;
+                                }
+                                // アニメーションタイマーをリセット（アニメーションを最初から開始するため）
+                                animationController->resetResultAnimation();
+                            } else {
+                                // その他の場合は通常通り結果フェーズに遷移
+                                currentPhase = BattlePhase::JUDGE_RESULT;
+                                judgeDisplayTimer = 0.0f;
+                                phaseTimer = 0.0f;  // 住民戦の場合もphaseTimerをリセット
+                            }
                         }
                     } else {
                         currentJudgingTurnIndex++;
@@ -2851,17 +2881,32 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
             }
         }
         
+        // 「怯える」かつ「攻撃」の場合は既にジャッジフェーズでprocessResidentTurnが呼ばれているので、
+        // ここでは2秒待つ処理をスキップする
+        // それ以外の場合（身を隠すなど）でpendingDamagesが空の場合は2秒待つ
         if (pendingDamages.empty() && phaseTimer < 2.0f && !residentAttackFailed) {
-            phaseTimer += deltaTime;
-            // 2秒後に実際の処理に移行
-            if (phaseTimer >= 2.0f) {
-                processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
-                // processResidentTurnでpendingDamagesに追加された後、すぐにアニメーション処理に進む
-                // phaseTimerをリセットして、アニメーション処理を確実に開始する
-                phaseTimer = 0.0f;
-                // returnしない（通常の戦闘と同じ処理に進む）
+            // 「怯える」かつ「攻撃」の場合は既に処理済みなのでスキップ
+            if (currentResidentCommand == BattleConstants::RESIDENT_COMMAND_AFRAID &&
+                currentResidentPlayerCommand == BattleConstants::COMMAND_ATTACK) {
+                // 既にprocessResidentTurnが呼ばれているはずなので、何もしない
             } else {
-                return;  // 2秒経過するまではreturn
+                phaseTimer += deltaTime;
+                // 2秒後に実際の処理に移行
+                if (phaseTimer >= 2.0f) {
+                    processResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
+                    // processResidentTurnでGameOverStateに遷移した場合は、ここで処理を終了
+                    if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                        return;
+                    }
+                    // processResidentTurnでpendingDamagesに追加された後、すぐにアニメーション処理に進む
+                    // phaseTimerをリセットして、アニメーション処理を確実に開始する
+                    phaseTimer = 0.0f;
+                    // アニメーションタイマーもリセット（重要：アニメーションを最初から開始するため）
+                    animationController->resetResultAnimation();
+                    // returnしない（通常の戦闘と同じ処理に進む）
+                } else {
+                    return;  // 2秒経過するまではreturn
+                }
             }
         }
         // pendingDamagesが追加された後は通常の戦闘と同じ処理
@@ -3018,6 +3063,149 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
             currentExecutingTurn = 0;
             executeDelayTimer = 0.0f;
         }
+    }
+    
+    // 住民戦の場合は専用の処理（1ターンしかないため）
+    if (enemy->isResident() && !pendingDamages.empty()) {
+        // アニメーション更新
+        animationController->updateResultAnimation(deltaTime, isDesperateMode);
+        auto& resultState = animationController->getResultState();
+        
+        // アニメーションタイマーが初期化されていない場合（初回のみ）、リセット
+        // これはprocessResidentTurnが呼ばれた直後の初回フレームで実行される
+        if (resultState.resultAnimationTimer == 0.0f && currentExecutingTurn == 0 && !damageAppliedInAnimation) {
+            animationController->resetResultAnimation();
+        }
+        
+        // 住民戦は1ターンしかないので、currentExecutingTurnは常に0
+        if (currentExecutingTurn == 0) {
+            auto& damageInfo = pendingDamages[0];
+            
+            // アニメーションをスキップする場合は、ダメージ適用処理もスキップ
+            if (!damageInfo.skipAnimation) {
+                // カウンターラッシュの場合はアニメーション時間を短縮
+                bool isCounterRush = damageInfo.isCounterRush;
+                float animStartTime = isCounterRush ? 0.1f : 0.5f;
+                float animDuration = isCounterRush ? 0.3f : 1.0f;
+                
+                // アニメーション更新（現在のダメージ用）
+                bool isVictory = !pendingDamages.empty();
+                animationController->updateResultCharacterAnimation(
+                    deltaTime, isVictory, false, resultState.resultAnimationTimer,
+                    damageAppliedInAnimation, false,
+                    animStartTime, animDuration);
+                
+                // アニメーションのピーク時（攻撃が当たる瞬間）にダメージを適用
+                float animTime = resultState.resultAnimationTimer - animStartTime;
+                
+                if (animTime >= 0.0f && animTime <= animDuration) {
+                    float progress = animTime / animDuration;
+                    // ピーク時（progress = 0.2f付近）にダメージを適用
+                    if (progress >= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT - BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                        progress <= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT + BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                        !damageAppliedInAnimation) {
+                        
+                        int damage = damageInfo.damage;
+                        bool isPlayerHit = damageInfo.isPlayerHit;
+                        
+                        // ダミーのダメージエントリ（damage == 0）の場合はダメージ適用をスキップ
+                        if (damage > 0) {
+                            if (isPlayerHit) {
+                                player->takeDamage(damage);
+                                int playerX = BattleConstants::PLAYER_POSITION_X;
+                                int playerY = BattleConstants::PLAYER_POSITION_Y;
+                                effectManager->triggerHitEffect(damage, playerX, playerY, true);
+                                float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
+                                float shakeDuration = 0.3f;
+                                effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                            } else {
+                                enemy->takeDamage(damage);
+                                int enemyX = BattleConstants::ENEMY_POSITION_X;
+                                int enemyY = BattleConstants::ENEMY_POSITION_Y;
+                                effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
+                                
+                                // 通常攻撃の場合、ステータスアップ効果を切る
+                                if (damageInfo.commandType == BattleConstants::COMMAND_ATTACK || 
+                                    damageInfo.commandType == BattleConstants::COMMAND_SPELL) {
+                                    if (player->hasNextTurnBonusActive()) {
+                                        player->clearNextTurnBonus();
+                                    }
+                                }
+                                
+                                float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
+                                float shakeDuration = 0.3f;
+                                effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                            }
+                        }
+                        
+                        damageAppliedInAnimation = true;
+                    }
+                }
+                
+                // アニメーション完了後、次の処理へ進む
+                float animTotalDuration = animStartTime + animDuration;
+                if (resultState.resultAnimationTimer >= animTotalDuration) {
+                    // アニメーション完了
+                    currentExecutingTurn = 1; // 完了フラグとして1に設定（pendingDamages.size()と同じ値にする）
+                    damageAppliedInAnimation = false;
+                }
+            } else {
+                // アニメーションをスキップする場合、すぐに完了とする
+                currentExecutingTurn = 1;
+                damageAppliedInAnimation = false;
+            }
+        }
+        
+        // 最初のアニメーション開始時のスクリーンシェイク（勝利）
+        float shakeDuration = 0.3f;
+        if (resultState.resultAnimationTimer < shakeDuration && !resultState.resultShakeActive && currentExecutingTurn == 0) {
+            resultState.resultShakeActive = true;
+            float intensity = BattleConstants::VICTORY_SHAKE_INTENSITY;
+            effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
+        }
+        
+        // 全ダメージ適用完了後、戦闘終了判定
+        if (currentExecutingTurn >= static_cast<int>(pendingDamages.size())) {
+            // 住民戦：アニメーション完了後、1秒待機
+            float finalWaitDuration = 0.5f + 1.0f; // 1.5秒
+            float maxWaitTime = 2.0f;
+            
+            if (resultState.resultAnimationTimer >= finalWaitDuration || phaseTimer >= maxWaitTime) {
+                updateStatus();
+                
+                if (enemy->getIsAlive() && player->getIsAlive()) {
+                    // 住民戦の場合は次のターンへ
+                    residentTurnCount++;
+                    // 10ターン経過したらゲームオーバー
+                    if (residentTurnCount > 10) {
+                        if (stateManager) {
+                            stateManager->changeState(std::make_unique<GameOverState>(
+                                player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                                true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
+                        }
+                        return;
+                    }
+                    currentPhase = BattlePhase::COMMAND_SELECT;
+                    battleLogic->setCommandTurnCount(1);
+                    initializeCommandSelection();
+                } else {
+                    checkBattleEnd();
+                    if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
+                        return;
+                    }
+                }
+                
+                // リセット
+                animationController->resetResultAnimation();
+                currentExecutingTurn = 0;
+                executeDelayTimer = 0.0f;
+                damageAppliedInAnimation = false;
+                pendingDamages.clear();
+                phaseTimer = 0;
+            }
+        }
+        
+        return; // 住民戦の処理が完了したら、通常戦の処理をスキップ
     }
     
     // アニメーション更新（pendingDamagesが空でない場合のみ）
