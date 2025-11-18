@@ -280,7 +280,7 @@ void SDL2Game::loadGameImages() {
     
     graphics.loadTexture("assets/textures/enemies/slime.png", "enemy_スライム");
     graphics.loadTexture("assets/textures/enemies/goblin.png", "enemy_ゴブリン");
-    graphics.loadTexture("assets/textures/enemies/orc.png", "enemy_オーク");
+    graphics.loadTexture("assets/textures/enemies/ork.png", "enemy_オーク");
     graphics.loadTexture("assets/textures/enemies/dragon.png", "enemy_ドラゴン");
     graphics.loadTexture("assets/textures/enemies/skeleton.png", "enemy_スケルトン");
     graphics.loadTexture("assets/textures/enemies/ghost.png", "enemy_ゴースト");

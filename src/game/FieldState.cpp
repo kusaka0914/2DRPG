@@ -762,10 +762,15 @@ void FieldState::generateMonsterSpawnPoints() {
         EnemyType enemyType = Enemy::createRandomEnemy(playerLevel).getType();
         int enemyLevel = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
         
+        // 敵タイプの基本レベルを取得して上限を適用
+        Enemy tempEnemy(enemyType);
+        tempEnemy.setLevel(enemyLevel);
+        int actualLevel = tempEnemy.getLevel(); // 上限チェック後の実際のレベル
+        
         monsterSpawnPoints.push_back({x, y});
         activeMonsterPoints.push_back({x, y});
         activeMonsterTypes.push_back(enemyType);
-        activeMonsterLevels.push_back(enemyLevel);
+        activeMonsterLevels.push_back(actualLevel);
         
         terrainMap[y][x].hasObject = true;
         terrainMap[y][x].objectType = 2; // モンスター専用タイル
@@ -802,8 +807,16 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
         if (activeMonsterPoints[i].first == oldX && activeMonsterPoints[i].second == oldY) {
             activeMonsterPoints[i].first = newX;
             activeMonsterPoints[i].second = newY;
-            activeMonsterTypes[i] = Enemy::createRandomEnemy(playerLevel).getType();
-            activeMonsterLevels[i] = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
+            EnemyType newEnemyType = Enemy::createRandomEnemy(playerLevel).getType();
+            int newEnemyLevel = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
+            
+            // 敵タイプの基本レベルを取得して上限を適用
+            Enemy tempEnemy(newEnemyType);
+            tempEnemy.setLevel(newEnemyLevel);
+            int actualLevel = tempEnemy.getLevel(); // 上限チェック後の実際のレベル
+            
+            activeMonsterTypes[i] = newEnemyType;
+            activeMonsterLevels[i] = actualLevel;
             break;
         }
     }

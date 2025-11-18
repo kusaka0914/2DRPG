@@ -138,6 +138,9 @@ void TownState::update(float deltaTime) {
                     stateManager->changeState(std::make_unique<NightState>(player));
                     player->setCurrentNight(player->getCurrentNight() + 1);
                     s_nightCount++;
+                    // 新しい目標レベルを設定
+                    s_targetLevel = 25 * (s_nightCount + 1);
+                    // 新しい目標レベルが設定されたので、達成フラグをリセット
                     s_levelGoalAchieved = false;
                 }
             }

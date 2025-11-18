@@ -106,9 +106,13 @@ public:
     
     /**
      * @brief 経験値報酬の取得
-     * @return 経験値報酬
+     * @details 基本経験値 + (レベル差 × 基本経験値 × 0.1) を返す
+     * @return 経験値報酬（レベルに応じて動的に計算）
      */
-    int getExpReward() const { return expReward; }
+    int getExpReward() const { 
+        int levelDiff = level - baseLevel;
+        return expReward + static_cast<int>(levelDiff * expReward * 0.1f);
+    }
     
     /**
      * @brief 敵の種類の取得

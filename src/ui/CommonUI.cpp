@@ -43,8 +43,8 @@ void CommonUI::drawTargetLevel(Graphics& graphics, int targetLevel, bool levelGo
         int textX, textY;
         config.calculatePosition(textX, textY, commonUIConfig.targetLevelText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         
-        if (levelGoalAchieved) {
-            // 目標達成済み
+        if (levelGoalAchieved && currentLevel >= targetLevel) {
+            // 目標達成済み（実際のレベルもチェック）
             std::string goalText = "必要レベル: " + std::to_string(targetLevel);
             graphics.drawText(goalText, textX, textY, "default", commonUIConfig.targetLevelAchievedColor);
             graphics.drawText("夜の街に進出可能", textX, textY + commonUIConfig.targetLevelLineSpacing, "default", commonUIConfig.targetLevelAchievedColor);

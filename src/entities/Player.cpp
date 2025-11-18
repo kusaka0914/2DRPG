@@ -33,7 +33,7 @@ void Player::levelUp() {
     int hpIncrease = 5;
     int mpIncrease = 1;
     int attackIncrease = 2;
-    int defenseIncrease = 1;
+    int defenseIncrease = 2;
     
     setMaxHp(getMaxHp() + hpIncrease);
     setMaxMp(getMaxMp() + mpIncrease);
@@ -62,8 +62,13 @@ void Player::displayInfo() const {
 void Player::gainExp(int expGained) {
     exp += expGained;
     
-    while (exp >= 10 && level < 100) {
-        exp -= 10;
+    // レベルアップに必要な経験値は段階的に増加: 10 + (現在のレベル - 1) × 5
+    while (level < 100) {
+        int requiredExp = 10 + (level - 1) * 5;
+        if (exp < requiredExp) {
+            break;
+        }
+        exp -= requiredExp;
         levelUp();
     }
     

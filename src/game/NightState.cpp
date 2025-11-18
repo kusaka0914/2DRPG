@@ -514,7 +514,7 @@ void NightState::handleInput(const InputManager& input) {
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
             TownState::s_nightTimerActive = true;
-            TownState::s_nightTimer = 300.0f; // 5分 = 300秒
+            TownState::s_nightTimer = 1200.0f; // 20分 = 1200秒
             stateManager->changeState(std::make_unique<TownState>(player));
         }
         return;

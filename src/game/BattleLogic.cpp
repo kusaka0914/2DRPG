@@ -142,7 +142,7 @@ int BattleLogic::calculatePlayerAttackDamage(float multiplier) const {
 }
 
 int BattleLogic::calculateEnemyAttackDamage() const {
-    int damage = enemy->getAttack() - player->getDefense();
+    int damage = enemy->getAttack() - player->getTotalDefense();
     return std::max(0, damage);
 }
 

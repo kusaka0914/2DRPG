@@ -97,7 +97,7 @@ namespace BattleConstants {
     constexpr int JUDGE_RESULT_DRAW = 0;
     
     // ダメージ倍率
-    constexpr float THREE_WIN_STREAK_MULTIPLIER = 1.5f;
+    constexpr float THREE_WIN_STREAK_MULTIPLIER = 2.5f;
     constexpr float DESPERATE_MODE_MULTIPLIER = 1.5f;
     
     // 画面位置定数

@@ -238,11 +238,13 @@ void BattleState::update(float deltaTime) {
             }
             isFirstCommandSelection = false;
             
-            if (currentSelectingTurn < battleLogic->getCommandTurnCount()) {
-                if (!isShowingOptions) {
-                    selectCommandForTurn(currentSelectingTurn);
-                }
-            } else {
+            // 初回のみコマンド選択UIを表示（handleInputでも呼ばれるが、念のため）
+            if (currentSelectingTurn < battleLogic->getCommandTurnCount() && !isShowingOptions) {
+                selectCommandForTurn(currentSelectingTurn);
+            }
+            
+            // 全てのコマンドが選択された場合は敵コマンドを生成
+            if (currentSelectingTurn >= battleLogic->getCommandTurnCount()) {
                 battleLogic->generateEnemyCommands();
             }
             break;
@@ -268,11 +270,13 @@ void BattleState::update(float deltaTime) {
             break;
             
         case BattlePhase::DESPERATE_COMMAND_SELECT:
-            if (currentSelectingTurn < battleLogic->getCommandTurnCount()) {
-                if (!isShowingOptions) {
-                    selectCommandForTurn(currentSelectingTurn);
-                }
-            } else {
+            // 初回のみコマンド選択UIを表示（handleInputでも呼ばれるが、念のため）
+            if (currentSelectingTurn < battleLogic->getCommandTurnCount() && !isShowingOptions) {
+                selectCommandForTurn(currentSelectingTurn);
+            }
+            
+            // 全てのコマンドが選択された場合は敵コマンドを生成
+            if (currentSelectingTurn >= battleLogic->getCommandTurnCount()) {
                 battleLogic->generateEnemyCommands();
             }
             break;
@@ -371,11 +375,17 @@ void BattleState::update(float deltaTime) {
 }
 
 void BattleState::render(Graphics& graphics) {
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!battleLogLabel) {
+    if (!battleLogLabel || (!lastReloadState && currentReloadState)) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
     if (!battleUI) {
         battleUI = std::make_unique<BattleUI>(&graphics, player, enemy.get(), battleLogic.get(), animationController.get());
@@ -418,9 +428,12 @@ void BattleState::render(Graphics& graphics) {
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         }
         
-        // 中央に敵を配置
-        int enemyX = screenWidth / 2;
-        int enemyY = screenHeight / 2;
+        // JSONから敵の位置を取得（INTROフェーズでは中央に配置）
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto battleConfig = config.getBattleConfig();
+        
+        int enemyX, enemyY;
+        config.calculatePosition(enemyX, enemyY, battleConfig.enemyPosition, screenWidth, screenHeight);
         constexpr int BASE_ENEMY_SIZE = 300;
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
@@ -609,9 +622,11 @@ void BattleState::render(Graphics& graphics) {
             int bgY = graphics.getScreenHeight() - bgHeight - 20;  // 画面下部から20px上
             int bgWidth = graphics.getScreenWidth() / 2;
             
-            graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒色
+            SDL_Color bgColor = mbConfig.backgroundColor;
+            bgColor.a = 200;  // 半透明
+            graphics.setDrawColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
             graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
-            graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+            graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
             graphics.drawRect(bgX, bgY, bgWidth, bgHeight);
         }
         
@@ -663,8 +678,11 @@ void BattleState::render(Graphics& graphics) {
         
         // プレイヤーと敵のキャラクター描画（renderResultAnnouncementと同じ構成）
         auto& charState = animationController->getCharacterState();
-        int playerBaseX = screenWidth / 4;
-        int playerBaseY = screenHeight / 2;
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto battleConfig = config.getBattleConfig();
+        
+        int playerBaseX, playerBaseY;
+        config.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
@@ -683,40 +701,11 @@ void BattleState::render(Graphics& graphics) {
             }
         }
         
-        // HP表示（プレイヤーのみ表示）
-        SDL_Color whiteColor = {255, 255, 255, 255};
-        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-        
-        // プレイヤーの名前とレベル（HPの上に表示）
-        std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
-        SDL_Texture* playerNameTexture = graphics.createTextTexture(playerNameText, "default", whiteColor);
-        if (playerNameTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(playerNameTexture, nullptr, nullptr, &textWidth, &textHeight);
-            int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 - 80 - padding;
-            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(playerNameTexture);
-        }
-        graphics.drawText(playerNameText, playerX - 100, playerY - playerHeight / 2 - 80, "default", whiteColor);
-        
-        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-        SDL_Texture* playerHpTexture = graphics.createTextTexture(playerHpText, "default", whiteColor);
-        if (playerHpTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
-            int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 - 40 - padding;
-            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(playerHpTexture);
-        }
-        graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+        // HP表示（コマンド選択フェーズと同じ位置にするためrenderHPを使用）
+        // 敵は描画しないので、適当な位置を渡す（敵のHPは表示されない）
+        int dummyEnemyX = screenWidth;
+        int dummyEnemyY = screenHeight;
+        battleUI->renderHP(playerX, playerY, dummyEnemyX, dummyEnemyY, playerHeight, BattleConstants::BATTLE_CHARACTER_SIZE, "");
         
         // プレイヤーのみ描画（敵は描画しない）
         if (playerTex) {
@@ -777,8 +766,11 @@ void BattleState::render(Graphics& graphics) {
         
         // プレイヤーと敵のキャラクター描画（renderResultAnnouncementと同じ構成）
         auto& charState = animationController->getCharacterState();
-        int playerBaseX = screenWidth / 4;
-        int playerBaseY = screenHeight / 2;
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto battleConfig = config.getBattleConfig();
+        
+        int playerBaseX, playerBaseY;
+        config.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
@@ -797,40 +789,11 @@ void BattleState::render(Graphics& graphics) {
             }
         }
         
-        // HP表示（プレイヤーのみ表示）
-        SDL_Color whiteColor = {255, 255, 255, 255};
-        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-        
-        // プレイヤーの名前とレベル（HPの上に表示）
-        std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
-        SDL_Texture* playerNameTexture = graphics.createTextTexture(playerNameText, "default", whiteColor);
-        if (playerNameTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(playerNameTexture, nullptr, nullptr, &textWidth, &textHeight);
-            int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 - 80 - padding;
-            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(playerNameTexture);
-        }
-        graphics.drawText(playerNameText, playerX - 100, playerY - playerHeight / 2 - 80, "default", whiteColor);
-        
-        std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-        SDL_Texture* playerHpTexture = graphics.createTextTexture(playerHpText, "default", whiteColor);
-        if (playerHpTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
-            int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 - 40 - padding;
-            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
-            graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(playerHpTexture);
-        }
-        graphics.drawText(playerHpText, playerX - 100, playerY - playerHeight / 2 - 40, "default", whiteColor);
+        // HP表示（コマンド選択フェーズと同じ位置にするためrenderHPを使用）
+        // 敵は描画しないので、適当な位置を渡す（敵のHPは表示されない）
+        int dummyEnemyX = screenWidth;
+        int dummyEnemyY = screenHeight;
+        battleUI->renderHP(playerX, playerY, dummyEnemyX, dummyEnemyY, playerHeight, BattleConstants::BATTLE_CHARACTER_SIZE, "");
         
         // プレイヤーのみ描画（敵は描画しない）
         if (playerTex) {
@@ -958,8 +921,32 @@ void BattleState::render(Graphics& graphics) {
     int screenWidth = graphics.getScreenWidth();
     int screenHeight = graphics.getScreenHeight();
     
-    int playerBaseX = screenWidth / 4;
-    int playerBaseY = screenHeight / 2;
+    // JSONからプレイヤーと敵の位置を取得
+    auto& uiConfigManager = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = uiConfigManager.getBattleConfig();
+    
+    // デバッグ: 位置情報を確認（毎フレーム表示、変更時のみ）
+    static int lastPlayerX = -1, lastPlayerY = -1;
+    static float lastAbsoluteX = -1, lastAbsoluteY = -1;
+    int playerBaseX, playerBaseY;
+    uiConfigManager.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
+    
+    // JSONの値が変更された場合も検出
+    bool jsonChanged = (battleConfig.playerPosition.absoluteX != lastAbsoluteX || 
+                       battleConfig.playerPosition.absoluteY != lastAbsoluteY);
+    bool positionChanged = (playerBaseX != lastPlayerX || playerBaseY != lastPlayerY);
+    
+    if (jsonChanged || positionChanged) {
+        printf("BattleState: Player position calculated: (%d, %d) from JSON (absoluteX: %.0f, absoluteY: %.0f, useRelative: %s)\n", 
+               playerBaseX, playerBaseY,
+               battleConfig.playerPosition.absoluteX, 
+               battleConfig.playerPosition.absoluteY,
+               battleConfig.playerPosition.useRelative ? "true" : "false");
+        lastPlayerX = playerBaseX;
+        lastPlayerY = playerBaseY;
+        lastAbsoluteX = battleConfig.playerPosition.absoluteX;
+        lastAbsoluteY = battleConfig.playerPosition.absoluteY;
+    }
     int playerX = playerBaseX;
     int playerY = playerBaseY;
     
@@ -1042,8 +1029,8 @@ void BattleState::render(Graphics& graphics) {
         graphics.drawRect(playerAnimX - 300 / 2, playerAnimY - 300 / 2, 300, 300, false);
     }
     
-    int enemyBaseX = screenWidth * 3 / 4;
-    int enemyBaseY = screenHeight / 2;
+    int enemyBaseX, enemyBaseY;
+    uiConfigManager.calculatePosition(enemyBaseX, enemyBaseY, battleConfig.enemyPosition, screenWidth, screenHeight);
     int enemyX = enemyBaseX;
     int enemyY = enemyBaseY;
     
@@ -1079,15 +1066,6 @@ void BattleState::render(Graphics& graphics) {
         }
     }
     
-    std::string enemyHpText = "HP: " + std::to_string(enemy->getHp()) + "/" + std::to_string(enemy->getMaxHp());
-    SDL_Color enemyHpColor = {255, 100, 100, 255};
-    int enemyHpX = enemyX - 100;
-    int enemyHpY = enemyY - enemyHeight / 2 - 40;
-    if (!shakeState.shakeTargetPlayer && shakeState.shakeTimer > 0.0f) {
-        enemyHpX += static_cast<int>(shakeState.shakeOffsetX);
-        enemyHpY += static_cast<int>(shakeState.shakeOffsetY);
-    }
-    graphics.drawText(enemyHpText, enemyHpX, enemyHpY, "default", enemyHpColor);
     
     if (enemyTexture) {
         graphics.drawTextureAspectRatio(enemyTexture, enemyAnimX, enemyAnimY, 300);
@@ -1193,13 +1171,11 @@ void BattleState::setupUI(Graphics& graphics) {
     messageLabel = messageLabelPtr.get();
     ui.addElement(std::move(messageLabelPtr));
     
-    // 説明用メッセージボード（左下に配置）
-    auto mbConfig = config.getMessageBoardConfig();
-    int explanationX = 30;  // 左下に配置（背景の内側に配置）
-    int bgHeight = 60;  // 2行分の高さ
-    int explanationY = graphics.getScreenHeight() - bgHeight - 10;  // 画面下部から背景の内側に配置
+    // 説明用メッセージボード（JSONから取得）
+    int explanationX, explanationY;
+    config.calculatePosition(explanationX, explanationY, battleConfig.explanationMessageBoard.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     auto explanationLabelPtr = std::make_unique<Label>(explanationX, explanationY, "", "default");
-    explanationLabelPtr->setColor(mbConfig.text.color);
+    explanationLabelPtr->setColor(battleConfig.explanationMessageBoard.text.color);
     explanationLabelPtr->setText("");
     explanationMessageBoard = explanationLabelPtr.get();
     ui.addElement(std::move(explanationLabelPtr));
@@ -2506,14 +2482,14 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         
         int padding = 8;
         int bgX = centerX - textWidth / 2 - padding;
-        int bgY = winLossY - padding;
+        int bgY = winLossY - padding -100;
         
         // 背景黒
         graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
         graphics.drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
         
         // テキスト白
-        graphics.drawText(winLossText, centerX - textWidth / 2, winLossY, "default", textColor);
+        graphics.drawText(winLossText, centerX - textWidth / 2, winLossY-100, "default", textColor);
         
         SDL_DestroyTexture(textTexture);
         
@@ -2540,14 +2516,14 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                 // 勝敗UIの下に配置
                 int totalAttackY = winLossY + textHeight + 20; // 勝敗UIの下に適切な間隔を空ける
                 int totalAttackBgX = centerX - totalAttackTextWidth / 2 - padding;
-                int totalAttackBgY = totalAttackY - padding;
+                int totalAttackBgY = totalAttackY - padding -100;
                 
                 // 背景黒
                 graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
                 graphics.drawRect(totalAttackBgX, totalAttackBgY, totalAttackTextWidth + padding * 2, totalAttackTextHeight + padding * 2, true);
                 
                 // テキスト白
-                graphics.drawText(totalAttackText, centerX - totalAttackTextWidth / 2, totalAttackY, "default", textColor);
+                graphics.drawText(totalAttackText, centerX - totalAttackTextWidth / 2 , totalAttackY-100, "default", textColor);
                 
                 SDL_DestroyTexture(totalAttackTexture);
                 
@@ -2600,14 +2576,14 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                             // 「〜ターン分の攻撃を実行」の下に配置
                             int attackY = totalAttackY + totalAttackTextHeight + 20; // 上記UIの下に適切な間隔を空ける
                             int attackBgX = centerX - attackTextWidth / 2 - padding;
-                            int attackBgY = attackY - padding;
+                            int attackBgY = attackY - padding -300;
                             
                             // 背景黒
                             graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
                             graphics.drawRect(attackBgX, attackBgY, attackTextWidth + padding * 2, attackTextHeight + padding * 2, true);
                             
                             // テキスト白
-                            graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", textColor);
+                            graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY-300, "default", textColor);
                             
                             SDL_DestroyTexture(attackTexture);
                         }
@@ -2653,6 +2629,16 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
     auto playerCmds = battleLogic->getPlayerCommands();
     auto enemyCmds = battleLogic->getEnemyCommands();
     
+    // JSONからプレイヤーと敵の位置を取得
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = config.getBattleConfig();
+    int screenWidth = BattleConstants::SCREEN_WIDTH;
+    int screenHeight = BattleConstants::SCREEN_HEIGHT;
+    
+    int playerX, playerY, enemyX, enemyY;
+    config.calculatePosition(playerX, playerY, battleConfig.playerPosition, screenWidth, screenHeight);
+    config.calculatePosition(enemyX, enemyY, battleConfig.enemyPosition, screenWidth, screenHeight);
+    
     if (stats.playerWins > stats.enemyWins) {
         for (int i = 0; i < battleLogic->getCommandTurnCount(); i++) {
             if (battleLogic->judgeRound(playerCmds[i], enemyCmds[i]) == 1) {
@@ -2661,8 +2647,6 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                     int baseDamage = player->calculateDamageWithBonus(*enemy);
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
                     enemy->takeDamage(damage);
-                    int enemyX = BattleConstants::ENEMY_POSITION_X;
-                    int enemyY = BattleConstants::ENEMY_POSITION_Y;
                     effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                     float shakeIntensity = stats.hasThreeWinStreak ? 30.0f : 20.0f;
                     effectManager->triggerScreenShake(shakeIntensity, 0.6f, true, false);
@@ -2683,8 +2667,6 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                         int baseDamage = player->calculateDamageWithBonus(*enemy);
                     int damage = static_cast<int>(baseDamage * damageMultiplier); // 攻撃魔法は通常の攻撃と同じ
                         enemy->takeDamage(damage);
-                        int enemyX = BattleConstants::ENEMY_POSITION_X;
-                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
                         effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                         float shakeIntensity = stats.hasThreeWinStreak ? 35.0f : 25.0f;
                         effectManager->triggerScreenShake(shakeIntensity, 0.7f, true, false);
@@ -2709,8 +2691,6 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                 int damage = enemy->getAttack() - player->getDefense();
                 if (damage < 0) damage = 0;
                 player->takeDamage(damage);
-                int playerX = BattleConstants::PLAYER_POSITION_X;
-                int playerY = BattleConstants::PLAYER_POSITION_Y;
                 effectManager->triggerHitEffect(damage, playerX, playerY, true);
                 effectManager->triggerScreenShake(15.0f, 0.5f, false, true);
                 std::string msg = enemy->getTypeName() + "の攻撃！\n" + 
@@ -2731,15 +2711,11 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                 int enemyDamage = player->calculateDamageWithBonus(*enemy) / 2;
                 if (playerDamage > 0) {
                     player->takeDamage(playerDamage);
-                    int playerX = BattleConstants::PLAYER_POSITION_X;
-                    int playerY = BattleConstants::PLAYER_POSITION_Y;
                     effectManager->triggerHitEffect(playerDamage, playerX, playerY, true);
                     effectManager->triggerScreenShake(10.0f, 0.3f, false, true);
                 }
                 if (enemyDamage > 0) {
                     enemy->takeDamage(enemyDamage);
-                    int enemyX = BattleConstants::ENEMY_POSITION_X;
-                    int enemyY = BattleConstants::ENEMY_POSITION_Y;
                     effectManager->triggerHitEffect(enemyDamage, enemyX, enemyY, false);
                 }
             }
@@ -2862,6 +2838,16 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     if (currentPhase != BattlePhase::JUDGE_RESULT && currentPhase != BattlePhase::DESPERATE_JUDGE_RESULT) {
         return;
     }
+    
+    // JSONからプレイヤーと敵の位置を取得
+    auto& uiConfigManager = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = uiConfigManager.getBattleConfig();
+    int screenWidth = BattleConstants::SCREEN_WIDTH;
+    int screenHeight = BattleConstants::SCREEN_HEIGHT;
+    
+    int playerX, playerY, enemyX, enemyY;
+    uiConfigManager.calculatePosition(playerX, playerY, battleConfig.playerPosition, screenWidth, screenHeight);
+    uiConfigManager.calculatePosition(enemyX, enemyY, battleConfig.enemyPosition, screenWidth, screenHeight);
     
     // 住民戦の場合は特別な処理（最初の1回だけprocessResidentTurnを呼ぶ）
     if (enemy->isResident()) {
@@ -3085,8 +3071,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
             if (!damageInfo.skipAnimation) {
                 // カウンターラッシュの場合はアニメーション時間を短縮
                 bool isCounterRush = damageInfo.isCounterRush;
-                float animStartTime = isCounterRush ? 0.1f : 0.5f;
-                float animDuration = isCounterRush ? 0.3f : 1.0f;
+                float animStartTime = isCounterRush ? 0.05f : 0.5f;
+                float animDuration = isCounterRush ? 0.15f : 1.0f;
                 
                 // アニメーション更新（現在のダメージ用）
                 bool isVictory = !pendingDamages.empty();
@@ -3112,16 +3098,12 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                         if (damage > 0) {
                             if (isPlayerHit) {
                                 player->takeDamage(damage);
-                                int playerX = BattleConstants::PLAYER_POSITION_X;
-                                int playerY = BattleConstants::PLAYER_POSITION_Y;
                                 effectManager->triggerHitEffect(damage, playerX, playerY, true);
                                 float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
                                 float shakeDuration = 0.3f;
                                 effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
                             } else {
                                 enemy->takeDamage(damage);
-                                int enemyX = BattleConstants::ENEMY_POSITION_X;
-                                int enemyY = BattleConstants::ENEMY_POSITION_Y;
                                 effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                                 
                                 // 通常攻撃の場合、ステータスアップ効果を切る
@@ -3222,8 +3204,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         if (!damageInfo.skipAnimation) {
         // カウンターラッシュの場合はアニメーション時間を短縮
         bool isCounterRush = damageInfo.isCounterRush;
-        float animStartTime = isCounterRush ? 0.1f : 0.5f;
-        float animDuration = isCounterRush ? 0.3f : 1.0f;
+        float animStartTime = isCounterRush ? 0.05f : 0.5f;
+        float animDuration = isCounterRush ? 0.15f : 1.0f;
         
         // アニメーション更新（現在のダメージ用）
         bool hasThreeWinStreak = enemy->isResident() ? false : stats.hasThreeWinStreak;
@@ -3244,8 +3226,8 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
         } else {
             // カウンターラッシュの場合はアニメーション時間を短縮
             bool isCounterRush = damageInfo.isCounterRush;
-            float animStartTime = isCounterRush ? 0.1f : 0.5f;
-            float animDuration = isCounterRush ? 0.3f : 1.0f;
+            float animStartTime = isCounterRush ? 0.05f : 0.5f;
+            float animDuration = isCounterRush ? 0.15f : 1.0f;
         
         // アニメーションのピーク時（攻撃が当たる瞬間）にダメージを適用
         float animTime = resultState.resultAnimationTimer - animStartTime;
@@ -3264,14 +3246,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     // 引き分けの場合、両方にダメージを適用
                     if (damageInfo.playerDamage > 0) {
                         player->takeDamage(damageInfo.playerDamage);
-                        int playerX = BattleConstants::PLAYER_POSITION_X;
-                        int playerY = BattleConstants::PLAYER_POSITION_Y;
                         effectManager->triggerHitEffect(damageInfo.playerDamage, playerX, playerY, true);
                     }
                     if (damageInfo.enemyDamage > 0) {
                         enemy->takeDamage(damageInfo.enemyDamage);
-                        int enemyX = BattleConstants::ENEMY_POSITION_X;
-                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
                         effectManager->triggerHitEffect(damageInfo.enemyDamage, enemyX, enemyY, false);
                         
                         // 引き分けでも通常攻撃または攻撃呪文の場合、ステータスアップ効果を切る
@@ -3291,8 +3269,6 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     if (damage > 0) {
                     if (isPlayerHit) {
                         player->takeDamage(damage);
-                        int playerX = BattleConstants::PLAYER_POSITION_X;
-                        int playerY = BattleConstants::PLAYER_POSITION_Y;
                         effectManager->triggerHitEffect(damage, playerX, playerY, true);
                         // 引き分けと同じスクリーンシェイク
                         float intensity = isDesperateMode ? BattleConstants::DESPERATE_DRAW_SHAKE_INTENSITY : BattleConstants::DRAW_SHAKE_INTENSITY;
@@ -3300,8 +3276,6 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                         effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
                     } else {
                         enemy->takeDamage(damage);
-                        int enemyX = BattleConstants::ENEMY_POSITION_X;
-                        int enemyY = BattleConstants::ENEMY_POSITION_Y;
                         effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                             
                             // 通常攻撃または攻撃呪文の場合、ステータスアップ効果を切る

@@ -6,273 +6,273 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
     switch (type) {
         case EnemyType::SLIME:
             name = "スライム";
-            hp = maxHp = 20;
-            attack = 12;
-            defense = 2;
+            hp = maxHp = 35;
+            attack = 13;
+            defense = 4;
             level = baseLevel = 1;
-            baseHp = 20;
-            baseAttack = 12;
-            baseDefense = 2;
+            baseHp = 35;
+            baseAttack = 13;
+            baseDefense = 4;
             goldReward = 5;
-            expReward = 10;
+            expReward = 30;
             break;
             
         case EnemyType::GOBLIN:
             name = "ゴブリン";
-            hp = maxHp = 40;
-            attack = 21;
-            defense = 4;
-            level = baseLevel = 3;
-            baseHp = 40;
-            baseAttack = 21;
-            baseDefense = 4;
+            hp = maxHp = 50;
+            attack = 18;
+            defense = 6;
+            level = baseLevel = 5;
+            baseHp = 50;
+            baseAttack = 18;
+            baseDefense = 6;
             goldReward = 8;
-            expReward = 15;
+            expReward = 50;
             break;
             
         case EnemyType::ORC:
             name = "オーク";
-            hp = maxHp = 120;
-            attack = 38;
-            defense = 8;
+            hp = maxHp = 95;
+            attack = 32;
+            defense = 13;
             level = baseLevel = 10;
-            baseHp = 120;
-            baseAttack = 38;
-            baseDefense = 8;
+            baseHp = 95;
+            baseAttack = 32;
+            baseDefense = 13;
             goldReward = 15;
-            expReward = 20;
+            expReward = 100;
             break;
             
         case EnemyType::DRAGON:
             name = "ドラゴン";
-            hp = maxHp = 160;
-            attack = 61;
-            defense = 12;
+            hp = maxHp = 125;
+            attack = 42;
+            defense = 18;
             level = baseLevel = 15;
-            baseHp = 160;
-            baseAttack = 61;
-            baseDefense = 12;
+            baseHp = 125;
+            baseAttack = 42;
+            baseDefense = 18;
             goldReward = 50;
-            expReward = 25;
+            expReward = 150;
             break;
             
         case EnemyType::SKELETON:
             name = "スケルトン";
-            hp = maxHp = 210;
-            attack = 67;    
-            defense = 15;
+            hp = maxHp = 160;
+            attack = 52;
+            defense = 23;
             level = baseLevel = 20;
-            baseHp = 210;
-            baseAttack = 67;
-            baseDefense = 15;
+            baseHp = 160;
+            baseAttack = 52;
+            baseDefense = 23;
             goldReward = 80;
-            expReward = 30;
+            expReward = 200;
             break;
             
         case EnemyType::GHOST:
             name = "ゴースト";
-            hp = maxHp = 300;
-            attack = 73;
-            defense = 20;
+            hp = maxHp = 190;
+            attack = 62;
+            defense = 28;
             level = baseLevel = 25;
-            baseHp = 300;
-            baseAttack = 73;
-            baseDefense = 20;
+            baseHp = 190;
+            baseAttack = 62;
+            baseDefense = 28;
             goldReward = 120;
-            expReward = 35;
+            expReward = 250;
             break;
             
         case EnemyType::VAMPIRE:
             name = "ヴァンパイア";
-            hp = maxHp = 450;
-            attack = 79;
-            defense = 25;
+            hp = maxHp = 220;
+            attack = 72;
+            defense = 33;
             level = baseLevel = 30;
-            baseHp = 450;
-            baseAttack = 79;
-            baseDefense = 25;
+            baseHp = 220;
+            baseAttack = 72;
+            baseDefense = 33;
             goldReward = 200;
-            expReward = 40;
+            expReward = 300;
             break;
             
         case EnemyType::DEMON_SOLDIER:
             name = "デーモンソルジャー";
-            hp = maxHp = 550;
-            attack = 85;
-            defense = 30;
+            hp = maxHp = 250;
+            attack = 82;
+            defense = 38;
             level = baseLevel = 35;
-            baseHp = 550;
-            baseAttack = 85;
-            baseDefense = 30;
+            baseHp = 250;
+            baseAttack = 82;
+            baseDefense = 38;
             goldReward = 300;
-            expReward = 45;
+            expReward = 350;
             break;
             
         case EnemyType::WEREWOLF:
             name = "ウェアウルフ";
-            hp = maxHp = 650;
-            attack = 91;
-            defense = 35;
+            hp = maxHp = 285;
+            attack = 92;
+            defense = 43;
             level = baseLevel = 40;
-            baseHp = 650;
-            baseAttack = 91;
-            baseDefense = 35;
+            baseHp = 285;
+            baseAttack = 92;
+            baseDefense = 43;
             goldReward = 400;
-            expReward = 50;
+            expReward = 400;
             break;
             
         case EnemyType::MINOTAUR:
             name = "ミノタウロス";
-            hp = maxHp = 800;
-            attack = 99;
-            defense = 40;
+            hp = maxHp = 315;
+            attack = 102;
+            defense = 48;
             level = baseLevel = 45;
-            baseHp = 800;
-            baseAttack = 99;
-            baseDefense = 40;
+            baseHp = 315;
+            baseAttack = 102;
+            baseDefense = 48;
             goldReward = 500;
-            expReward = 55;
+            expReward = 450;
             break;
             
         case EnemyType::CYCLOPS:
             name = "サイクロプス";
-            hp = maxHp = 950;
-            attack = 110;
-            defense = 45;
+            hp = maxHp = 345;
+            attack = 112;
+            defense = 53;
             level = baseLevel = 50;
-            baseHp = 950;
-            baseAttack = 110;
-            baseDefense = 45;
+            baseHp = 345;
+            baseAttack = 112;
+            baseDefense = 53;
             goldReward = 600;
-            expReward = 60;
+            expReward = 500;
             break;
             
         case EnemyType::GARGOYLE:
             name = "ガーゴイル";
-            hp = maxHp = 1200;
-            attack = 115;
-            defense = 50;
+            hp = maxHp = 375;
+            attack = 122;
+            defense = 58;
             level = baseLevel = 55;
-            baseHp = 1200;
-            baseAttack = 115;
-            baseDefense = 50;
+            baseHp = 375;
+            baseAttack = 122;
+            baseDefense = 58;
             goldReward = 650;
-            expReward = 65;
+            expReward = 550;
             break;
             
         case EnemyType::PHANTOM:
             name = "ファントム";
-            hp = maxHp = 1350;
-            attack = 120;
-            defense = 55;
+            hp = maxHp = 405;
+            attack = 132;
+            defense = 63;
             level = baseLevel = 60;
-            baseHp = 1350;
-            baseAttack = 120;
-            baseDefense = 55;
+            baseHp = 405;
+            baseAttack = 132;
+            baseDefense = 63;
             goldReward = 800;
-            expReward = 70;
+            expReward = 600;
             break;
             
         case EnemyType::DARK_KNIGHT:
             name = "ダークナイト";
-            hp = maxHp = 1500;
-            attack = 125;
-            defense = 60;
+            hp = maxHp = 435;
+            attack = 142;
+            defense = 68;
             level = baseLevel = 65;
-            baseHp = 1500;
-            baseAttack = 125;
-            baseDefense = 60;
+            baseHp = 435;
+            baseAttack = 142;
+            baseDefense = 68;
             goldReward = 1000;
-            expReward = 75;
+            expReward = 650;
             break;
             
         case EnemyType::ICE_GIANT:
             name = "アイスジャイアント";
-            hp = maxHp = 1650;
-            attack = 130;
-            defense = 70;
+            hp = maxHp = 465;
+            attack = 152;
+            defense = 73;
             level = baseLevel = 70;
-            baseHp = 1650;
-            baseAttack = 130;
-            baseDefense = 70;
+            baseHp = 465;
+            baseAttack = 152;
+            baseDefense = 73;
             goldReward = 1200;
-            expReward = 80;
+            expReward = 700;
             break;
             
         case EnemyType::FIRE_DEMON:
             name = "ファイアデーモン";
-            hp = maxHp = 1800;
-            attack = 135;
-            defense = 80;
+            hp = maxHp = 500;
+            attack = 162;
+            defense = 78;
             level = baseLevel = 75;
-            baseHp = 1800;
-            baseAttack = 135;
-            baseDefense = 80;
+            baseHp = 500;
+            baseAttack = 162;
+            baseDefense = 78;
             goldReward = 1400;
-            expReward = 85;
+            expReward = 750;
             break;
             
         case EnemyType::SHADOW_LORD:
             name = "シャドウロード";
-            hp = maxHp = 2100;
-            attack = 140;
-            defense = 90;
+            hp = maxHp = 530;
+            attack = 172;
+            defense = 83;
             level = baseLevel = 80;
-            baseHp = 2100;
-            baseAttack = 140;
-            baseDefense = 90;
+            baseHp = 530;
+            baseAttack = 172;
+            baseDefense = 83;
             goldReward = 1600;
-            expReward = 90;
+            expReward = 800;
             break;
             
         case EnemyType::ANCIENT_DRAGON:
             name = "エンシェントドラゴン";
-            hp = maxHp = 2300;
-            attack = 150;
-            defense = 100;
+            hp = maxHp = 560;
+            attack = 182;
+            defense = 88;
             level = baseLevel = 85;
-            baseHp = 2300;
-            baseAttack = 150;
-            baseDefense = 100;
+            baseHp = 560;
+            baseAttack = 182;
+            baseDefense = 88;
             goldReward = 2000;
-            expReward = 95;
+            expReward = 850;
             break;
             
         case EnemyType::CHAOS_BEAST:
             name = "カオスビースト";
-            hp = maxHp = 2500;
-            attack = 158;
-            defense = 110;
+            hp = maxHp = 590;
+            attack = 192;
+            defense = 93;
             level = baseLevel = 90;
-            baseHp = 2500;
-            baseAttack = 158;
-            baseDefense = 110;
+            baseHp = 590;
+            baseAttack = 192;
+            baseDefense = 93;
             goldReward = 2500;
-            expReward = 100;
+            expReward = 900;
             break;
             
         case EnemyType::ELDER_GOD:
             name = "エルダーゴッド";
-            hp = maxHp = 2700;
-            attack = 162;
-            defense = 120;
+            hp = maxHp = 620;
+            attack = 202;
+            defense = 98;
             level = baseLevel = 95;
-            baseHp = 2700;
-            baseAttack = 162;
-            baseDefense = 120;
+            baseHp = 620;
+            baseAttack = 202;
+            baseDefense = 98;
             goldReward = 3000;
-            expReward = 100;
+            expReward = 950;
             break;
             
         case EnemyType::DEMON_LORD:
             name = "魔王";
-            hp = maxHp = 4000;
-            attack = 180;
-            defense = 150;
+            hp = maxHp = 700;
+            attack = 215;
+            defense = 105;
             level = baseLevel = 100;
-            baseHp = 4000;
-            baseAttack = 180;
-            baseDefense = 150;
+            baseHp = 700;
+            baseAttack = 215;
+            baseDefense = 105;
             goldReward = 0;
             expReward = 0;
             break;
@@ -333,7 +333,7 @@ Enemy Enemy::createRandomEnemy(int playerLevel) {
         possibleEnemies.push_back(EnemyType::SLIME);
     }
     
-    if (playerLevel >= 3 && playerLevel <=20) {
+    if (playerLevel >= 5 && playerLevel <=20) {
         possibleEnemies.push_back(EnemyType::GOBLIN);
     }
     
@@ -418,6 +418,17 @@ Enemy Enemy::createRandomEnemy(int playerLevel) {
 void Enemy::setLevel(int newLevel) {
     if (newLevel < 1) {
         newLevel = 1;
+    }
+    
+    // 基本レベル+5を上限とする（スライムは特別に上限5）
+    int maxLevel;
+    if (type == EnemyType::SLIME) {
+        maxLevel = 5;
+    } else {
+        maxLevel = baseLevel + 5;
+    }
+    if (newLevel > maxLevel) {
+        newLevel = maxLevel;
     }
     
     // 基準レベルからの差分を計算
