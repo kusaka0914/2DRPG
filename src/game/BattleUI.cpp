@@ -81,15 +81,17 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     }
     SDL_Color turnColor = {255, 255, 255, 255};
     
-    // ターンテキストの背景を描画
+    // ターンテキストの背景を描画（コマンド選択フェーズと同じ位置）
     SDL_Texture* turnTexture = graphics->createTextTexture(turnText, "default", turnColor);
     if (turnTexture) {
         int textWidth, textHeight;
         SDL_QueryTexture(turnTexture, nullptr, nullptr, &textWidth, &textHeight);
         
+        // コマンド選択フェーズと同じ位置に設定
+        int turnNumberY = 70; // コマンド選択フェーズと同じ位置
         int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-        int bgX = 20 - padding;
-        int bgY = 20 - padding;
+        int bgX = 18 - padding; // コマンド選択フェーズと同じ位置
+        int bgY = turnNumberY - padding;
         int bgWidth = textWidth + padding * 2;
         int bgHeight = textHeight + padding * 2;
         
@@ -101,7 +103,9 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         SDL_DestroyTexture(turnTexture);
     }
     
-    graphics->drawText(turnText, 20, 20, "default", turnColor);
+    // コマンド選択フェーズと同じ位置にテキストを描画
+    int turnNumberY = 70; // コマンド選択フェーズと同じ位置
+    graphics->drawText(turnText, 18, turnNumberY, "default", turnColor);
     
     renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, params.residentBehaviorHint);
     
@@ -329,6 +333,9 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
                                    enemyCmds[params.currentJudgingTurnIndex]);
         }
         
+        // JSONから設定を取得
+        auto& judgePhaseConfig = battleConfig.judgePhase;
+        
         std::string resultText;
         SDL_Color resultColor;
         
@@ -336,31 +343,41 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         float scale = BattleConstants::JUDGE_RESULT_MIN_SCALE + scaleProgress * BattleConstants::JUDGE_RESULT_SCALE_RANGE;
         
         if (result == 1) {
-            resultText = "勝ち！";
-            resultColor = {255, 215, 0, 255};
+            resultText = judgePhaseConfig.win.text;
+            resultColor = judgePhaseConfig.win.color;
         } else if (result == -1) {
-            resultText = "負け...";
-            resultColor = {255, 0, 0, 255};
+            resultText = judgePhaseConfig.lose.text;
+            resultColor = judgePhaseConfig.lose.color;
         } else {
-            resultText = "引き分け";
-            resultColor = {200, 200, 200, 255};
+            resultText = judgePhaseConfig.draw.text;
+            resultColor = judgePhaseConfig.draw.color;
         }
         
-        int textWidth = 200;
-        int textHeight = 60;
+        int textWidth = judgePhaseConfig.baseWidth;
+        int textHeight = judgePhaseConfig.baseHeight;
         int scaledWidth = (int)(textWidth * scale);
         int scaledHeight = (int)(textHeight * scale);
-        int textX = centerX - scaledWidth / 2;
-        int textY = centerY - scaledHeight / 2;
         
+        // 位置を計算（JSONから取得）
+        int textX, textY;
+        if (judgePhaseConfig.position.useRelative) {
+            textX = static_cast<int>(centerX + judgePhaseConfig.position.offsetX - scaledWidth / 2);
+            textY = static_cast<int>(centerY + judgePhaseConfig.position.offsetY - scaledHeight / 2);
+        } else {
+            textX = static_cast<int>(judgePhaseConfig.position.absoluteX);
+            textY = static_cast<int>(judgePhaseConfig.position.absoluteY);
+        }
+        
+        int backgroundPadding = judgePhaseConfig.backgroundPadding;
         graphics->setDrawColor(resultColor.r / 2, resultColor.g / 2, resultColor.b / 2, 150);
-        graphics->drawRect(textX - 20, textY - 20, scaledWidth + 40, scaledHeight + 40, true);
+        graphics->drawRect(textX - backgroundPadding, textY - backgroundPadding, scaledWidth + backgroundPadding * 2, scaledHeight + backgroundPadding * 2, true);
         
         graphics->drawText(resultText, textX, textY, "default", resultColor);
         
         if (result == 1) {
             float glowProgress = std::sin(params.judgeDisplayTimer * 3.14159f * 4.0f) * 0.5f + 0.5f;
-            graphics->setDrawColor(255, 215, 0, (Uint8)(glowProgress * 100));
+            SDL_Color glowColor = judgePhaseConfig.glowColor;
+            graphics->setDrawColor(glowColor.r, glowColor.g, glowColor.b, (Uint8)(glowProgress * 100));
             graphics->drawRect(textX - 30, textY - 30, scaledWidth + 60, scaledHeight + 60, false);
         }
     }
@@ -431,10 +448,12 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     // 選択済みコマンドを表示（ボタンの上）
     auto playerCmds = battleLogic->getPlayerCommands();
+    auto& cmdSelectConfig = battleConfig.commandSelection;
+    
     if (params.currentSelectingTurn > 0) {
         // 選択済みコマンドを画像で表示
-        int selectedCmdY = centerY - 150; // ボタンの上に配置
-        int imageSpacing = 60; // 画像間のスペース
+        int selectedCmdY = static_cast<int>(centerY + cmdSelectConfig.selectedCommandOffsetY);
+        int imageSpacing = cmdSelectConfig.imageSpacing;
         int startX = centerX - ((params.currentSelectingTurn - 1) * imageSpacing / 2);
         
         int totalWidth = 0;
@@ -448,13 +467,13 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
             if (cmdImage) {
                 int imgWidth, imgHeight;
                 SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
-                int displayWidth = 50; // 固定サイズ
+                int displayWidth = cmdSelectConfig.selectedCommandImageSize;
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
                 commandImages.push_back(cmdImage);
                 imageWidths.push_back(displayWidth);
                 totalWidth += displayWidth;
                 if (i < params.currentSelectingTurn - 1) {
-                    totalWidth += 20; // 矢印のスペース
+                    totalWidth += cmdSelectConfig.arrowSpacing;
                 }
             } else {
                 commandImages.push_back(nullptr);
@@ -470,7 +489,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                 SDL_Texture* cmdImage = commandImages[i];
                 int imgWidth, imgHeight;
                 SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
-                int displayWidth = 50;
+                int displayWidth = cmdSelectConfig.selectedCommandImageSize;
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
                 int imageX = currentX;
                 int imageY = selectedCmdY - (displayHeight / 2);
@@ -480,9 +499,8 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                 
                 // 矢印を表示（最後のコマンド以外）
                 if (i < params.currentSelectingTurn - 1) {
-                    SDL_Color arrowColor = {255, 255, 255, 255};
-                    graphics->drawText("→", currentX + 5, selectedCmdY - 10, "default", arrowColor);
-                    currentX += 20;
+                    graphics->drawText("→", currentX + 5, selectedCmdY - 10, "default", cmdSelectConfig.arrowColor);
+                    currentX += cmdSelectConfig.arrowSpacing;
                 }
             } else {
                 // フォールバック：テキスト表示
@@ -492,7 +510,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                 currentX += 60;
                 if (i < params.currentSelectingTurn - 1) {
                     graphics->drawText("→", currentX, selectedCmdY - 15, "default", selectedCmdColor);
-                    currentX += 20;
+                    currentX += cmdSelectConfig.arrowSpacing;
                 }
             }
         }
@@ -500,12 +518,12 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     auto& cmdSelectState = animationController->getCommandSelectState();
     float buttonSlideProgress = std::min(1.0f, cmdSelectState.commandSelectSlideProgress);
-    int baseY = centerY - 50;
+    int baseY = static_cast<int>(centerY + cmdSelectConfig.buttonBaseOffsetY);
     int slideOffset = (int)((1.0f - buttonSlideProgress) * 200);
     
-    int buttonWidth = 200;
-    int buttonHeight = 60;
-    int buttonSpacing = 80;
+    int buttonWidth = cmdSelectConfig.buttonWidth;
+    int buttonHeight = cmdSelectConfig.buttonHeight;
+    int buttonSpacing = cmdSelectConfig.buttonSpacing;
     int startX = centerX - (buttonWidth / 2);
     int startY = baseY + slideOffset;
     
@@ -517,49 +535,47 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         SDL_Color bgColor;
         if (isSelected) {
             float glowProgress = std::sin(cmdSelectState.commandSelectAnimationTimer * 3.14159f * 4.0f) * 0.3f + 0.7f;
-            bgColor = {(Uint8)(100 * glowProgress), (Uint8)(200 * glowProgress), (Uint8)(255 * glowProgress), 200};
+            bgColor = {
+                (Uint8)(cmdSelectConfig.selectedBgColor.r * glowProgress),
+                (Uint8)(cmdSelectConfig.selectedBgColor.g * glowProgress),
+                (Uint8)(cmdSelectConfig.selectedBgColor.b * glowProgress),
+                cmdSelectConfig.selectedBgColor.a
+            };
         } else {
-            bgColor = {50, 50, 50, 150};
+            bgColor = cmdSelectConfig.unselectedBgColor;
         }
         
         graphics->setDrawColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
         graphics->drawRect(startX - 10, buttonY - 5, buttonWidth + 20, buttonHeight + 10, true);
         
         if (isSelected) {
-            SDL_Color borderColor = {255, 215, 0, 255};
-            graphics->setDrawColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+            graphics->setDrawColor(cmdSelectConfig.selectedBorderColor.r, cmdSelectConfig.selectedBorderColor.g, cmdSelectConfig.selectedBorderColor.b, cmdSelectConfig.selectedBorderColor.a);
             graphics->drawRect(startX - 10, buttonY - 5, buttonWidth + 20, buttonHeight + 10, false);
             graphics->drawRect(startX - 8, buttonY - 3, buttonWidth + 16, buttonHeight + 6, false);
         } else {
-            SDL_Color borderColor = {150, 150, 150, 255};
-            graphics->setDrawColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+            graphics->setDrawColor(cmdSelectConfig.unselectedBorderColor.r, cmdSelectConfig.unselectedBorderColor.g, cmdSelectConfig.unselectedBorderColor.b, cmdSelectConfig.unselectedBorderColor.a);
             graphics->drawRect(startX - 10, buttonY - 5, buttonWidth + 20, buttonHeight + 10, false);
         }
         
-        SDL_Color textColor;
-        if (isSelected) {
-            textColor = {255, 255, 255, 255};
-        } else {
-            textColor = {200, 200, 200, 255};
-        }
+        SDL_Color textColor = isSelected ? cmdSelectConfig.selectedTextColor : cmdSelectConfig.unselectedTextColor;
         
         // コマンド名を画像で表示
         std::string commandName = (*params.currentOptions)[i];
         SDL_Texture* commandImage = getCommandTexture(commandName);
         
         if (commandImage) {
-            // 画像を適切なサイズで表示（60px幅に固定）
+            // 画像を適切なサイズで表示
             int imageWidth, imageHeight;
             SDL_QueryTexture(commandImage, nullptr, nullptr, &imageWidth, &imageHeight);
             
-            int displayWidth = 60;
+            int displayWidth = cmdSelectConfig.buttonImageSize;
             int displayHeight = static_cast<int>(imageHeight * (static_cast<float>(displayWidth) / imageWidth));
             
             int imageX = startX + (buttonWidth / 2) - (displayWidth / 2);
             int imageY = buttonY + (buttonHeight / 2) - (displayHeight / 2);
             
             if (isSelected) {
-                graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", {255, 215, 0, 255});
+                graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", cmdSelectConfig.selectedBorderColor);
             }
             graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
         } else {
@@ -576,14 +592,25 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     }
     }
     
-    // 住民戦の場合は「Qで戻る」を表示しない
+    // コマンド選択ヒントテキスト（JSONから設定を取得）
+    auto& commandHintConfig = battleConfig.commandHint;
     std::string hintText;
     if (params.residentTurnCount > 0) {
-        hintText = "↑↓で選択  Enterで決定";
+        hintText = commandHintConfig.residentText;
     } else {
-        hintText = "↑↓で選択  Enterで決定  Qで戻る";
+        hintText = commandHintConfig.normalText;
     }
-    SDL_Color hintColor = {255, 255, 255, 255};
+    SDL_Color hintColor = commandHintConfig.color;
+    
+    // 位置を計算（JSONから取得）
+    int hintX, hintY;
+    if (commandHintConfig.position.useRelative) {
+        hintX = static_cast<int>(centerX + commandHintConfig.position.offsetX);
+        hintY = static_cast<int>(screenHeight + commandHintConfig.position.offsetY);
+    } else {
+        hintX = static_cast<int>(commandHintConfig.position.absoluteX);
+        hintY = static_cast<int>(commandHintConfig.position.absoluteY);
+    }
     
     // 選択方法のテキスト背景を描画
     SDL_Texture* hintTexture = graphics->createTextTexture(hintText, "default", hintColor);
@@ -591,9 +618,9 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         int textWidth, textHeight;
         SDL_QueryTexture(hintTexture, nullptr, nullptr, &textWidth, &textHeight);
         
-        int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-        int bgX = centerX - 120 - padding;
-        int bgY = screenHeight - 100 - padding;
+        int padding = commandHintConfig.padding;
+        int bgX = hintX - padding;
+        int bgY = hintY - padding;
         int bgWidth = textWidth + padding * 2;
         int bgHeight = textHeight + padding * 2;
         
@@ -605,7 +632,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         SDL_DestroyTexture(hintTexture);
     }
     
-    graphics->drawText(hintText, centerX - 120, screenHeight - 100, "default", hintColor);
+    graphics->drawText(hintText, hintX, hintY, "default", hintColor);
     
     renderHP(playerBaseX, playerBaseY, enemyBaseX, enemyBaseY, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, params.residentBehaviorHint);
 }
@@ -615,6 +642,10 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     int screenHeight = graphics->getScreenHeight();
     int centerX = screenWidth / 2;
     int centerY = screenHeight / 2;
+    
+    // JSONから設定を取得（ホットリロード対応のため、毎回取得）
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = config.getBattleConfig();
     
     // 画面をクリア（背景画像で覆う前に）
     graphics->setDrawColor(0, 0, 0, 255);
@@ -630,38 +661,50 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     // graphics->setDrawColor(0, 0, 0, 100);
     // graphics->drawRect(0, 0, screenWidth, screenHeight, true);
     
-    // メイン結果テキスト
+    // メイン結果テキスト（JSONから設定を取得）
     std::string mainText;
     SDL_Color mainColor;
     
+    auto& resultTextConfig = battleConfig.judgeResult.resultText;
+    
     if (params.isVictory) {
         if (params.isDesperateMode) {
-            mainText = "🎉 一発逆転成功！ 🎉";
+            mainText = "一発逆転成功！";
+            mainColor = resultTextConfig.desperateVictoryColor;
         } else {
-            mainText = "🎯 勝利！";
+            mainText = "勝利！";
+            mainColor = resultTextConfig.victoryColor;
         }
-        mainColor = {255, 215, 0, 255};
     } else if (params.isDefeat) {
         if (params.isDesperateMode) {
-            mainText = "💀 大敗北... 💀";
+            mainText = "大敗北...";
+            mainColor = resultTextConfig.desperateDefeatColor;
         } else {
-            mainText = "❌ 敗北...";
+            mainText = "敗北...";
+            mainColor = resultTextConfig.defeatColor;
         }
-        mainColor = {255, 0, 0, 255};
     } else {
-        mainText = "⚖️ 引き分け";
-        mainColor = {200, 200, 200, 255};
+        mainText = "引き分け";
+        mainColor = resultTextConfig.drawColor;
     }
     
     auto& resultState = animationController->getResultState();
     float displayScale = (resultState.resultScale > 0.0f) ? resultState.resultScale : 1.0f;
     displayScale = std::max(0.5f, displayScale); // 最小スケールを0.5fに設定
-    int textWidth = 400;
-    int textHeight = 100;
+    int textWidth = resultTextConfig.baseWidth;
+    int textHeight = resultTextConfig.baseHeight;
     int scaledWidth = (int)(textWidth * displayScale);
     int scaledHeight = (int)(textHeight * displayScale);
-    int textX = centerX - scaledWidth / 2;
-    int textY = centerY - scaledHeight / 2 - 100;
+    
+    // 位置を計算（JSONから取得）
+    int textX, textY;
+    if (resultTextConfig.position.useRelative) {
+        textX = centerX - scaledWidth / 2;
+        textY = static_cast<int>(centerY + resultTextConfig.position.offsetY - scaledHeight / 2);
+    } else {
+        textX = static_cast<int>(resultTextConfig.position.absoluteX);
+        textY = static_cast<int>(resultTextConfig.position.absoluteY);
+    }
     
     float glowIntensity = std::sin(resultState.resultAnimationTimer * 3.14159f * 4.0f) * 0.3f + 0.7f;
     graphics->setDrawColor((Uint8)(mainColor.r * glowIntensity * 0.5f), 
@@ -678,16 +721,32 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     }
     
     if (params.hasThreeWinStreak && params.isVictory) {
+        auto& threeWinStreakConfig = battleConfig.judgeResult.threeWinStreak;
         float streakScale = 0.5f + std::sin(resultState.resultAnimationTimer * 3.14159f * 4.0f) * 0.3f;
-        std::string streakText = "🔥 3連勝！ 🔥";
-        SDL_Color streakColor = {255, 215, 0, 255};
+        // JSONからフォーマットを取得
+        std::string streakText = threeWinStreakConfig.format;
+        // プレースホルダーを置換（安全な方法：文字列を前後で結合）
+        size_t pos = streakText.find("{multiplier}");
+        if (pos != std::string::npos) {
+            std::string multiplierStr = "2.5";  // THREE_WIN_STREAK_MULTIPLIER = 2.5f
+            streakText = streakText.substr(0, pos) + multiplierStr + streakText.substr(pos + 13);
+        }
+        SDL_Color streakColor = threeWinStreakConfig.color;
         
-        int streakTextWidth = 300;
-        int streakTextHeight = 80;
+        int streakTextWidth = threeWinStreakConfig.baseWidth;
+        int streakTextHeight = threeWinStreakConfig.baseHeight;
         int streakScaledWidth = (int)(streakTextWidth * streakScale);
         int streakScaledHeight = (int)(streakTextHeight * streakScale);
-        int streakTextX = centerX - streakScaledWidth / 2;
-        int streakTextY = centerY - 150 - streakScaledHeight / 2;
+        
+        // 位置を計算（JSONから取得）
+        int streakTextX, streakTextY;
+        if (threeWinStreakConfig.position.useRelative) {
+            streakTextX = centerX - streakScaledWidth / 2;
+            streakTextY = static_cast<int>(centerY + threeWinStreakConfig.position.offsetY - streakScaledHeight / 2);
+        } else {
+            streakTextX = static_cast<int>(threeWinStreakConfig.position.absoluteX);
+            streakTextY = static_cast<int>(threeWinStreakConfig.position.absoluteY);
+        }
         
         graphics->setDrawColor(255, 200, 0, 200);
         graphics->drawRect(streakTextX - 20, streakTextY - 20, streakScaledWidth + 40, streakScaledHeight + 40, true);
@@ -703,11 +762,30 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     graphics->drawText(mainText, textX, textY, "default", mainColor);
     
     
-    if (params.hasThreeWinStreak && params.isVictory) {
-        std::string bonusText = "✨ ダメージ2.5倍ボーナス！ ✨";
-        SDL_Color bonusColor = {255, 255, 100, 255};
-        graphics->drawText(bonusText, centerX - 150, centerY + 80, "default", bonusColor);
-    }
+    // if (params.hasThreeWinStreak && params.isVictory) {
+    //     auto& damageBonusConfig = battleConfig.judgeResult.damageBonus;
+    //     // JSONからフォーマットを取得
+    //     std::string bonusText = damageBonusConfig.format;
+    //     // プレースホルダーを置換
+    //     size_t pos = bonusText.find("{multiplier}");
+    //     if (pos != std::string::npos) {
+    //         std::string multiplierStr = "2.5";  // THREE_WIN_STREAK_MULTIPLIER = 2.5f
+    //         bonusText.replace(pos, 13, multiplierStr);
+    //     }
+    //     SDL_Color bonusColor = damageBonusConfig.color;
+        
+    //     // 位置を計算（JSONから取得）
+    //     int bonusX, bonusY;
+    //     if (damageBonusConfig.position.useRelative) {
+    //         bonusX = static_cast<int>(centerX + damageBonusConfig.position.offsetX);
+    //         bonusY = static_cast<int>(centerY + damageBonusConfig.position.offsetY);
+    //     } else {
+    //         bonusX = static_cast<int>(damageBonusConfig.position.absoluteX);
+    //         bonusY = static_cast<int>(damageBonusConfig.position.absoluteY);
+    //     }
+        
+    //     graphics->drawText(bonusText, bonusX, bonusY, "default", bonusColor);
+    // }
     
     
     if (params.isVictory) {
@@ -726,10 +804,7 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     
     // 敗北時の暗いオーバーレイを削除（勝った時と同じように背景が見えるように）
     
-    // JSONからプレイヤーと敵の位置を取得
-    auto& config = UIConfig::UIConfigManager::getInstance();
-    auto battleConfig = config.getBattleConfig();
-    
+    // プレイヤーと敵の位置を取得（battleConfigは既に取得済み）
     int playerBaseX, playerBaseY;
     config.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
     
@@ -752,22 +827,7 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     
     renderCharacters(playerX, playerY, enemyX, enemyY, playerWidth, playerHeight, enemyWidth, enemyHeight);
     
-    // 住民戦ではない場合、中央上部にRock-Paper-Scissors画像を表示
-    if (!enemy->isResident()) {
-        SDL_Texture* rpsTexture = graphics->getTexture("rock_paper_scissors");
-        if (rpsTexture) {
-            int textureWidth, textureHeight;
-            SDL_QueryTexture(rpsTexture, nullptr, nullptr, &textureWidth, &textureHeight);
-            
-            // 中央上部に配置（画像の幅を適切なサイズに調整）
-            int displayWidth = 200; // 表示幅を200pxに設定（必要に応じて調整可能）
-            int displayHeight = static_cast<int>(textureHeight * (static_cast<float>(displayWidth) / textureWidth));
-            int posX = (screenWidth - displayWidth) / 2; // 中央
-            int posY = 20; // 上部から20px下
-            
-            graphics->drawTexture(rpsTexture, posX, posY, displayWidth, displayHeight);
-        }
-    }
+    // ジャッジ結果フェーズでは三すくみ画像を表示しない（renderRockPaperScissorsImageで表示されるため）
 }
 
 void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY,
@@ -804,66 +864,102 @@ void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY
 }
 
 void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
-                        int playerHeight, int enemyHeight, const std::string& residentBehaviorHint) {
-    SDL_Color whiteColor = {255, 255, 255, 255};
+                        int playerHeight, int enemyHeight, const std::string& residentBehaviorHint, bool hideEnemyUI) {
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto battleConfig = config.getBattleConfig();
+    
     int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
     
     // プレイヤーの名前とレベル（HPの上に表示）- 住民戦でも表示
     std::string playerNameText = player->getName() + " Lv." + std::to_string(player->getLevel());
-    SDL_Texture* playerNameTexture = graphics->createTextTexture(playerNameText, "default", whiteColor);
+    SDL_Texture* playerNameTexture = graphics->createTextTexture(playerNameText, "default", battleConfig.playerName.color);
     if (playerNameTexture) {
         int textWidth, textHeight;
         SDL_QueryTexture(playerNameTexture, nullptr, nullptr, &textWidth, &textHeight);
-        int bgX = playerX - 80 - padding;
-        int bgY = playerY - playerHeight / 2 - 40 - padding;
+        int bgX = static_cast<int>(playerX + battleConfig.playerName.offsetX - padding);
+        int bgY = static_cast<int>(playerY - playerHeight / 2 + battleConfig.playerName.offsetY - padding);
         graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
         graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
         graphics->setDrawColor(255, 255, 255, 255);
         graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
         SDL_DestroyTexture(playerNameTexture);
     }
-    graphics->drawText(playerNameText, playerX - 80, playerY - playerHeight / 2 - 40, "default", whiteColor);
+    int playerNameX = static_cast<int>(playerX + battleConfig.playerName.offsetX);
+    int playerNameY = static_cast<int>(playerY - playerHeight / 2 + battleConfig.playerName.offsetY);
+    graphics->drawText(playerNameText, playerNameX, playerNameY, "default", battleConfig.playerName.color);
     
     // 住民戦の場合はプレイヤーのHP表示をスキップ
     if (!enemy->isResident()) {
-    std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-    SDL_Texture* playerHpTexture = graphics->createTextTexture(playerHpText, "default", whiteColor);
-    if (playerHpTexture) {
-        int textWidth, textHeight;
-        SDL_QueryTexture(playerHpTexture, nullptr, nullptr, &textWidth, &textHeight);
-        int bgX = playerX  + 10 - padding;
-        int bgY = playerY - playerHeight / 2 - 40 - padding;
-        graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-        graphics->setDrawColor(255, 255, 255, 255);
-        graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-        SDL_DestroyTexture(playerHpTexture);
+        // プレイヤーのHPを体力バーとして表示
+        int barWidth = battleConfig.healthBar.width;
+        int barHeight = battleConfig.healthBar.height;
+        int barX = static_cast<int>(playerX + battleConfig.healthBar.offsetX);
+        int barY = static_cast<int>(playerY - playerHeight / 2 + battleConfig.healthBar.offsetY);
+        
+        // HPの割合を計算
+        int playerHp = player->getHp();
+        int playerMaxHp = player->getMaxHp();
+        float hpRatio = static_cast<float>(playerHp) / static_cast<float>(playerMaxHp);
+        if (hpRatio < 0.0f) hpRatio = 0.0f;
+        if (hpRatio > 1.0f) hpRatio = 1.0f;
+        
+        int currentBarWidth = static_cast<int>(barWidth * hpRatio);
+        
+        // バーの背景（空の部分）を描画
+        graphics->setDrawColor(battleConfig.healthBar.bgColor.r, battleConfig.healthBar.bgColor.g, battleConfig.healthBar.bgColor.b, battleConfig.healthBar.bgColor.a);
+        graphics->drawRect(barX, barY, barWidth, barHeight, true);
+        
+        // 現在のHPに応じた黄緑色のバーを描画
+        if (currentBarWidth > 0) {
+            graphics->setDrawColor(battleConfig.healthBar.barColor.r, battleConfig.healthBar.barColor.g, battleConfig.healthBar.barColor.b, battleConfig.healthBar.barColor.a);
+            graphics->drawRect(barX, barY, currentBarWidth, barHeight, true);
+        }
+        
+        // バーの枠線を描画
+        graphics->setDrawColor(battleConfig.healthBar.borderColor.r, battleConfig.healthBar.borderColor.g, battleConfig.healthBar.borderColor.b, battleConfig.healthBar.borderColor.a);
+        graphics->drawRect(barX, barY, barWidth, barHeight, false);
+        
+        // ステータス上昇呪文の状態を表示（HPの下）
+        if (player->hasNextTurnBonusActive()) {
+            auto& attackMultiplierConfig = battleConfig.attackMultiplier;
+            float multiplier = player->getNextTurnMultiplier();
+            int turns = player->getNextTurnBonusTurns();
+            // 倍率を文字列に変換（小数点以下1桁まで表示）
+            int multiplierInt = static_cast<int>(multiplier * 10);
+            std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
+            // JSONからフォーマットを取得
+            std::string statusText = attackMultiplierConfig.format;
+            // プレースホルダーを置換（安全な方法：文字列を前後で結合）
+            size_t pos = statusText.find("{multiplier}");
+            if (pos != std::string::npos) {
+                statusText = statusText.substr(0, pos) + multiplierStr + statusText.substr(pos + 13);
+            }
+            pos = statusText.find("{turns}");
+            if (pos != std::string::npos) {
+                statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 8);
+            }
+            SDL_Color statusColor = attackMultiplierConfig.textColor;
+            SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
+            if (statusTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
+                int bgX = static_cast<int>(playerX + attackMultiplierConfig.offsetX - attackMultiplierConfig.padding);
+                int bgY = static_cast<int>(playerY - playerHeight / 2 + attackMultiplierConfig.offsetY - attackMultiplierConfig.padding);
+                graphics->setDrawColor(attackMultiplierConfig.bgColor.r, attackMultiplierConfig.bgColor.g, attackMultiplierConfig.bgColor.b, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                graphics->drawRect(bgX, bgY, textWidth + attackMultiplierConfig.padding * 2, textHeight + attackMultiplierConfig.padding * 2, true);
+                graphics->setDrawColor(attackMultiplierConfig.borderColor.r, attackMultiplierConfig.borderColor.g, attackMultiplierConfig.borderColor.b, attackMultiplierConfig.borderColor.a);
+                graphics->drawRect(bgX, bgY, textWidth + attackMultiplierConfig.padding * 2, textHeight + attackMultiplierConfig.padding * 2, false);
+                SDL_DestroyTexture(statusTexture);
+            }
+            int statusTextX = static_cast<int>(playerX + attackMultiplierConfig.offsetX);
+            int statusTextY = static_cast<int>(playerY - playerHeight / 2 + attackMultiplierConfig.offsetY);
+            graphics->drawText(statusText, statusTextX, statusTextY, "default", statusColor);
+        }
     }
-    graphics->drawText(playerHpText, playerX + 10, playerY - playerHeight / 2 - 40, "default", whiteColor);
     
-    // ステータス上昇呪文の状態を表示（HPの下）
-    if (player->hasNextTurnBonusActive()) {
-        float multiplier = player->getNextTurnMultiplier();
-        int turns = player->getNextTurnBonusTurns();
-        // 倍率を文字列に変換（小数点以下1桁まで表示）
-        int multiplierInt = static_cast<int>(multiplier * 10);
-        std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
-        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
-        SDL_Color statusColor = {255, 255, 100, 255}; // 黄色
-        SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
-        if (statusTexture) {
-            int textWidth, textHeight;
-            SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
-            int bgX = playerX - 100 - padding;
-            int bgY = playerY - playerHeight / 2 + padding;
-            graphics->setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-            graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics->setDrawColor(255, 255, 100, 255);
-            graphics->drawRect(bgX, bgY, textWidth + padding * 2, textHeight + padding * 2, false);
-            SDL_DestroyTexture(statusTexture);
-        }
-        graphics->drawText(statusText, playerX - 100, playerY - playerHeight / 2 + padding, "default", statusColor);
-        }
+    // 敵のUIを非表示にするフラグが立っている場合は、敵のUIを描画しない
+    if (hideEnemyUI) {
+        return;
     }
     
     // 敵の型のヒントを表示（敵の名前の下）
@@ -895,6 +991,7 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     std::string enemyNameText = enemyName + " Lv." + std::to_string(enemy->getLevel());
     
     // 体力に応じて色を決定
+    SDL_Color whiteColor = {255, 255, 255, 255};
     SDL_Color enemyNameColor = whiteColor;
     int enemyHp = enemy->getHp();
     int enemyMaxHp = enemy->getMaxHp();
@@ -957,9 +1054,11 @@ void BattleUI::renderTurnNumber(int turnNumber, int totalTurns, bool isDesperate
         SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
         
         // 背景を描画（パディング付き）
+        // ターン数UIを少し下に移動（夜のタイマーUIの下に表示）
+        int turnNumberY = 70; // 20から60に変更
         int padding = BattleConstants::JUDGE_COMMAND_TEXT_PADDING_SMALL;
-        int bgX = 20 - padding;
-        int bgY = 20 - padding;
+        int bgX = 18 - padding;
+        int bgY = turnNumberY - padding;
         int bgWidth = textWidth + padding * 2;
         int bgHeight = textHeight + padding * 2;
         
@@ -970,13 +1069,14 @@ void BattleUI::renderTurnNumber(int turnNumber, int totalTurns, bool isDesperate
         
         // テキストを描画
         SDL_Color turnColor = {255, 255, 255, 255};
-        graphics->drawText(turnText, 20, 20, "default", turnColor);
+        graphics->drawText(turnText, 18, turnNumberY, "default", turnColor);
         
         SDL_DestroyTexture(textTexture);
     } else {
         // フォールバック：通常のテキスト描画
+        int turnNumberY = 60; // 20から60に変更
         SDL_Color turnColor = {255, 255, 255, 255};
-        graphics->drawText(turnText, 20, 20, "default", turnColor);
+        graphics->drawText(turnText, 20, turnNumberY, "default", turnColor);
     }
 }
 

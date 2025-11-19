@@ -94,6 +94,173 @@ namespace UIConfig {
         int playerWidth;             // プレイヤーの画像幅
         int playerHeight;            // プレイヤーの画像高さ
         UIMessageBoardConfig explanationMessageBoard;  // 説明用メッセージボード
+        
+        // プレイヤー名と体力バーの設定（相対位置オフセット）
+        struct {
+            float offsetX = -80.0f;      // プレイヤー名のXオフセット（playerXからの相対位置）
+            float offsetY = -40.0f;      // プレイヤー名のYオフセット（playerY - playerHeight/2からの相対位置）
+            SDL_Color color = {255, 255, 255, 255};  // プレイヤー名の色
+        } playerName;
+        
+        struct {
+            float offsetX = 10.0f;       // 体力バーのXオフセット（playerXからの相対位置）
+            float offsetY = -40.0f;      // 体力バーのYオフセット（playerY - playerHeight/2からの相対位置）
+            int width = 150;              // 体力バーの幅
+            int height = 20;              // 体力バーの高さ
+            SDL_Color barColor = {150, 255, 150, 255};      // 体力バーの色（黄緑色）
+            SDL_Color bgColor = {50, 50, 50, 255};          // 体力バーの背景色（暗いグレー）
+            SDL_Color borderColor = {255, 255, 255, 255};   // 体力バーの枠線色（白色）
+        } healthBar;
+        
+        // コマンド選択UIの設定
+        struct {
+            float selectedCommandOffsetY = -150.0f;  // 選択済みコマンドのYオフセット（centerYからの相対位置）
+            int selectedCommandImageSize = 50;       // 選択済みコマンド画像のサイズ（幅）
+            int imageSpacing = 60;                   // 画像間のスペース
+            int arrowSpacing = 20;                    // 矢印のスペース
+            
+            float buttonBaseOffsetY = -50.0f;        // コマンドボタンのベースYオフセット（centerYからの相対位置）
+            int buttonWidth = 200;                   // ボタンの幅
+            int buttonHeight = 60;                   // ボタンの高さ
+            int buttonSpacing = 80;                  // ボタン間のスペース
+            int buttonImageSize = 60;                 // ボタン内のコマンド画像のサイズ（幅）
+            
+            SDL_Color selectedBgColor = {100, 200, 255, 200};    // 選択中のボタンの背景色
+            SDL_Color unselectedBgColor = {50, 50, 50, 150};     // 未選択のボタンの背景色
+            SDL_Color selectedBorderColor = {255, 215, 0, 255};   // 選択中のボタンの枠線色
+            SDL_Color unselectedBorderColor = {150, 150, 150, 255}; // 未選択のボタンの枠線色
+            SDL_Color selectedTextColor = {255, 255, 255, 255};   // 選択中のボタンのテキスト色
+            SDL_Color unselectedTextColor = {200, 200, 200, 255}; // 未選択のボタンのテキスト色
+            SDL_Color arrowColor = {255, 255, 255, 255};          // 矢印の色
+        } commandSelection;
+        
+        // 三すくみ画像の設定
+        struct {
+            UIPosition position;          // 三すくみ画像の位置
+            int width = 200;              // 三すくみ画像の幅
+        } rockPaperScissors;
+        
+        // ジャッジ結果フェーズのUI設定
+        struct {
+            // メイン結果テキスト（勝利/敗北/引き分け）
+            struct {
+                UIPosition position;      // 位置（centerYからの相対位置）
+                float offsetY = -100.0f;   // Yオフセット（centerYからの相対位置）
+                int baseWidth = 400;      // ベース幅
+                int baseHeight = 100;     // ベース高さ
+                SDL_Color victoryColor = {255, 215, 0, 255};      // 勝利時の色（金色）
+                SDL_Color defeatColor = {255, 0, 0, 255};         // 敗北時の色（赤色）
+                SDL_Color drawColor = {200, 200, 200, 255};       // 引き分け時の色（グレー）
+                SDL_Color desperateVictoryColor = {255, 215, 0, 255};  // 一発逆転成功時の色
+                SDL_Color desperateDefeatColor = {255, 0, 0, 255};     // 大敗北時の色
+            } resultText;
+            
+            // 3連勝テキスト
+            struct {
+                UIPosition position;      // 位置（centerYからの相対位置）
+                float offsetY = -150.0f;  // Yオフセット（centerYからの相対位置）
+                int baseWidth = 300;      // ベース幅
+                int baseHeight = 80;      // ベース高さ
+                SDL_Color color = {255, 215, 0, 255};  // 色（金色）
+                std::string format = "3連勝！ダメージ{multiplier}倍ボーナス！";  // テキストフォーマット（{multiplier}が置換される）
+            } threeWinStreak;
+            
+            // ダメージボーナステキスト
+            struct {
+                UIPosition position;      // 位置（centerYからの相対位置）
+                float offsetY = 80.0f;    // Yオフセット（centerYからの相対位置）
+                float offsetX = -150.0f;  // Xオフセット（centerXからの相対位置）
+                SDL_Color color = {255, 255, 100, 255};  // 色（黄色）
+                std::string format = "✨ ダメージ{multiplier}倍ボーナス！ ✨";  // テキストフォーマット（{multiplier}が置換される）
+            } damageBonus;
+        } judgeResult;
+        
+        // 勝敗UIの設定（renderWinLossUI用）
+        struct {
+            // 「自分 X勝 敵 Y勝」テキスト
+            struct {
+                UIPosition position;      // 位置（VSの下からの相対位置）
+                float offsetY = 20.0f;     // Yオフセット（VSの下からの相対位置）
+                SDL_Color color = {255, 255, 255, 255};  // 色（白色）
+                int padding = 8;           // 背景のパディング
+                std::string format = "自分 {playerWins}勝  敵 {enemyWins}勝";  // テキストフォーマット（{playerWins}, {enemyWins}が置換される）
+            } winLossText;
+            
+            // 「〜ターン分の攻撃を実行」テキスト
+            struct {
+                UIPosition position;      // 位置（勝敗UIの下からの相対位置）
+                float offsetY = 20.0f;     // Yオフセット（勝敗UIの下からの相対位置）
+                SDL_Color color = {255, 255, 255, 255};  // 色（白色）
+                int padding = 8;           // 背景のパディング
+                std::string playerWinFormat = "{playerName}が{turns}ターン分の攻撃を実行！";  // プレイヤー勝利時のフォーマット
+                std::string enemyWinFormat = "敵が{turns}ターン分の攻撃を実行！";  // 敵勝利時のフォーマット
+                std::string drawFormat = "両方がダメージを受ける";  // 引き分け時のフォーマット
+                std::string hesitateFormat = "{playerName}はメンタルの影響で攻撃をためらいました。";  // 住民戦で攻撃失敗時のフォーマット
+            } totalAttackText;
+            
+            // 「〜のアタック！」などのテキスト
+            struct {
+                UIPosition position;      // 位置（totalAttackTextの下からの相対位置）
+                float offsetY = 20.0f;     // Yオフセット（totalAttackTextの下からの相対位置）
+                SDL_Color color = {255, 255, 255, 255};  // 色（白色）
+                int padding = 8;           // 背景のパディング
+                std::string attackFormat = "{playerName}のアタック！";  // 通常攻撃のフォーマット
+                std::string rushFormat = "{playerName}のラッシュアタック！";  // ラッシュアタックのフォーマット
+                std::string statusUpSpellFormat = "{playerName}が強化呪文発動！";  // ステータスアップ呪文のフォーマット
+                std::string healSpellFormat = "{playerName}が回復呪文発動！";  // 回復呪文のフォーマット
+                std::string attackSpellFormat = "{playerName}が攻撃呪文発動！";  // 攻撃呪文のフォーマット
+                std::string defaultSpellFormat = "{playerName}が呪文発動！";  // デフォルト呪文のフォーマット
+                std::string defaultAttackFormat = "{playerName}の攻撃！";  // デフォルト攻撃のフォーマット
+            } attackText;
+        } winLossUI;
+        
+        // コマンド選択ヒントテキストの設定
+        struct {
+            UIPosition position;          // 位置（画面下部からの相対位置）
+            float offsetY = -100.0f;      // Yオフセット（screenHeightからの相対位置）
+            float offsetX = -120.0f;      // Xオフセット（centerXからの相対位置）
+            SDL_Color color = {255, 255, 255, 255};  // 色（白色）
+            int padding = 8;               // 背景のパディング
+            std::string normalText = "選択: W/S 決定: Enter 戻る: Q";  // 通常時のテキスト
+            std::string residentText = "選択: W/S 決定: Enter";  // 住民戦時のテキスト
+        } commandHint;
+        
+        // ジャッジフェーズの結果表示UI設定（「勝ち！」「負け...」「引き分け」）
+        struct {
+            UIPosition position;      // 位置（centerX/centerYからの相対位置または絶対位置）
+            
+            struct {
+                std::string text = "勝ち！";  // 勝利時のテキスト
+                SDL_Color color = {255, 215, 0, 255};  // 勝利時の色（金色）
+            } win;
+            
+            struct {
+                std::string text = "負け...";  // 敗北時のテキスト
+                SDL_Color color = {255, 0, 0, 255};  // 敗北時の色（赤色）
+            } lose;
+            
+            struct {
+                std::string text = "引き分け";  // 引き分け時のテキスト
+                SDL_Color color = {200, 200, 200, 255};  // 引き分け時の色（グレー）
+            } draw;
+            
+            int baseWidth = 200;      // ベース幅
+            int baseHeight = 60;      // ベース高さ
+            int backgroundPadding = 20;  // 背景のパディング
+            SDL_Color glowColor = {255, 215, 0, 255};  // 勝利時のグロー色（金色）
+        } judgePhase;
+        
+        // ステータス上昇呪文の攻撃倍率表示UI設定
+        struct {
+            UIPosition position;      // 位置（プレイヤーHPバーの下からの相対位置）
+            float offsetX = -100.0f;  // Xオフセット（プレイヤーXからの相対位置）
+            float offsetY = 0.0f;     // Yオフセット（プレイヤーHPバーの下からの相対位置）
+            SDL_Color textColor = {255, 255, 100, 255};  // テキスト色（黄色）
+            SDL_Color bgColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 100, 255};  // ボーダー色（黄色）
+            int padding = 8;           // 背景のパディング
+            std::string format = "攻撃倍率: {multiplier}倍 (残り{turns}ターン)";  // テキストフォーマット（{multiplier}, {turns}が置換される）
+        } attackMultiplier;
     };
     
     // RoomState用

@@ -88,10 +88,18 @@ void SDL2Game::handleEvents() {
             // 現在のStateの状態を取得して保存
             GameState* currentState = stateManager.getCurrentState();
             if (currentState) {
-                // BattleStateの場合は保存しない（直前のフィールド状態が既に保存されている）
-                if (currentState->getType() != StateType::BATTLE) {
+                // GameOverStateの場合は特別な処理
+                if (currentState->getType() == StateType::GAME_OVER) {
+                    // ゲームオーバーからの終了フラグを設定
+                    player->setGameOverExit(true);
+                    // フィールドの状態を設定（直前のフィールド状態が存在する場合はそれを使用、なければデフォルト）
+                    // ここではフィールドの状態を設定しない（loadGameで処理される）
+                } else if (currentState->getType() != StateType::BATTLE) {
+                    // BattleState以外の通常のStateの場合
                     nlohmann::json stateJson = currentState->toJson();
                     player->setSavedGameState(stateJson);
+                    // ゲームオーバーからの終了フラグをクリア
+                    player->setGameOverExit(false);
                 }
             }
             player->saveGame("autosave.json", nightTimer, nightTimerActive);
@@ -201,6 +209,57 @@ void SDL2Game::initializeGame() {
         } else if (debugStartState == "town") {
             stateManager.changeState(std::make_unique<TownState>(player));
         } else if (debugStartState == "night") {
+            // 夜の街のデバッグモード：レベル25のプレイヤーを設定
+            // 初期ステータス: HP=30, MP=20, Attack=8, Defense=3, Level=1
+            // レベルアップ増加: HP+5, MP+1, Attack+2, Defense+2 per level
+            // レベル25のステータス: HP=150, MP=44, Attack=56, Defense=51
+            int targetLevel = 25;
+            player->setLevel(targetLevel);
+            
+            // レベル25のステータスを計算して設定
+            int baseHp = 30;
+            int baseMp = 20;
+            int baseAttack = 8;
+            int baseDefense = 3;
+            
+            int levelUps = targetLevel - 1; // レベル1から25まで24回レベルアップ
+            int maxHp = baseHp + levelUps * 5;
+            int maxMp = baseMp + levelUps * 1;
+            int attack = baseAttack + levelUps * 2;
+            int defense = baseDefense + levelUps * 2;
+            
+            player->setMaxHp(maxHp);
+            player->setMaxMp(maxMp);
+            player->setAttack(attack);
+            player->setDefense(defense);
+            player->heal(maxHp); // HPを最大値に設定
+            player->restoreMp(maxMp); // MPを最大値に設定
+            
+            // 進行状態を設定
+            player->setCurrentNight(1); // 1夜目
+            player->hasSeenRoomStory = true; // チュートリアル完了
+            player->hasSeenTownExplanation = true;
+            player->hasSeenFieldExplanation = true;
+            player->hasSeenFieldFirstVictoryExplanation = true;
+            player->hasSeenBattleExplanation = true;
+            player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
+            
+            // 信頼度を適切に設定（レベル25なので適度な信頼度）
+            player->setKingTrust(50);
+            player->setDemonTrust(50);
+            
+            // メンタルを適度に設定
+            player->setMental(70);
+            
+            // 夜の回数を設定（夜の街から開始するので1夜目）
+            TownState::s_nightCount = 1;
+            // 目標レベルをs_nightCountに基づいて計算（1夜目なので50）
+            TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
+            TownState::s_levelGoalAchieved = false;
+            
+            std::cout << "デバッグモード: レベル25のプレイヤーで夜の街から開始します" << std::endl;
+            std::cout << "ステータス: HP=" << maxHp << ", MP=" << maxMp << ", Attack=" << attack << ", Defense=" << defense << std::endl;
+            
             stateManager.changeState(std::make_unique<NightState>(player));
         } else if (debugStartState == "castle") {
             stateManager.changeState(std::make_unique<CastleState>(player, false));
@@ -218,7 +277,7 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<MainMenuState>(player));
         }
     } else {
-        stateManager.changeState(std::make_unique<MainMenuState>(player));
+    stateManager.changeState(std::make_unique<MainMenuState>(player));
     }
 }
 

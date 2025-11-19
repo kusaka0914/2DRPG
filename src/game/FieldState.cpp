@@ -109,14 +109,22 @@ void FieldState::enter() {
     // 初勝利後の説明を表示するかチェック（レベル2になった場合）
     // ただし、セーブデータから復元された場合は既に表示済みとみなす
     // また、説明UIを既に見た場合は表示しない
+    // 初回フィールド説明が表示されている場合でも、初勝利後の説明を表示できるようにするため、
+    // !showGameExplanationの条件を削除（初回フィールド説明が終わった後に表示される）
     static bool s_firstVictoryExplanationShown = false;
-    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2 && !showGameExplanation && !player->hasSeenFieldFirstVictoryExplanation) {
-        setupGameExplanation(true);  // 初勝利後の説明
-        showGameExplanation = true;
-        explanationStep = 0;
-        s_firstVictoryExplanationShown = true;
-    } else if (showGameExplanation || player->hasSeenFieldFirstVictoryExplanation) {
-        // セーブデータから復元された場合、または既に見た場合は既に表示済みとみなす
+    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2 && !player->hasSeenFieldFirstVictoryExplanation) {
+        // 初回フィールド説明が表示されている場合は、handleInput()で初回フィールド説明が終わった後に表示する
+        // そのため、ここではsetupGameExplanation()を呼ばず、フラグのみ設定
+        // ただし、初回フィールド説明が既に表示されていない場合は、すぐに表示する
+        if (!showGameExplanation || player->hasSeenFieldExplanation) {
+            setupGameExplanation(true);  // 初勝利後の説明
+            showGameExplanation = true;
+            explanationStep = 0;
+            s_firstVictoryExplanationShown = true;
+        }
+        // 初回フィールド説明が表示されている場合は、handleInput()で処理される
+    } else if (player->hasSeenFieldFirstVictoryExplanation) {
+        // 既に見た場合は既に表示済みとみなす
         s_firstVictoryExplanationShown = true;
     }
 
@@ -179,11 +187,15 @@ void FieldState::update(float deltaTime) {
             TownState::s_nightTimerActive = false;
             TownState::s_nightTimer = 0.0f;
             
-            // 目標達成していない場合はゲームオーバー
+            // 目標達成していない場合は目標レベルの敵と戦闘を開始
             if (!TownState::s_levelGoalAchieved) {
                 if (stateManager) {
-                    auto newPlayer = std::make_shared<Player>("勇者");
-                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                    int targetLevel = TownState::s_targetLevel;
+                    auto targetLevelEnemy = std::make_unique<Enemy>(Enemy::createTargetLevelEnemy(targetLevel));
+                    auto battleState = std::make_unique<BattleState>(player, std::move(targetLevelEnemy));
+                    // 目標レベル達成用の敵フラグを明示的に設定
+                    battleState->setIsTargetLevelEnemy(true);
+                    stateManager->changeState(std::move(battleState));
                 }
             } else {
                 if (stateManager) {
@@ -320,11 +332,8 @@ void FieldState::handleInput(const InputManager& input) {
             explanationStep++;
             
             if (explanationStep >= gameExplanationTexts.size()) {
-                showGameExplanation = false;
-                explanationStep = 0;
-                clearMessage();
-                
                 // 説明UIが完全に終わったことを記録
+                bool wasFirstFieldExplanation = false;
                 if (!gameExplanationTexts.empty()) {
                     if (gameExplanationTexts[0].find("初勝利") != std::string::npos) {
                         // 初勝利後の説明
@@ -332,6 +341,7 @@ void FieldState::handleInput(const InputManager& input) {
                     } else {
                         // 初回フィールド説明
                         player->hasSeenFieldExplanation = true;
+                        wasFirstFieldExplanation = true;
                     }
                 }
                 
@@ -345,6 +355,21 @@ void FieldState::handleInput(const InputManager& input) {
                     nightTimer = 900.0f;  // 15分 = 900秒（NIGHT_TIMER_DURATIONと同じ値）
                     TownState::s_nightTimerActive = true;
                     TownState::s_nightTimer = 900.0f;
+                }
+                
+                showGameExplanation = false;
+                explanationStep = 0;
+                clearMessage();
+                
+                // 初回フィールド説明が終わった後、初勝利後の説明を表示するかチェック
+                if (wasFirstFieldExplanation && player->getLevel() >= 2 && !player->hasSeenFieldFirstVictoryExplanation) {
+                    static bool s_firstVictoryExplanationShown = false;
+                    if (!s_firstVictoryExplanationShown) {
+                        setupGameExplanation(true);  // 初勝利後の説明
+                        showGameExplanation = true;
+                        explanationStep = 0;
+                        s_firstVictoryExplanationShown = true;
+                    }
                 }
             } else {
                 showMessage(gameExplanationTexts[explanationStep]);
@@ -871,6 +896,7 @@ void FieldState::setupGameExplanation(bool isFirstVictory) {
     if (isFirstVictory) {
         // 初勝利後の説明
         gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！");
+        gameExplanationTexts.push_back("ちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
         gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
         gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。");
         gameExplanationTexts.push_back("タイマーが0になるまでに目標レベルに達してください！");

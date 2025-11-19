@@ -158,7 +158,7 @@ public:
      * @param residentBehaviorHint 住民の様子（住民戦の場合のみ、デフォルトは空文字列）
      */
     void renderHP(int playerX, int playerY, int enemyX, int enemyY,
-                  int playerHeight, int enemyHeight, const std::string& residentBehaviorHint = "");
+                  int playerHeight, int enemyHeight, const std::string& residentBehaviorHint = "", bool hideEnemyUI = false);
     
     /**
      * @brief ターン数表示（共通）

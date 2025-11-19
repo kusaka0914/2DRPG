@@ -12,11 +12,13 @@
 GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
                              EnemyType enemyType, int enemyLevel,
                              bool isResident, const std::string& residentName,
-                             int residentX, int residentY, int residentTextureIndex)
+                             int residentX, int residentY, int residentTextureIndex,
+                             bool isTargetLevelEnemy)
     : player(player), gameOverReason(reason), 
       battleEnemyType(enemyType), battleEnemyLevel(enemyLevel),
       isResidentBattle(isResident), residentName(residentName),
       residentX(residentX), residentY(residentY), residentTextureIndex(residentTextureIndex),
+      isTargetLevelEnemy(isTargetLevelEnemy),
       titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
     // 戦闘に敗北した場合または住民戦でゲームオーバーになった場合のみ敵情報を有効にする
     hasBattleEnemyInfo = (gameOverReason.find("戦闘に敗北") != std::string::npos) || isResidentBattle;
@@ -144,6 +146,61 @@ void GameOverState::render(Graphics& graphics) {
 void GameOverState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
+    // 目標レベル達成用の敵に負けた場合の特別な処理
+    if (isTargetLevelEnemy) {
+        if (input.isKeyJustPressed(InputKey::R)) {
+            // Rキーで再戦
+            if (stateManager) {
+                float nightTimer;
+                bool nightTimerActive;
+                if (player->autoLoad(nightTimer, nightTimerActive)) {
+                    player->heal(player->getMaxHp());
+                    player->restoreMp(player->getMaxMp());
+                    
+                    // 目標レベルの敵との戦闘を再開
+                    int targetLevel = TownState::s_targetLevel;
+                    auto enemy = std::make_unique<Enemy>(Enemy::createTargetLevelEnemy(targetLevel));
+                    auto battleState = std::make_unique<BattleState>(player, std::move(enemy));
+                    // 目標レベル達成用の敵フラグを明示的に設定
+                    battleState->setIsTargetLevelEnemy(true);
+                    stateManager->changeState(std::move(battleState));
+                    
+                    TownState::s_nightTimerActive = nightTimerActive;
+                    TownState::s_nightTimer = nightTimer;
+                } else {
+                    auto newPlayer = std::make_shared<Player>("勇者");
+                    newPlayer->setKingTrust(50);
+                    newPlayer->setCurrentNight(1);
+                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                }
+            }
+        } else if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            // Enterキーで3分延長してフィールドに戻る
+            if (stateManager) {
+                float nightTimer;
+                bool nightTimerActive;
+                if (player->autoLoad(nightTimer, nightTimerActive)) {
+                    player->heal(player->getMaxHp());
+                    player->restoreMp(player->getMaxMp());
+                    
+                    // タイマーを3分（180秒）延長
+                    TownState::s_nightTimerActive = true;
+                    TownState::s_nightTimer = 180.0f; // 3分 = 180秒
+                    
+                    // フィールドに戻る
+                    stateManager->changeState(std::make_unique<FieldState>(player));
+                } else {
+                    auto newPlayer = std::make_shared<Player>("勇者");
+                    newPlayer->setKingTrust(50);
+                    newPlayer->setCurrentNight(1);
+                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                }
+            }
+        }
+        return; // 目標レベル達成用の敵に負けた場合は、通常の処理をスキップ
+    }
+    
+    // 通常の処理
     if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (stateManager) {
             float nightTimer;
@@ -225,7 +282,9 @@ void GameOverState::setupUI() {
     int instructionX, instructionY;
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.position, 1100, 650);
     std::string instructionText;
-    if (hasBattleEnemyInfo) {
+    if (isTargetLevelEnemy) {
+        instructionText = "Rキーで再戦 / Enterキーで3分延長してフィールドに戻る";
+    } else if (hasBattleEnemyInfo) {
         instructionText = "EnterまたはAボタンで再戦";
     } else {
         instructionText = "EnterまたはAボタンで夜の街に再スタート";

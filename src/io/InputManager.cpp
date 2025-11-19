@@ -163,7 +163,9 @@ InputKey InputManager::sdlKeyToInputKey(SDL_Keycode key) {
             return InputKey::ENTER;
         case SDLK_q:
             return InputKey::Q;
-        case SDLK_n: 
+        case SDLK_r:
+            return InputKey::R;
+        case SDLK_n:
             return InputKey::N;
         default:
             return static_cast<InputKey>(-1);

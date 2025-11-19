@@ -57,7 +57,7 @@ private:
     int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス（住民の場合のみ有効、-1=住民ではない） */
     int residentX;  /**< @brief 住民のX座標（住民の場合のみ有効、-1=住民ではない） */
     int residentY;  /**< @brief 住民のY座標（住民の場合のみ有効、-1=住民ではない） */
-    
+
     // 基準レベルと基準ステータス（レベル調整用）
     int baseLevel;  /**< @brief この敵タイプの基準レベル */
     int baseHp;  /**< @brief 基準レベルでのHP */
@@ -192,4 +192,13 @@ public:
      * @param newLevel 新しいレベル
      */
     void setLevel(int newLevel);
+    
+    /**
+     * @brief 目標レベルに到達できる敵を生成
+     * @details 目標レベルに到達できる敵を生成する。目標レベルが敵のbaseLevel以上で、maxLevel（baseLevel + 5）以下になる敵を選ぶ。
+     * 
+     * @param targetLevel 目標レベル
+     * @return 生成された敵（目標レベルに設定済み）
+     */
+    static Enemy createTargetLevelEnemy(int targetLevel);
 }; 

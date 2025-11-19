@@ -33,6 +33,9 @@ private:
     int residentY;  /**< @brief 住民のY座標 */
     int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス */
     
+    // 目標レベル達成用の敵に負けた場合の情報
+    bool isTargetLevelEnemy;  /**< @brief 目標レベル達成用の敵に負けたか */
+    
     // UI要素
     Label* titleLabel;
     Label* reasonLabel;
@@ -50,11 +53,13 @@ public:
      * @param residentX 住民のX座標（住民戦の場合のみ有効）
      * @param residentY 住民のY座標（住民戦の場合のみ有効）
      * @param residentTextureIndex 住民のテクスチャインデックス（住民戦の場合のみ有効）
+     * @param isTargetLevelEnemy 目標レベル達成用の敵に負けたか（オプション）
      */
     GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
                   EnemyType enemyType = EnemyType::SLIME, int enemyLevel = 1,
                   bool isResident = false, const std::string& residentName = "",
-                  int residentX = -1, int residentY = -1, int residentTextureIndex = -1);
+                  int residentX = -1, int residentY = -1, int residentTextureIndex = -1,
+                  bool isTargetLevelEnemy = false);
     
     /**
      * @brief 状態に入る

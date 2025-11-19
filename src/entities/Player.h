@@ -52,6 +52,9 @@ private:
     // セーブされたゲーム状態（オプショナル）
     std::unique_ptr<nlohmann::json> savedGameState;
     
+    // ゲームオーバーからの終了フラグ（オプショナル）
+    bool savedGameOverExit;
+    
     // 夜間システム
     bool isNightTime; // 夜間かどうか
     
@@ -65,6 +68,7 @@ public:
     bool hasSeenFieldExplanation;     /**< @brief フィールドの説明UIを見たか */
     bool hasSeenFieldFirstVictoryExplanation;  /**< @brief フィールドの初勝利後の説明UIを見たか */
     bool hasSeenBattleExplanation;   /**< @brief 戦闘の説明UIを見たか */
+    bool hasSeenResidentBattleExplanation;   /**< @brief 住民戦の説明UIを見たか */
     bool hasSeenNightExplanation;     /**< @brief 夜の街の説明UIを見たか */
     
     // ストーリーメッセージUIの完了状態
@@ -479,7 +483,15 @@ public:
      * @param x X座標
      * @param y Y座標
      */
-    void addKilledResident(int x, int y) { killedResidents.push_back({x, y}); }
+    void addKilledResident(int x, int y) {
+        // 重複チェック
+        for (const auto& pos : killedResidents) {
+            if (pos.first == x && pos.second == y) {
+                return; // 既に存在する場合は追加しない
+            }
+        }
+        killedResidents.push_back({x, y});
+    }
     
     /**
      * @brief 倒した住民の位置をクリア
@@ -527,6 +539,12 @@ public:
      * @return ゲーム状態のJSONオブジェクト（存在しない場合はnullptr）
      */
     const nlohmann::json* getSavedGameState() const;
+    
+    /**
+     * @brief ゲームオーバーからの終了フラグの設定
+     * @param gameOverExit ゲームオーバーからの終了かどうか
+     */
+    void setGameOverExit(bool gameOverExit);
     
     /**
      * @brief レベルの設定

@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "../game/TownState.h"
+#include "../core/GameState.h"
 #include <iostream>
 #include <random>
 #include <fstream>
@@ -12,12 +13,14 @@ Player::Player(const std::string& name)
       playerStats(std::make_unique<PlayerStats>()),
       playerStory(std::make_unique<PlayerStory>(name)),
       playerTrust(std::make_unique<PlayerTrust>(50, true)),
+      savedGameState(nullptr), savedGameOverExit(false),
       isNightTime(false), currentNight(0),
-             hasSeenTownExplanation(false),
-             hasSeenFieldExplanation(false),
-             hasSeenFieldFirstVictoryExplanation(false),
-             hasSeenBattleExplanation(false),
-             hasSeenNightExplanation(false),
+            hasSeenTownExplanation(false),
+            hasSeenFieldExplanation(false),
+            hasSeenFieldFirstVictoryExplanation(false),
+            hasSeenBattleExplanation(false),
+            hasSeenResidentBattleExplanation(false),
+            hasSeenNightExplanation(false),
              hasSeenRoomStory(false),
              hasSeenCastleStory(false),
              hasSeenDemonCastleStory(false) {
@@ -295,6 +298,7 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     j["hasSeenFieldExplanation"] = hasSeenFieldExplanation;
     j["hasSeenFieldFirstVictoryExplanation"] = hasSeenFieldFirstVictoryExplanation;
     j["hasSeenBattleExplanation"] = hasSeenBattleExplanation;
+    j["hasSeenResidentBattleExplanation"] = hasSeenResidentBattleExplanation;
     j["hasSeenNightExplanation"] = hasSeenNightExplanation;
     
     // ストーリーメッセージUIの完了状態
@@ -309,6 +313,11 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     // ゲーム状態情報（外部から設定される）
     if (savedGameState) {
         j["gameState"] = *savedGameState;
+    }
+    
+    // ゲームオーバーからの終了フラグ（外部から設定される）
+    if (savedGameOverExit) {
+        j["gameOverExit"] = true;
     }
     
     // JSONファイルに書き込み（既存ファイルを上書き）
@@ -361,6 +370,15 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         if (j.contains("attack")) setAttack(j["attack"]);
         if (j.contains("defense")) setDefense(j["defense"]);
         
+        // HPが0の場合はマックスにする（戦闘画面で終了した場合など）
+        if (hp <= 0 && maxHp > 0) {
+            hp = maxHp;
+        }
+        // MPが0の場合はマックスにする（戦闘画面で終了した場合など）
+        if (mp <= 0 && maxMp > 0) {
+            mp = maxMp;
+        }
+        
         // 拡張ステータス
         auto& extStats = playerStats->getExtendedStats();
         if (j.contains("gold")) extStats.gold = j["gold"];
@@ -403,13 +421,25 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         
         // タイマー情報
         if (j.contains("nightTimer")) nightTimer = j["nightTimer"];
-        if (j.contains("nightTimerActive")) nightTimerActive = j["nightTimerActive"];
+        bool savedNightTimerActive = false;
+        if (j.contains("nightTimerActive")) {
+            savedNightTimerActive = j["nightTimerActive"];
+            nightTimerActive = savedNightTimerActive;
+        }
+        
+        // タイマーが0の場合は1に設定し、activeをtrueにする（戦闘画面で終了した場合など）
+        // ただし、一度でもactiveがtrueになったことがある場合のみ（初めてactiveがtrueになった後にのみ）
+        if (nightTimer <= 0.0f && savedNightTimerActive) {
+            nightTimer = 1.0f;
+            nightTimerActive = true;
+        }
         
         // 説明UIの完了状態
         if (j.contains("hasSeenTownExplanation")) hasSeenTownExplanation = j["hasSeenTownExplanation"];
         if (j.contains("hasSeenFieldExplanation")) hasSeenFieldExplanation = j["hasSeenFieldExplanation"];
         if (j.contains("hasSeenFieldFirstVictoryExplanation")) hasSeenFieldFirstVictoryExplanation = j["hasSeenFieldFirstVictoryExplanation"];
         if (j.contains("hasSeenBattleExplanation")) hasSeenBattleExplanation = j["hasSeenBattleExplanation"];
+        if (j.contains("hasSeenResidentBattleExplanation")) hasSeenResidentBattleExplanation = j["hasSeenResidentBattleExplanation"];
         if (j.contains("hasSeenNightExplanation")) hasSeenNightExplanation = j["hasSeenNightExplanation"];
         
         // ストーリーメッセージUIの完了状態
@@ -424,6 +454,26 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         // ゲーム状態情報
         if (j.contains("gameState") && !j["gameState"].is_null()) {
             savedGameState = std::make_unique<nlohmann::json>(j["gameState"]);
+        }
+        
+        // ゲームオーバーからの終了フラグ
+        if (j.contains("gameOverExit") && j["gameOverExit"].get<bool>()) {
+            // HP/MPをマックスにする
+            hp = maxHp;
+            mp = maxMp;
+            // フィールドの状態を設定（gameStateが存在しない場合、またはGameOverStateの場合）
+            if (!savedGameState || (savedGameState->contains("stateType") && 
+                static_cast<int>((*savedGameState)["stateType"]) == static_cast<int>(StateType::GAME_OVER))) {
+                // フィールドの状態を作成
+                nlohmann::json fieldState;
+                fieldState["stateType"] = static_cast<int>(StateType::FIELD);
+                // フィールドのデフォルト位置を使用（FieldStateの静的変数から取得）
+                fieldState["playerX"] = 25;
+                fieldState["playerY"] = 8;
+                fieldState["showGameExplanation"] = false;
+                fieldState["explanationStep"] = 0;
+                savedGameState = std::make_unique<nlohmann::json>(fieldState);
+            }
         }
         
         file.close();
@@ -448,6 +498,10 @@ bool Player::autoLoad(float& nightTimer, bool& nightTimerActive) {
 
 void Player::setSavedGameState(const nlohmann::json& stateJson) {
     savedGameState = std::make_unique<nlohmann::json>(stateJson);
+}
+
+void Player::setGameOverExit(bool gameOverExit) {
+    savedGameOverExit = gameOverExit;
 }
 
 const nlohmann::json* Player::getSavedGameState() const {

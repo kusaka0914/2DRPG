@@ -92,6 +92,9 @@ private:
     bool nightTimerActive;
     float nightTimer;
     
+    // 目標レベル達成用の敵フラグ
+    bool isTargetLevelEnemy;  /**< @brief 目標レベル達成用の敵かどうか */
+    
     BattleResult lastResult;
     
     // レベルアップ情報
@@ -180,6 +183,12 @@ public:
     
     StateType getType() const override { return StateType::BATTLE; }
     
+    /**
+     * @brief 目標レベル達成用の敵フラグを設定
+     * @param isTargetLevelEnemy 目標レベル達成用の敵かどうか
+     */
+    void setIsTargetLevelEnemy(bool isTargetLevelEnemy) { this->isTargetLevelEnemy = isTargetLevelEnemy; }
+    
 private:
     void setupUI(Graphics& graphics);
     void updateStatus();
@@ -187,6 +196,7 @@ private:
     void showMessage(const std::string& message);
     void hideMessage();
     void setupGameExplanation();
+    void setupResidentBattleExplanation();
     void showExplanationMessage(const std::string& message);
     void clearExplanationMessage();
     void loadBattleImages();

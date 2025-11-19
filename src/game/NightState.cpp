@@ -147,6 +147,9 @@ void NightState::enter() {
             player->setNightTime(true);
         }
         
+        // 夜の街に入る時はタイマーを停止
+        TownState::s_nightTimerActive = false;
+        
         // 保存された位置がある場合は復元
         if (s_playerPositionSaved) {
             playerX = s_savedPlayerX;
@@ -154,20 +157,8 @@ void NightState::enter() {
         }
         
         residents.clear();
-    std::vector<std::pair<int, int>> allResidentPositions = {
-        {3, 7},   // 町の住人1
-        {7, 6},   // 町の住人2
-        {11, 8},  // 町の住人3
-        {5, 10},  // 町の住人4
-        {19, 8},  // 町の住人5
-        {23, 6},  // 町の住人6
-        {27, 7},  // 町の住人7
-        {6, 13},  // 町の住人8
-        {24, 13},  // 町の住人9
-        {3, 14},  // 町の住人10
-        {19, 14},  // 町の住人11,
-        {20, 4}  // 町の住人12
-    };
+    // 昼の街と同じ住民位置を使用（TownLayout::RESIDENTS）
+    std::vector<std::pair<int, int>> allResidentPositions = TownLayout::RESIDENTS;
     
     const auto& killedResidents = player->getKilledResidents();
     for (const auto& pos : allResidentPositions) {
@@ -186,22 +177,19 @@ void NightState::enter() {
     // 静的変数の現在の状態を保存（住民を倒した処理のチェック用）
     std::vector<std::pair<int, int>> previousKilledPositions = killedResidentPositions;
     int previousTotalKilled = totalResidentsKilled;
-    
+        
     // 新しい夜に入る時は、1夜に倒した人数をリセット
-    // （前回の夜から戻ってきた場合はリセットしない）
-    // fromJson()で復元された場合は、residentsKilledは既に復元されているのでリセットしない
     static int lastNight = -1;
     int currentNight = player->getCurrentNight();
-    // fromJson()で復元された場合は、residentsKilledは既に復元されているので、
-    // lastNightを更新するだけでリセットしない
-    // ただし、fromJson()が呼ばれたかどうかは判定できないため、
-    // residentsKilledが0でない場合は復元されたものとみなす
-    if (lastNight != currentNight) {
-        // residentsKilledが0の場合は新しい夜なのでリセット
-        // 0でない場合はfromJson()で復元されたものなのでリセットしない
-        if (residentsKilled == 0) {
-            residentsKilled = 0;  // 明示的に0に設定（既に0だが、意図を明確にする）
-        }
+    bool isNewNight = (lastNight != currentNight);
+    
+    if (isNewNight) {
+        // 新しい夜の開始時は、residentsKilledを必ず0にリセット
+        residentsKilled = 0;
+        // メッセージ表示フラグもリセット
+        showResidentKilledMessage = false;
+        showReturnToTownMessage = false;
+        shouldReturnToTown = false;
         lastNight = currentNight;
     }
         
@@ -213,34 +201,72 @@ void NightState::enter() {
             nightDisplayLabel->setText("第" + std::to_string(currentNight) + "夜");
         }
         
-        // 戦闘から戻ってきた場合、最新の倒した住民を処理
+        // 戦闘から戻ってきた場合のみ、最新の倒した住民を処理
+        // （新しい夜の開始時には実行しない）
         bool residentKilledInBattle = false;
-        const auto& playerKilledResidents = player->getKilledResidents();
-        if (!playerKilledResidents.empty()) {
-            // 最新の倒した住民の位置を取得
-            const auto& lastKilled = playerKilledResidents.back();
-            int x = lastKilled.first;
-            int y = lastKilled.second;
-            
-            // まだ処理していない住民か確認（previousKilledPositionsに含まれていない場合）
-            bool alreadyProcessed = false;
-            for (const auto& pos : previousKilledPositions) {
-                if (pos.first == x && pos.second == y) {
-                    alreadyProcessed = true;
-                    break;
+        if (!isNewNight) {
+            const auto& playerKilledResidents = player->getKilledResidents();
+            if (!playerKilledResidents.empty()) {
+                // 最新の倒した住民の位置を取得
+                const auto& lastKilled = playerKilledResidents.back();
+                int x = lastKilled.first;
+                int y = lastKilled.second;
+                
+                // まだ処理していない住民か確認（previousKilledPositionsに含まれていない場合）
+                bool alreadyProcessed = false;
+                for (const auto& pos : previousKilledPositions) {
+                    if (pos.first == x && pos.second == y) {
+                        alreadyProcessed = true;
+                        break;
+                    }
                 }
-            }
-            
-            // まだ処理していない場合、住民を倒した処理を実行
-            if (!alreadyProcessed) {
-                handleResidentKilled(x, y);
-                residentKilledInBattle = true;
+                
+                // まだ処理していない場合、住民を倒した処理を実行
+                if (!alreadyProcessed) {
+                    handleResidentKilled(x, y);
+                    residentKilledInBattle = true;
+                }
             }
         }
         
-        // 静的変数を更新（住民を倒した処理の後）
-        killedResidentPositions = playerKilledResidents;
-        totalResidentsKilled = playerKilledResidents.size();
+        // 静的変数を更新（新しい夜の開始時は、player->getKilledResidents()で更新）
+        // 戦闘から戻ってきた場合は、handleResidentKilledで既に更新されている
+        const auto& playerKilledResidents = player->getKilledResidents();
+        if (isNewNight) {
+            // 新しい夜の開始時は、killedResidentPositionsとtotalResidentsKilledを更新
+            // 重複を除去してから設定
+            killedResidentPositions.clear();
+            for (const auto& pos : playerKilledResidents) {
+                bool found = false;
+                for (const auto& existingPos : killedResidentPositions) {
+                    if (existingPos.first == pos.first && existingPos.second == pos.second) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    killedResidentPositions.push_back(pos);
+                }
+            }
+            totalResidentsKilled = killedResidentPositions.size();
+        } else if (residentKilledInBattle) {
+            // 戦闘から戻ってきた場合は、handleResidentKilledで既に更新されているので、
+            // 念のため同期を取る（重複を除去）
+            killedResidentPositions.clear();
+            for (const auto& pos : playerKilledResidents) {
+                bool found = false;
+                for (const auto& existingPos : killedResidentPositions) {
+                    if (existingPos.first == pos.first && existingPos.second == pos.second) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    killedResidentPositions.push_back(pos);
+                }
+            }
+            totalResidentsKilled = killedResidentPositions.size();
+        }
         
         // 初回の夜の街説明を表示するかチェック
         // 説明UIを既に見た場合は表示しない
@@ -468,25 +494,21 @@ void NightState::handleInput(const InputManager& input) {
                     // 次のEnterで街に戻る処理を実行するフラグを設定
                     shouldReturnToTown = true;
                 } else {
-                    // 4夜目以降の場合はメッセージを表示（衛兵を攻撃可能にする）
-                    showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
+                    // 4夜目以降でも、1夜に3人倒した場合は街に戻る
+                    showMessage("住民を3人倒しました。これ以上は危険です。\n街に戻ります。");
+                    // 次のEnterで街に戻る処理を実行するフラグを設定
+                    shouldReturnToTown = true;
                 }
             }
             else if (shouldReturnToTown) {
                 // 街に戻るメッセージを表示した後、Enterを押した時に街に戻る処理を実行
                 shouldReturnToTown = false;
                 int currentNight = player->getCurrentNight();
-                if (stateManager && currentNight < 4) {
+                if (stateManager) {
                     // 1夜に倒した人数をリセット（次の夜のために）
                     residentsKilled = 0;
                     TownState::s_nightTimerActive = true;
-                    if (currentNight == 1) {
-                        TownState::s_nightTimer = 240.0f;
-                    } else if (currentNight == 2) {
-                        TownState::s_nightTimer = 180.0f;
-                    } else {
-                        TownState::s_nightTimer = 180.0f;
-                    }
+                    TownState::s_nightTimer = 900.0f; // 15分 = 900秒
                     stateManager->changeState(std::make_unique<TownState>(player));
                 }
             }
@@ -497,13 +519,7 @@ void NightState::handleInput(const InputManager& input) {
                     // 1夜に倒した人数をリセット（次の夜のために）
                     residentsKilled = 0;
                     TownState::s_nightTimerActive = true;
-                    if (player->getCurrentNight() == 1) {
-                        TownState::s_nightTimer = 240.0f;
-                    } else if (player->getCurrentNight() == 2) {
-                        TownState::s_nightTimer = 180.0f;
-                    } else {
-                        TownState::s_nightTimer = 180.0f;
-                    }
+                    TownState::s_nightTimer = 900.0f; // 20分 = 1200秒
                     stateManager->changeState(std::make_unique<TownState>(player));
                 }
             }
@@ -514,7 +530,7 @@ void NightState::handleInput(const InputManager& input) {
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
             TownState::s_nightTimerActive = true;
-            TownState::s_nightTimer = 1200.0f; // 20分 = 1200秒
+            TownState::s_nightTimer = 900.0f; // 20分 = 1200秒
             stateManager->changeState(std::make_unique<TownState>(player));
         }
         return;
@@ -607,14 +623,41 @@ void NightState::attackResident(int x, int y) {
         return;
     }
     
-    // 1夜に倒せる住民の最大値は3人まで
-    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT) {
+    // 1夜に倒せる住民の最大値は3人まで（ただし、全ての住民を倒した場合は除く）
+    // 実際に全ての住民を倒したかどうかを確認
+    const auto& killedResidents = player->getKilledResidents();
+    const auto& allResidentPositions = TownLayout::RESIDENTS;
+    
+    bool allKilled = true;
+    for (const auto& residentPos : allResidentPositions) {
+        bool found = false;
+        for (const auto& killedPos : killedResidents) {
+            if (residentPos.first == killedPos.first && residentPos.second == killedPos.second) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            allKilled = false;
+            break;
+        }
+    }
+    
+    // 1夜に3人倒した場合、かつ全ての住民を倒していない場合は、街に戻る
+    if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT && !allKilled) {
         int currentNight = player->getCurrentNight();
         if (currentNight < 4) {
             showMessage("住民を3人倒しました。これ以上は危険です。\n街に戻ります。");
         } else {
-            showMessage("住民を全て倒しました。次は衛兵を倒しましょう。\n衛兵は2回攻撃しないと倒すことができません。");
+            // 4夜目以降でも、全ての住民を倒していない場合は街に戻る
+            showMessage("住民を3人倒しました。これ以上は危険です。\n街に戻ります。");
         }
+        return;
+    }
+    
+    // 全ての住民を倒した場合は、checkGameProgress()で処理されるため、ここでは何もしない
+    // （canAttackGuardsがtrueの場合は、既に全ての住民を倒しているので、住民との対話はできない）
+    if (allKilled && canAttackGuards) {
         return;
     }
     
@@ -937,15 +980,26 @@ void NightState::handleResidentKilled(int x, int y) {
     
     player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
     
-    totalResidentsKilled++; // 合計倒した人数を増加
+    // 重複チェック
+    bool alreadyKilled = false;
+    for (const auto& pos : killedResidentPositions) {
+        if (pos.first == x && pos.second == y) {
+            alreadyKilled = true;
+            break;
+        }
+    }
+    if (!alreadyKilled) {
+        killedResidentPositions.push_back({x, y});
+    }
+    player->addKilledResident(x, y);
+    
+    // totalResidentsKilledはplayer->getKilledResidents().size()で更新
+    totalResidentsKilled = player->getKilledResidents().size();
     if (totalResidentsKilled >= 6) { // 合計6人以上倒した場合
         player->changeMental(20); // メンタルを20上昇
     } else {
         player->changeMental(-20); // メンタルを20減少
     }
-    
-    killedResidentPositions.push_back({x, y});
-    player->addKilledResident(x, y);
     
     residents.erase(std::remove_if(residents.begin(), residents.end(),
         [x, y](const std::pair<int, int>& pos) {
@@ -1191,7 +1245,28 @@ void NightState::drawGate(Graphics& graphics) {
 }
 
 void NightState::checkGameProgress() {
-    if (!allResidentsKilled && residents.empty()) {
+    // 住民を全て倒したかどうかを正確に判定
+    // TownLayout::RESIDENTSの各位置がplayer->getKilledResidents()に含まれているかをチェック
+    // 重複を考慮して、全ての住民位置が倒されたかどうかを判定
+    const auto& killedResidents = player->getKilledResidents();
+    const auto& allResidentPositions = TownLayout::RESIDENTS;
+    
+    bool allKilled = true;
+    for (const auto& residentPos : allResidentPositions) {
+        bool found = false;
+        for (const auto& killedPos : killedResidents) {
+            if (residentPos.first == killedPos.first && residentPos.second == killedPos.second) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            allKilled = false;
+            break;
+        }
+    }
+    
+    if (!allResidentsKilled && allKilled) {
         allResidentsKilled = true;
         canAttackGuards = true;
         showMessage("住民を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。");
@@ -1238,7 +1313,7 @@ void NightState::enterCastle() {
     if (stateManager) {
         stateManager->changeState(std::make_unique<CastleState>(player, true));
     }
-}
+} 
 
 void NightState::setupGameExplanation() {
     gameExplanationTexts.clear();
@@ -1389,14 +1464,26 @@ void NightState::fromJson(const nlohmann::json& j) {
         }
     }
     
-    // 倒した住民の位置を復元
+    // 倒した住民の位置を復元（重複を除去）
     if (j.contains("killedResidentPositions") && j["killedResidentPositions"].is_array()) {
         killedResidentPositions.clear();
         for (const auto& posJson : j["killedResidentPositions"]) {
             int x = posJson["x"];
             int y = posJson["y"];
-            killedResidentPositions.push_back({x, y});
+            // 重複チェック
+            bool found = false;
+            for (const auto& existingPos : killedResidentPositions) {
+                if (existingPos.first == x && existingPos.second == y) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                killedResidentPositions.push_back({x, y});
+            }
         }
+        // totalResidentsKilledも更新
+        totalResidentsKilled = killedResidentPositions.size();
     }
     
     // 衛兵のHPを復元

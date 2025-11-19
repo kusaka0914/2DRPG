@@ -1,6 +1,7 @@
 #include "MainMenuState.h"
 #include "FieldState.h"
 #include "RoomState.h"
+#include "TownState.h"
 #include "BattleState.h"
 #include "../core/utils/ui_config_manager.h"
 #include <sstream>
@@ -36,7 +37,12 @@ void MainMenuState::update(float deltaTime) {
     // フェードアウト完了後、状態遷移
     if (isFadingOut && fadeTimer >= fadeDuration) {
         if (stateManager) {
-            stateManager->changeState(std::make_unique<RoomState>(player));
+            // チュートリアルが終わっている場合は街に遷移、そうでなければ部屋に遷移
+            if (player && player->hasSeenRoomStory) {
+                stateManager->changeState(std::make_unique<TownState>(player));
+            } else {
+                stateManager->changeState(std::make_unique<RoomState>(player));
+            }
         }
     }
     

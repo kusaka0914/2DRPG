@@ -5,6 +5,7 @@
 #include "NightState.h"
 #include "CastleState.h"
 #include "GameOverState.h"
+#include "BattleState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
 #include <iostream>
@@ -32,7 +33,8 @@ TownState::TownState(std::shared_ptr<Player> player)
     buildingTypes = TownLayout::BUILDING_TYPES;
     residentHomes = TownLayout::RESIDENT_HOMES;
     
-    s_targetLevel = 25 * (s_nightCount+1);
+    // 目標レベルをs_nightCountに基づいて再計算（夜の街から戻った時など、常に最新の値を反映）
+    s_targetLevel = 25 * (s_nightCount + 1);
     // s_targetLevel = 1;
 }
 
@@ -56,7 +58,7 @@ void TownState::enter() {
         // 説明UIが完了していない場合は最初から始める
         if (!player->hasSeenTownExplanation) {
             if (!showGameExplanation || gameExplanationTexts.empty()) {
-                startNightTimer();
+        startNightTimer();
             } else {
                 // 既に説明UIが設定されている場合でも、最初から始める
                 explanationStep = 0;
@@ -66,10 +68,8 @@ void TownState::enter() {
         s_fromDemonCastle = false; // フラグをリセット
     }
     
-    if (!hasVisitedTown) {
-        pendingWelcomeMessage = true;
-        hasVisitedTown = true;
-    }
+    // 街に入った時のメッセージは削除
+    hasVisitedTown = true;
 }
 
 void TownState::exit() {
@@ -127,10 +127,16 @@ void TownState::update(float deltaTime) {
             s_nightTimerActive = false;
             s_nightTimer = 0.0f;
             
-            // 目標達成していない場合はゲームオーバー
+            // 目標達成していない場合は目標レベルの敵と戦闘を開始
             if (!s_levelGoalAchieved) {
                 if (stateManager) {
-                    stateManager->changeState(std::make_unique<GameOverState>(player, "目標レベルに達しませんでした。街に戻る途中でモンスターに襲われました。"));
+                    int targetLevel = s_targetLevel;
+                    auto targetLevelEnemy = std::make_unique<Enemy>(Enemy::createTargetLevelEnemy(targetLevel));
+                    auto battleState = std::make_unique<BattleState>(player, std::move(targetLevelEnemy));
+                    // 目標レベル達成用の敵フラグを明示的に設定
+                    battleState->setIsTargetLevelEnemy(true);
+                    exit();
+                    stateManager->changeState(std::move(battleState));
                 }
             } else {
                 if (stateManager) {
@@ -175,10 +181,7 @@ void TownState::render(Graphics& graphics) {
     lastReloadState = currentReloadState;
     
     if (uiJustInitialized) {
-        if (pendingWelcomeMessage) {
-            showMessage("街に到着しました。\nここでは道具屋、宿屋、教会など様々な施設を利用できます。\n城に向かって冒険を始めましょう。");
-            pendingWelcomeMessage = false;
-        } else if (!pendingMessage.empty()) {
+        if (!pendingMessage.empty()) {
             showMessage(pendingMessage);
             pendingMessage.clear();
         }
@@ -411,11 +414,25 @@ void TownState::setupNPCs() {
         const auto& pos = TownLayout::RESIDENTS[i];
         
         bool isKilled = false;
-        const auto& killedPositions = NightState::getKilledResidentPositions();
-        for (const auto& killedPos : killedPositions) {
-            if (killedPos.first == pos.first && killedPos.second == pos.second) {
-                isKilled = true;
-                break;
+        // Playerに保存されている倒した住民の位置を確認（セーブ/ロードで永続化される）
+        if (player) {
+            const auto& playerKilledResidents = player->getKilledResidents();
+            for (const auto& killedPos : playerKilledResidents) {
+                if (killedPos.first == pos.first && killedPos.second == pos.second) {
+                    isKilled = true;
+                    break;
+                }
+            }
+        }
+        
+        // 念のため、NightStateの静的変数も確認
+        if (!isKilled) {
+            const auto& killedPositions = NightState::getKilledResidentPositions();
+            for (const auto& killedPos : killedPositions) {
+                if (killedPos.first == pos.first && killedPos.second == pos.second) {
+                    isKilled = true;
+                    break;
+                }
             }
         }
         
