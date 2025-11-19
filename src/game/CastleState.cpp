@@ -529,13 +529,19 @@ void CastleState::drawCastleObjects(Graphics& graphics) {
     
     if (!kingDefeated) {
         if (kingTexture) {
-            graphics.drawTexture(kingTexture, ROOM_OFFSET_X + throneX * TILE_SIZE, ROOM_OFFSET_Y + throneY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            // アスペクト比を保持して縦幅に合わせて描画
+            int centerX = ROOM_OFFSET_X + throneX * TILE_SIZE + TILE_SIZE / 2;
+            int centerY = ROOM_OFFSET_Y + throneY * TILE_SIZE + TILE_SIZE / 2;
+            graphics.drawTextureAspectRatio(kingTexture, centerX, centerY, TILE_SIZE, true, true);
         }
     }
     
     if (!guardLeftDefeated) {
         if (guardTexture) {
-            graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            // アスペクト比を保持して縦幅に合わせて描画
+            int centerX = ROOM_OFFSET_X + guardLeftX * TILE_SIZE + TILE_SIZE / 2;
+            int centerY = ROOM_OFFSET_Y + guardLeftY * TILE_SIZE + TILE_SIZE / 2;
+            graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
         } else {
             graphics.setDrawColor(192, 192, 192, 255);
             graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -546,7 +552,10 @@ void CastleState::drawCastleObjects(Graphics& graphics) {
     
     if (!guardRightDefeated) {
         if (guardTexture) {
-            graphics.drawTexture(guardTexture, ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            // アスペクト比を保持して縦幅に合わせて描画
+            int centerX = ROOM_OFFSET_X + guardRightX * TILE_SIZE + TILE_SIZE / 2;
+            int centerY = ROOM_OFFSET_Y + guardRightY * TILE_SIZE + TILE_SIZE / 2;
+            graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
         } else {
             graphics.setDrawColor(192, 192, 192, 255);
             graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -572,7 +581,10 @@ void CastleState::drawPlayer(Graphics& graphics) {
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = ROOM_OFFSET_Y + playerY * TILE_SIZE + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
         graphics.setDrawColor(0, 0, 255, 255);
         graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);

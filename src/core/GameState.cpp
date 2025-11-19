@@ -216,7 +216,10 @@ SDL_Texture* GameState::loadDemonTexture(Graphics& graphics) {
 void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTexture, 
                                     int playerX, int playerY, int tileSize) {
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, playerX * tileSize, playerY * tileSize, tileSize, tileSize);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = playerX * tileSize + tileSize / 2;
+        int centerY = playerY * tileSize + tileSize / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, tileSize, true, true);
     } else {
         int drawX = playerX * tileSize + 4;
         int drawY = playerY * tileSize + 4;
@@ -232,7 +235,10 @@ void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTex
 void GameState::drawCharacterWithTexture(Graphics& graphics, SDL_Texture* texture, 
                                        int x, int y, int tileSize) {
     if (texture) {
-        graphics.drawTexture(texture, x * tileSize, y * tileSize, tileSize, tileSize);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = x * tileSize + tileSize / 2;
+        int centerY = y * tileSize + tileSize / 2;
+        graphics.drawTextureAspectRatio(texture, centerX, centerY, tileSize, true, true);
     } else {
         graphics.setDrawColor(255, 0, 0, 255);
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, true);

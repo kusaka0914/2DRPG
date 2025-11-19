@@ -271,8 +271,8 @@ namespace UIConfig {
         battleConfig.commandHint.position.offsetX = -120.0f;
         battleConfig.commandHint.color = {255, 255, 255, 255};
         battleConfig.commandHint.padding = 8;
-        battleConfig.commandHint.normalText = "選択: W/S 決定: Enter 戻る: Q";
-        battleConfig.commandHint.residentText = "選択: W/S 決定: Enter";
+        battleConfig.commandHint.normalText = "選択: W/S 決定: ENTER 戻る: Q";
+        battleConfig.commandHint.residentText = "選択: W/S 決定: ENTER";
         
         // ジャッジフェーズの結果表示UI設定
         battleConfig.judgePhase.position.useRelative = true;  // デフォルトは相対位置（画面中央）

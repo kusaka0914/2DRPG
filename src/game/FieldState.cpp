@@ -686,18 +686,24 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
 }
 
 void FieldState::drawPlayer(Graphics& graphics) {
-    int drawX = playerX * TILE_SIZE + 4;
-    int drawY = playerY * TILE_SIZE + 4;
-    int size = TILE_SIZE - 8;
+    // プレイヤーの描画位置を計算（レベル表示で使用するため）
+    int drawX = playerX * TILE_SIZE;
+    int drawY = playerY * TILE_SIZE;
     
     SDL_Texture* playerTexture = graphics.getTexture("player_field");
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, drawX, drawY, size, size);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = drawX + TILE_SIZE / 2;
+        int centerY = drawY + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
+        int drawXOffset = drawX + 4;
+        int drawYOffset = drawY + 4;
+        int size = TILE_SIZE - 8;
         graphics.setDrawColor(0, 0, 255, 255);
-        graphics.drawRect(drawX, drawY, size, size, true);
+        graphics.drawRect(drawXOffset, drawYOffset, size, size, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(drawX, drawY, size, size, false);
+        graphics.drawRect(drawXOffset, drawYOffset, size, size, false);
     }
     
     // プレイヤーの上にレベルを表示
@@ -895,21 +901,16 @@ void FieldState::setupGameExplanation(bool isFirstVictory) {
     
     if (isFirstVictory) {
         // 初勝利後の説明
-        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！");
-        gameExplanationTexts.push_back("ちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
+        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
         gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
-        gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。");
-        gameExplanationTexts.push_back("タイマーが0になるまでに目標レベルに達してください！");
+        gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。\nタイマーが0になるまでに目標レベルに達してください！");
         gameExplanationTexts.push_back("ではまた夜の街でお会いしましょう！頑張って！");
     } else {
         // 初回フィールド説明
-        gameExplanationTexts.push_back("ここがフィールドです。たくさんモンスターがいますね。");
-        gameExplanationTexts.push_back("モンスターの上に表示されているのがモンスターのレベルです。");
-        gameExplanationTexts.push_back("そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。");
-        gameExplanationTexts.push_back("自分のレベルに合わせて戦うモンスターを選びましょう。");
-        gameExplanationTexts.push_back("そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。");
-        gameExplanationTexts.push_back("まずはモンスターがいる場所に移動してみてください。");
-    }
+        gameExplanationTexts.push_back("ここがフィールドです。たくさんモンスターがいますね。\nモンスターの上に表示されているのがモンスターのレベルです。");
+        gameExplanationTexts.push_back("そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。\n自分のレベルに合わせて戦うモンスターを選びましょう。");
+        gameExplanationTexts.push_back("そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。\nまずはモンスターがいる場所に移動してみてください。");
+    }   
 }
 
 void FieldState::showMessage(const std::string& message) {

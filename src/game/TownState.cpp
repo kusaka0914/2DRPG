@@ -18,9 +18,6 @@ bool TownState::s_levelGoalAchieved = false;
 bool TownState::s_fromDemonCastle = false;
 int TownState::s_nightCount = 0; // 夜の回数を追跡
 bool TownState::saved = false; // セーブ状態の管理
-std::vector<std::pair<int, int>> residentHomes = {
-    {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
-};
 
 TownState::TownState(std::shared_ptr<Player> player)
     : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
@@ -228,6 +225,77 @@ void TownState::render(Graphics& graphics) {
     
     drawPlayer(graphics);
     
+    // インタラクション可能な時に「ENTER」を表示（広場のみ）
+    if (currentLocation == TownLocation::SQUARE && !isShowingMessage) {
+        bool canInteract = false;
+        
+        // NPCの近くにいるかチェック
+        if (isNearNPC(playerX, playerY)) {
+            canInteract = true;
+        }
+        // 建物の入り口の近くにいるかチェック
+        else {
+            for (size_t i = 0; i < buildings.size(); ++i) {
+                if (playerX == buildings[i].first && playerY == buildings[i].second) {
+                    canInteract = true;
+                    break;
+                }
+            }
+        }
+        // 自室の入り口の近くにいるかチェック
+        if (!canInteract && GameUtils::isNearPositionEuclidean(playerX, playerY, roomEntranceX, roomEntranceY, 1.5f)) {
+            canInteract = true;
+        }
+        // 城の近くにいるかチェック
+        if (!canInteract && GameUtils::isNearPositionEuclidean(playerX, playerY, castleX, castleY, 3.0f)) {
+            canInteract = true;
+        }
+        
+        if (canInteract) {
+            int textX = playerX * TILE_SIZE + TILE_SIZE / 2;
+            int textY = playerY * TILE_SIZE + TILE_SIZE + 5;
+            
+            // テキストを中央揃えにするため、テキストの幅を取得して調整
+            SDL_Color textColor = {255, 255, 255, 255};
+            SDL_Texture* enterTexture = graphics.createTextTexture("ENTER", "default", textColor);
+            if (enterTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(enterTexture, nullptr, nullptr, &textWidth, &textHeight);
+                
+                // テキストサイズを小さくする（80%に縮小）
+                const float SCALE = 0.8f;
+                int scaledWidth = static_cast<int>(textWidth * SCALE);
+                int scaledHeight = static_cast<int>(textHeight * SCALE);
+                
+                // パディングを追加
+                const int PADDING = 4;
+                int bgWidth = scaledWidth + PADDING * 2;
+                int bgHeight = scaledHeight + PADDING * 2;
+                
+                // 背景の位置を計算（中央揃え）
+                int bgX = textX - bgWidth / 2;
+                int bgY = textY;
+                
+                // 黒背景を描画
+                graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                
+                // 白い枠線を描画
+                graphics.setDrawColor(255, 255, 255, 255); // 白
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                
+                // テキストを小さく描画（中央揃え）
+                int drawX = textX - scaledWidth / 2;
+                int drawY = textY + PADDING;
+                graphics.drawTexture(enterTexture, drawX, drawY, scaledWidth, scaledHeight);
+                SDL_DestroyTexture(enterTexture);
+            } else {
+                // フォールバック: drawTextを使用
+                graphics.drawText("ENTER", textX, textY, "default", textColor);
+            }
+        }
+    }
+    
     if (messageBoard && !messageBoard->getText().empty()) {
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto mbConfig = config.getMessageBoardConfig();
@@ -391,72 +459,35 @@ void TownState::setupUI(Graphics& graphics) {
 void TownState::setupNPCs() {
     npcs.clear();
     
-    std::vector<std::string> residentNames = {
-        "町の住民1", "町の住民2", "町の住民3", "町の住民4", "町の住民5", "町の住民6", "町の住民7", "町の住民8", "町の住民9", "町の住民10", "町の住民11", "町の住民12"
-    };
-    
-    std::vector<std::string> residentDialogues = {
-        "最近魔物が増えて困っているんだ...",
-        "今日は良い天気だね。",
-        "王様の城は立派だね。",
-        "冒険者さん、頑張ってね！",
-        "街は平和でいいね。",
-        "今日も気持ちがいい天気！",
-        "最近魔物が増えて困っているんだ...",
-        "今日は良い天気だね。",
-        "王様の城は立派だね。",
-        "冒険者さん、頑張ってね！",
-        "街は平和でいいね。",
-        "今日も気持ちがいい天気！"
-    };
-    
-    for (size_t i = 0; i < TownLayout::RESIDENTS.size() && i < residentNames.size(); ++i) {
+    for (size_t i = 0; i < TownLayout::RESIDENTS.size(); ++i) {
         const auto& pos = TownLayout::RESIDENTS[i];
         
         bool isKilled = false;
         // Playerに保存されている倒した住民の位置を確認（セーブ/ロードで永続化される）
         if (player) {
             const auto& playerKilledResidents = player->getKilledResidents();
-            for (const auto& killedPos : playerKilledResidents) {
-                if (killedPos.first == pos.first && killedPos.second == pos.second) {
-                    isKilled = true;
-                    break;
-                }
-            }
+            isKilled = TownLayout::isResidentKilled(pos.first, pos.second, playerKilledResidents);
         }
         
         // 念のため、NightStateの静的変数も確認
         if (!isKilled) {
-        const auto& killedPositions = NightState::getKilledResidentPositions();
-        for (const auto& killedPos : killedPositions) {
-            if (killedPos.first == pos.first && killedPos.second == pos.second) {
-                isKilled = true;
-                break;
-                }
-            }
+            const auto& killedPositions = NightState::getKilledResidentPositions();
+            isKilled = TownLayout::isResidentKilled(pos.first, pos.second, killedPositions);
         }
         
         if (!isKilled) {
-            npcs.emplace_back(NPCType::TOWNSPERSON, residentNames[i], 
-                              residentDialogues[i], pos.first, pos.second);
+            std::string residentName = TownLayout::getResidentName(pos.first, pos.second);
+            std::string residentDialogue = TownLayout::getResidentDialogue(pos.first, pos.second);
+            npcs.emplace_back(NPCType::TOWNSPERSON, residentName, 
+                              residentDialogue, pos.first, pos.second);
         }
     }
     
-    std::vector<std::string> guardNames = {
-        "衛兵1", "衛兵2", "衛兵3", "衛兵4"
-    };
-    
-    std::vector<std::string> guardDialogues = {
-        "町の平和を守るのが私の仕事だ！",
-        "何か困ったことがあれば声をかけてくれ。",
-        "街の見回りは大切な仕事だ。",
-        "町の平和を守るのが私の仕事だ！"
-    };
-    
-    for (size_t i = 0; i < TownLayout::GUARDS.size() && i < guardNames.size(); ++i) {
+    for (size_t i = 0; i < TownLayout::GUARDS.size(); ++i) {
         const auto& pos = TownLayout::GUARDS[i];
-        npcs.emplace_back(NPCType::GUARD, guardNames[i], 
-                          guardDialogues[i], pos.first, pos.second);
+        std::string guardName = TownLayout::getGuardName(pos.first, pos.second);
+        std::string guardDialogue = TownLayout::getGuardDialogue(pos.first, pos.second);
+        npcs.emplace_back(NPCType::GUARD, guardName, guardDialogue, pos.first, pos.second);
     }
 }
 
@@ -785,9 +816,12 @@ void TownState::drawNPCs(Graphics& graphics) {
                 break;
             case NPCType::TOWNSPERSON:
                 {
-                    int residentIndex = (i - 2) % 5; // 最初の2つ（店主と女将）を除く
-                    if (residentIndex >= 0 && residentIndex < 5 && residentTextures[residentIndex]) {
-                        graphics.drawTexture(residentTextures[residentIndex], drawX, drawY, size, size);
+                    int residentIndex = TownLayout::getResidentTextureIndex(npc.x, npc.y);
+                    if (residentIndex >= 0 && residentIndex < 6 && residentTextures[residentIndex]) {
+                        // アスペクト比を保持して縦幅に合わせて描画
+                        int centerX = drawX + TILE_SIZE / 2;
+                        int centerY = drawY + TILE_SIZE / 2;
+                        graphics.drawTextureAspectRatio(residentTextures[residentIndex], centerX, centerY, TILE_SIZE, true, true);
                         continue; // 画像を描画したら色の描画はスキップ
                     } else {
                         graphics.setDrawColor(128, 0, 128, 255); // 紫（フォールバック）
@@ -796,7 +830,10 @@ void TownState::drawNPCs(Graphics& graphics) {
                 break;
             case NPCType::GUARD:
                 if (guardTexture) {
-                    graphics.drawTexture(guardTexture, drawX, drawY, size, size);
+                    // アスペクト比を保持して縦幅に合わせて描画
+                    int centerX = drawX + TILE_SIZE / 2;
+                    int centerY = drawY + TILE_SIZE / 2;
+                    graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
                     continue; // 画像を描画したら色の描画はスキップ
                 } else {
                     graphics.setDrawColor(255, 0, 0, 255); // 赤（フォールバック）
@@ -865,17 +902,6 @@ bool TownState::isCollidingWithNPC(int x, int y) const {
     return false;
 }
 
-bool TownState::isNearNPC(int x, int y) const {
-    for (const auto& npc : npcs) {
-        int dx = abs(x - npc.x);
-        int dy = abs(y - npc.y);
-        if (dx <= 1 && dy <= 1) {
-            return true;
-        }
-    }
-    return false;
-}
-
 NPC* TownState::getNearbyNPC(int x, int y) {
     for (auto& npc : npcs) {
         int dx = abs(x - npc.x);
@@ -885,6 +911,21 @@ NPC* TownState::getNearbyNPC(int x, int y) {
         }
     }
     return nullptr;
+}
+
+const NPC* TownState::getNearbyNPC(int x, int y) const {
+    for (const auto& npc : npcs) {
+        int dx = abs(x - npc.x);
+        int dy = abs(y - npc.y);
+        if (dx <= 1 && dy <= 1) {
+            return &npc;
+        }
+    }
+    return nullptr;
+}
+
+bool TownState::isNearNPC(int x, int y) const {
+    return getNearbyNPC(x, y) != nullptr;
 }
 
 // メッセージボード関連
@@ -1030,25 +1071,11 @@ void TownState::checkCastleEntrance() {
 void TownState::setupGameExplanation() {
     gameExplanationTexts.clear();    
     gameExplanationTexts.push_back("これからゲーム説明を始めます。よく聞いてくださいね。");
-    gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。");
-    gameExplanationTexts.push_back("夜時間に住民を倒し、少しずつ街を滅ぼしていきます。");
-    gameExplanationTexts.push_back("詳細は夜時間になったら説明しますね。");
-    gameExplanationTexts.push_back("ひとまず夜時間までにフィールド上のモンスターを倒して目標レベルまで上げてください。");
-    gameExplanationTexts.push_back("そしてこのゲームにはメンタル、魔王からの信頼、王様からの信頼の概念があります。");
-    gameExplanationTexts.push_back("今は王様からの信頼という概念だけ覚えておいてください。");
-    gameExplanationTexts.push_back("王様からの信頼はモンスターを倒すことで上昇します。");
-    gameExplanationTexts.push_back("街を安全に滅ぼすためにも信頼を保つのが大事なのでたくさん倒しましょう。");
+    gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。\n夜時間に住民を倒し、少しずつ街を滅ぼしていきます。");
+    gameExplanationTexts.push_back("詳細は夜時間になったら説明しますね。\nひとまず夜時間までにフィールド上のモンスターを倒して目標レベルまで上げてください。");
+    gameExplanationTexts.push_back("そしてこのゲームにはメンタル、魔王からの信頼、王様からの信頼の概念があります。\n今は王様からの信頼という概念だけ覚えておいてください。");
+    gameExplanationTexts.push_back("王様からの信頼はモンスターを倒すことで上昇します。\n街を安全に滅ぼすためにも信頼を保つのが大事なのでたくさん倒しましょう。");
     gameExplanationTexts.push_back("以上で説明は終わりです。早速下にあるゲートからフィールドに行ってレベルを上げましょう。");
-    // gameExplanationTexts.push_back("衛兵が住人の家を徘徊しているので、衛兵がいない時に倒しましょう。");
-    // gameExplanationTexts.push_back("住人を全員倒すことで街を滅ぼすことができます。どんどん倒しましょう。");
-    // gameExplanationTexts.push_back("しかし住人を倒すと勇者のメンタルが下がってしまいます。");
-    // gameExplanationTexts.push_back("メンタルが下がると勇者が住人を倒すのをためらって、失敗してしまいます。");
-    // gameExplanationTexts.push_back("（倒すのになれてしまうと逆にメンタルが上がるかもしれませんね。）");
-    // gameExplanationTexts.push_back("住人を倒せば魔王からの信頼度が上がり王様からの信頼度が下がります。");
-    // gameExplanationTexts.push_back("住人を倒さなければ魔王からの信頼度が下がりますがメンタルが回復します。");
-    // gameExplanationTexts.push_back("もしどちらかの信頼度が0になってしまったらその時点で処刑されゲームオーバーです。");
-    // gameExplanationTexts.push_back("処刑されないように、昼はモンスターを倒して王様からの信頼度を上げ、");
-    // gameExplanationTexts.push_back("夜は住人を倒して魔王からの信頼度を上げるようにしましょう。");
 }
 
 void TownState::checkTrustLevels() {

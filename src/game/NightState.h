@@ -302,22 +302,6 @@ private:
     bool isCollidingWithGuard(int x, int y) const;
     
     /**
-     * @brief 住民のテクスチャインデックスの取得
-     * @param x 住民のX座標
-     * @param y 住民のY座標
-     * @return テクスチャインデックス
-     */
-    int getResidentTextureIndex(int x, int y) const;
-    
-    /**
-     * @brief 住民の名前の取得
-     * @param x 住民のX座標
-     * @param y 住民のY座標
-     * @return 住民の名前
-     */
-    std::string getResidentName(int x, int y) const;
-    
-    /**
      * @brief UIの更新
      */
     void updateUI();
@@ -350,13 +334,6 @@ private:
      * @brief 衛兵との相互作用チェック
      */
     void checkGuardInteraction();
-    
-    /**
-     * @brief 衛兵への攻撃
-     * @param x 衛兵のX座標
-     * @param y 衛兵のY座標
-     */
-    void attackGuard(int x, int y);
     
     /**
      * @brief 城の入り口チェック

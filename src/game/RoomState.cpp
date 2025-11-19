@@ -127,6 +127,58 @@ void RoomState::render(Graphics& graphics) {
     drawRoomObjects(graphics);
     drawPlayer(graphics);
     
+    // インタラクション可能な時に「ENTER」を表示
+    if (!isShowingMessage && (isNearObject(bedX, bedY) || isNearObject(deskX, deskY) || isNearObject(doorX, doorY))) {
+        const int SCREEN_WIDTH = 1100;
+        const int SCREEN_HEIGHT = 650;
+        const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;
+        const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE;
+        const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;
+        const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2;
+        
+        int textX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+        int textY = ROOM_OFFSET_Y + (playerY + 1) * TILE_SIZE+5;
+        
+        // テキストを中央揃えにするため、テキストの幅を取得して調整
+        SDL_Color textColor = {255, 255, 255, 255};
+        SDL_Texture* enterTexture = graphics.createTextTexture("ENTER", "default", textColor);
+        if (enterTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(enterTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            // テキストサイズを小さくする（70%に縮小）
+            const float SCALE = 0.8f;
+            int scaledWidth = static_cast<int>(textWidth * SCALE);
+            int scaledHeight = static_cast<int>(textHeight * SCALE);
+            
+            // パディングを追加
+            const int PADDING = 4;
+            int bgWidth = scaledWidth + PADDING * 2;
+            int bgHeight = scaledHeight + PADDING * 2;
+            
+            // 背景の位置を計算（中央揃え）
+            int bgX = textX - bgWidth / 2;
+            int bgY = textY;
+            
+            // 黒背景を描画
+            graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+            
+            // 白い枠線を描画
+            graphics.setDrawColor(255, 255, 255, 255); // 白
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+            
+            // テキストを小さく描画（中央揃え）
+            int drawX = textX - scaledWidth / 2;
+            int drawY = textY + PADDING;
+            graphics.drawTexture(enterTexture, drawX, drawY, scaledWidth, scaledHeight);
+            SDL_DestroyTexture(enterTexture);
+        } else {
+            // フォールバック: drawTextを使用
+            graphics.drawText("ENTER", textX, textY, "default", textColor);
+        }
+    }
+    
     if (messageBoard && !messageBoard->getText().empty()) {
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto roomConfig = config.getRoomConfig();
@@ -199,7 +251,7 @@ void RoomState::setupUI(Graphics& graphics) {
     config.calculatePosition(howToX, howToY, roomConfig.howToOperateText.position, graphics.getScreenWidth(), graphics.getScreenHeight());
     auto howtooperateLabel = std::make_unique<Label>(howToX, howToY, "", "default");
     howtooperateLabel->setColor(roomConfig.howToOperateText.color);
-    howtooperateLabel->setText("移動: W/A/S/D\n調べる/ドアに入る/次のメッセージ: Enter");
+    howtooperateLabel->setText("移動: W/A/S/D\n調べる/外に出る/次のメッセージ: ENTER");
     howtooperateBoard = howtooperateLabel.get(); // ポインタを保存
     ui.addElement(std::move(howtooperateLabel));
 }
@@ -215,6 +267,7 @@ void RoomState::loadTextures(Graphics& graphics) {
     deskTexture = graphics.loadTexture("assets/textures/objects/desk.png", "desk");
     bedTexture = graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     houseTileTexture = graphics.loadTexture("assets/textures/tiles/housetile.png", "house_tile");
+    graphics.loadTexture("assets/textures/objects/door.png", "door");
 }
 
 void RoomState::handleMovement(const InputManager& input) {
@@ -301,10 +354,15 @@ void RoomState::drawRoomObjects(Graphics& graphics) {
         graphics.drawRect(ROOM_OFFSET_X + deskX * TILE_SIZE, ROOM_OFFSET_Y + deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
     
-    graphics.setDrawColor(160, 82, 45, 255);
-    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-    graphics.setDrawColor(0, 0, 0, 255);
-    graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    SDL_Texture* doorTexture = graphics.getTexture("door");
+    if (doorTexture) {
+        graphics.drawTexture(doorTexture, ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    } else {
+        graphics.setDrawColor(160, 82, 45, 255);
+        graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
 }
 
 void RoomState::drawPlayer(Graphics& graphics) {
@@ -318,7 +376,10 @@ void RoomState::drawPlayer(Graphics& graphics) {
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 190) / 2 = 230
     
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = ROOM_OFFSET_Y + playerY * TILE_SIZE + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
         graphics.setDrawColor(0, 255, 0, 255);
         graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -358,7 +419,7 @@ void RoomState::interactWithBed() {
 }
 
 void RoomState::interactWithDesk() {
-    showMessage("勉強机です。\n冒険者の心得: 「相手の傾向をしっかりと見極めること！」");
+    showMessage("冒険者の心得: 「敵の行動の傾向をしっかりと見極めること！」");
 }
 
 void RoomState::exitToTown() {

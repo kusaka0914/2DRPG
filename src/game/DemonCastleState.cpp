@@ -28,17 +28,12 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
         };
     } else if (s_demonCastleFirstTime) {
         demonDialogues = {
-            "天の声: ん？なにやら勇者と魔王が話しているみたいですよ。",
-            "魔王: 王様に魔王討伐を頼まれただと？",
-            "魔王: ハハハ、実に愉快だ。よくやったぞ、" + player->getName() + "。",
-            "魔王: お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。", 
-            "魔王: だが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。",
-            "魔王: そこでお前は我が手下たちを倒すことで王様からの信頼を増やすのだ。",
-            "魔王: その合間に街の住民を倒していくことで、勘付かれずに街を滅ぼすことができる。",
-            "魔王: 頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。",
-            "魔王: もしも街を滅ぼせなかった時は、、分かっているだろうな？",
-            "天の声: 勇者は魔王より弱いため逆らえないみたいですね、、",
-            "天の声: それでは、街を滅ぼすために頑張っていきましょう。",
+            "天の声: ここは、、？魔王の城？なぜ勇者と魔王が話しているのでしょうか？\nちょっと聞いてみましょう！",
+            "魔王: 王様に魔王討伐を頼まれただと？\nハハハ、実に愉快だ。よくやったぞ、" + player->getName() + "。",
+            "魔王: お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。\nだが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。", 
+            "魔王: そこでお前は我が手下たちを倒すことで王様からの信頼を増やすのだ。\nその合間に街の住民を倒していくことで、勘付かれずに街を滅ぼすことができる。", 
+            "魔王: 頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。\nもしも街を滅ぼせなかった時は、、分かっているだろうな？",
+            "天の声: 勇者は魔王より弱いため逆らえないみたいですね、、\nそれでは、街を滅ぼすために頑張っていきましょう。",
         };
     } else {
         demonDialogues = {
@@ -394,7 +389,10 @@ void DemonCastleState::drawPlayer(Graphics& graphics) {
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = ROOM_OFFSET_Y + playerY * TILE_SIZE + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
         graphics.setDrawColor(0, 0, 255, 255);
         graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);

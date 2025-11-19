@@ -958,12 +958,12 @@ void BattleState::render(Graphics& graphics) {
         int attackGain = player->getAttack() - oldAttack;
         int defenseGain = player->getDefense() - oldDefense;
         
-        std::string levelUpText = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
+        std::string levelUpText = "レベルアップ！\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
         levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
         
         int levelGained = player->getLevel() - oldLevel;
         if (levelGained > 1) {
-            levelUpText = "★レベルアップ！★\n" + player->getName() + "はレベル" + std::to_string(oldLevel) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
+            levelUpText = "レベルアップ！\n" + player->getName() + "はレベル" + std::to_string(oldLevel) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
             levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
         }
         

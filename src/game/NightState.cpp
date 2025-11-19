@@ -10,6 +10,7 @@
 #include "../io/InputManager.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../utils/TownLayout.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <random>
@@ -40,61 +41,23 @@ NightState::NightState(std::shared_ptr<Player> player)
         residentTextures[i] = nullptr;
     }
     
-    std::vector<std::pair<int, int>> allResidentPositions = {
-        {3, 7},   // 町の住人1
-        {7, 6},   // 町の住人2
-        {11, 8},  // 町の住人3
-        {5, 10},  // 町の住人4
-        {19, 8},  // 町の住人5
-        {23, 6},  // 町の住人6
-        {27, 7},  // 町の住人7
-        {6, 13},  // 町の住人8
-        {24, 13},  // 町の住人9
-        {3, 14},  // 町の住人10
-        {19, 14},  // 町の住人11,
-        {20, 4}  // 町の住人12
-    };
-    
-    for (const auto& pos : allResidentPositions) {
-        bool isKilled = false;
-        for (const auto& killedPos : killedResidentPositions) {
-            if (pos.first == killedPos.first && pos.second == killedPos.second) {
-                isKilled = true;
-                break;
-            }
-        }
-        if (!isKilled) {
+    for (const auto& pos : TownLayout::RESIDENTS) {
+        if (!TownLayout::isResidentKilled(pos.first, pos.second, killedResidentPositions)) {
             residents.push_back(pos);
         }
     }
     
-    buildings = {
-        {8, 10},   // 道具屋（2x2）
-        {18, 10},  // 武器屋（2x2）
-        {24, 10},  // 自室（2x2）
-        {13, 2}    // 城（画面中央上部、2x2）
-    };
+    buildings = TownLayout::BUILDINGS;
+    buildingTypes = TownLayout::BUILDING_TYPES;
+    residentHomes = TownLayout::RESIDENT_HOMES;
+    guards = TownLayout::GUARDS;
     
-    buildingTypes = {
-        "shop", "weapon_shop", "house", "castle"
-    };
-    
-    residentHomes = {
-        {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6}, {4, 12}, {22, 12},{1,13},{17,13},{18,3}
-    };
-    
-    guards = {
-        {12, 2},  // 衛兵1
-        {12, 3},  // 衛兵2
-        {15, 2},   // 衛兵3
-        {15, 3}   // 衛兵4
-    };
-    
+    // 衛兵の初期位置を住人の家の周辺に設定（デバッグ用、通常はTownLayout::GUARDSを使用）
     if (residentHomes.size() >= 4) {
-        guards[0] = {residentHomes[0].first - 1, residentHomes[0].second}; // 1番目の家の左
-        guards[1] = {residentHomes[1].first, residentHomes[1].second - 1}; // 2番目の家の上
-        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second}; // 3番目の家の右
-        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1}; // 4番目の家の下
+        guards[0] = {residentHomes[0].first - 1, residentHomes[0].second};
+        guards[1] = {residentHomes[1].first, residentHomes[1].second - 1};
+        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second};
+        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1};
     }
     
     guardDirections = {
@@ -166,18 +129,9 @@ void NightState::enter() {
         
         residents.clear();
     // 昼の街と同じ住民位置を使用（TownLayout::RESIDENTS）
-    std::vector<std::pair<int, int>> allResidentPositions = TownLayout::RESIDENTS;
-    
     const auto& killedResidents = player->getKilledResidents();
-    for (const auto& pos : allResidentPositions) {
-        bool isKilled = false;
-        for (const auto& killedPos : killedResidents) {
-            if (pos.first == killedPos.first && pos.second == killedPos.second) {
-                isKilled = true;
-                break;
-            }
-        }
-        if (!isKilled) {
+    for (const auto& pos : TownLayout::RESIDENTS) {
+        if (!TownLayout::isResidentKilled(pos.first, pos.second, killedResidents)) {
             residents.push_back(pos);
         }
     }
@@ -221,13 +175,7 @@ void NightState::enter() {
                 int y = lastKilled.second;
                 
                 // まだ処理していない住民か確認（previousKilledPositionsに含まれていない場合）
-                bool alreadyProcessed = false;
-                for (const auto& pos : previousKilledPositions) {
-                    if (pos.first == x && pos.second == y) {
-                        alreadyProcessed = true;
-                        break;
-                    }
-                }
+                bool alreadyProcessed = TownLayout::isResidentKilled(x, y, previousKilledPositions);
                 
                 // まだ処理していない場合、住民を倒した処理を実行
                 if (!alreadyProcessed) {
@@ -242,37 +190,14 @@ void NightState::enter() {
         const auto& playerKilledResidents = player->getKilledResidents();
         if (isNewNight) {
             // 新しい夜の開始時は、killedResidentPositionsとtotalResidentsKilledを更新
-            // 重複を除去してから設定
-            killedResidentPositions.clear();
-            for (const auto& pos : playerKilledResidents) {
-                bool found = false;
-                for (const auto& existingPos : killedResidentPositions) {
-                    if (existingPos.first == pos.first && existingPos.second == pos.second) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    killedResidentPositions.push_back(pos);
-                }
-            }
+            killedResidentPositions = playerKilledResidents;
+            TownLayout::removeDuplicatePositions(killedResidentPositions);
             totalResidentsKilled = killedResidentPositions.size();
         } else if (residentKilledInBattle) {
             // 戦闘から戻ってきた場合は、handleResidentKilledで既に更新されているので、
             // 念のため同期を取る（重複を除去）
-            killedResidentPositions.clear();
-            for (const auto& pos : playerKilledResidents) {
-                bool found = false;
-                for (const auto& existingPos : killedResidentPositions) {
-                    if (existingPos.first == pos.first && existingPos.second == pos.second) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    killedResidentPositions.push_back(pos);
-                }
-            }
+            killedResidentPositions = playerKilledResidents;
+            TownLayout::removeDuplicatePositions(killedResidentPositions);
             totalResidentsKilled = killedResidentPositions.size();
         }
         
@@ -315,22 +240,7 @@ void NightState::enter() {
             // 衛兵を倒した直後でも、ゲーム進行状態は更新する（メッセージは表示しない）
             // 住民を全て倒したかどうかを確認（メッセージは表示しない）
             const auto& killedResidents = player->getKilledResidents();
-            const auto& allResidentPositions = TownLayout::RESIDENTS;
-            
-            bool allKilled = true;
-            for (const auto& residentPos : allResidentPositions) {
-                bool found = false;
-                for (const auto& killedPos : killedResidents) {
-                    if (residentPos.first == killedPos.first && killedPos.second == residentPos.second) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    allKilled = false;
-                    break;
-                }
-            }
+            bool allKilled = TownLayout::areAllResidentsKilled(killedResidents);
             
             if (!allResidentsKilled && allKilled) {
                 allResidentsKilled = true;
@@ -415,11 +325,14 @@ void NightState::render(Graphics& graphics) {
         for (size_t i = 0; i < residents.size(); ++i) {
             const auto& resident = residents[i];
             
-            int textureIndex = getResidentTextureIndex(resident.first, resident.second);
+            int textureIndex = TownLayout::getResidentTextureIndex(resident.first, resident.second);
             SDL_Texture* texture = residentTextures[textureIndex];
             
             if (texture) {
-                graphics.drawTexture(texture, resident.first * TILE_SIZE, resident.second * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                // アスペクト比を保持して縦幅に合わせて描画
+                int centerX = resident.first * TILE_SIZE + TILE_SIZE / 2;
+                int centerY = resident.second * TILE_SIZE + TILE_SIZE / 2;
+                graphics.drawTextureAspectRatio(texture, centerX, centerY, TILE_SIZE, true, true);
             } else {
                 graphics.setDrawColor(255, 0, 0, 255);
                 graphics.drawRect(resident.first * TILE_SIZE, resident.second * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -428,7 +341,10 @@ void NightState::render(Graphics& graphics) {
         
         for (auto& guard : guards) {
             if (guardTexture) {
-                graphics.drawTexture(guardTexture, guard.first * TILE_SIZE, guard.second * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                // アスペクト比を保持して縦幅に合わせて描画
+                int centerX = guard.first * TILE_SIZE + TILE_SIZE / 2;
+                int centerY = guard.second * TILE_SIZE + TILE_SIZE / 2;
+                graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
             } else {
                 graphics.setDrawColor(0, 0, 255, 255);
                 graphics.drawRect(guard.first * TILE_SIZE, guard.second * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -688,7 +604,7 @@ void NightState::setupUI() {
         // 夜の操作ラベル
         int nightOperationX, nightOperationY;
         config.calculatePosition(nightOperationX, nightOperationY, nightConfig.nightOperationText.position, 1100, 650);
-        auto nightOperationLabel = std::make_unique<Label>(nightOperationX, nightOperationY, "住民と話す: Enter", "default");
+        auto nightOperationLabel = std::make_unique<Label>(nightOperationX, nightOperationY, "住民と話す: ENTER", "default");
         nightOperationLabel->setColor(nightConfig.nightOperationText.color);
         this->nightOperationLabel = nightOperationLabel.get(); // ポインタを保存
         ui.addElement(std::move(nightOperationLabel));
@@ -732,22 +648,7 @@ void NightState::attackResident(int x, int y) {
     // 1夜に倒せる住民の最大値は3人まで（ただし、全ての住民を倒した場合は除く）
     // 実際に全ての住民を倒したかどうかを確認
     const auto& killedResidents = player->getKilledResidents();
-    const auto& allResidentPositions = TownLayout::RESIDENTS;
-    
-    bool allKilled = true;
-    for (const auto& residentPos : allResidentPositions) {
-        bool found = false;
-        for (const auto& killedPos : killedResidents) {
-            if (residentPos.first == killedPos.first && residentPos.second == killedPos.second) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            allKilled = false;
-            break;
-        }
-    }
+    bool allKilled = TownLayout::areAllResidentsKilled(killedResidents);
     
     // 1夜に3人倒した場合、かつ全ての住民を倒していない場合は、街に戻る
     if (residentsKilled >= MAX_RESIDENTS_PER_NIGHT && !allKilled) {
@@ -829,11 +730,11 @@ void NightState::executeResidentChoice(int choice) {
         Enemy residentEnemy(EnemyType::SLIME);
         
         // 住民の名前を取得して設定
-        std::string residentName = getResidentName(currentTargetX, currentTargetY);
+        std::string residentName = TownLayout::getResidentName(currentTargetX, currentTargetY);
         residentEnemy.setName(residentName);
         
         // 住民の画像インデックスを取得して設定
-        int textureIndex = getResidentTextureIndex(currentTargetX, currentTargetY);
+        int textureIndex = TownLayout::getResidentTextureIndex(currentTargetX, currentTargetY);
         residentEnemy.setResidentTextureIndex(textureIndex);
         
         // 住民の位置情報を設定
@@ -958,7 +859,10 @@ void NightState::drawNightTown(Graphics& graphics) {
 
 void NightState::drawPlayer(Graphics& graphics) {
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, playerX * TILE_SIZE, playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = playerX * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = playerY * TILE_SIZE + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
         graphics.setDrawColor(0, 255, 0, 255);
         graphics.drawRect(playerX * TILE_SIZE, playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -1026,75 +930,13 @@ bool NightState::isCollidingWithGuard(int x, int y) const {
     return false;
 }
 
-int NightState::getResidentTextureIndex(int x, int y) const {
-    std::vector<std::pair<int, int>> allPositions = {
-        {3, 7},   // 町の住人1 -> resident_1
-        {7, 6},   // 町の住人2 -> resident_2
-        {11, 8},  // 町の住人3 -> resident_3
-        {5, 10},  // 町の住人4 -> resident_4
-        {19, 8},  // 町の住人5 -> resident_5
-        {23, 6},  // 町の住人6 -> resident_6
-        {27, 7},  // 町の住人7 -> resident_1（循環）
-        {6, 13},  // 町の住人8 -> resident_2
-        {24, 13}, // 町の住人9 -> resident_3
-        {3, 14},  // 町の住人10 -> resident_4
-        {19, 14}, // 町の住人11 -> resident_5
-        {20, 4}   // 町の住人12 -> resident_6
-    };
-    
-    for (size_t i = 0; i < allPositions.size(); ++i) {
-        if (allPositions[i].first == x && allPositions[i].second == y) {
-            return i % 6; // 6つの画像を循環使用
-        }
-    }
-    
-    return 0; // デフォルト
-}
-
-std::string NightState::getResidentName(int x, int y) const {
-    std::vector<std::pair<int, int>> allPositions = {
-        {3, 7},   // 町の住人1
-        {7, 6},   // 町の住人2
-        {11, 8},  // 町の住人3
-        {5, 10},  // 町の住人4
-        {19, 8},  // 町の住人5
-        {23, 6},  // 町の住人6
-        {27, 7},  // 町の住人7
-        {6, 13},  // 町の住人8
-        {24, 13}, // 町の住人9
-        {3, 14},  // 町の住人10
-        {19, 14}, // 町の住人11
-        {20, 4}   // 町の住人12
-    };
-    
-    std::vector<std::string> residentNames = {
-        "町の住民1", "町の住民2", "町の住民3", "町の住民4", "町の住民5", "町の住民6",
-        "町の住民7", "町の住民8", "町の住民9", "町の住民10", "町の住民11", "町の住民12"
-    };
-    
-    for (size_t i = 0; i < allPositions.size() && i < residentNames.size(); ++i) {
-        if (allPositions[i].first == x && allPositions[i].second == y) {
-            return residentNames[i];
-        }
-    }
-    
-    return "住民"; // デフォルト
-}
-
 void NightState::handleResidentKilled(int x, int y) {
     residentsKilled++;
     
     player->changeDemonTrust(10); // 魔王からの信頼度を10上昇
     
     // 重複チェック
-    bool alreadyKilled = false;
-    for (const auto& pos : killedResidentPositions) {
-        if (pos.first == x && pos.second == y) {
-            alreadyKilled = true;
-            break;
-        }
-    }
-    if (!alreadyKilled) {
+    if (!TownLayout::isResidentKilled(x, y, killedResidentPositions)) {
         killedResidentPositions.push_back({x, y});
     }
     player->addKilledResident(x, y);
@@ -1352,25 +1194,8 @@ void NightState::drawGate(Graphics& graphics) {
 
 void NightState::checkGameProgress() {
     // 住民を全て倒したかどうかを正確に判定
-    // TownLayout::RESIDENTSの各位置がplayer->getKilledResidents()に含まれているかをチェック
-    // 重複を考慮して、全ての住民位置が倒されたかどうかを判定
     const auto& killedResidents = player->getKilledResidents();
-    const auto& allResidentPositions = TownLayout::RESIDENTS;
-    
-    bool allKilled = true;
-    for (const auto& residentPos : allResidentPositions) {
-        bool found = false;
-        for (const auto& killedPos : killedResidents) {
-            if (residentPos.first == killedPos.first && residentPos.second == killedPos.second) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            allKilled = false;
-            break;
-        }
-    }
+    bool allKilled = TownLayout::areAllResidentsKilled(killedResidents);
     
     if (!allResidentsKilled && allKilled) {
         allResidentsKilled = true;
@@ -1402,10 +1227,6 @@ void NightState::checkGuardInteraction() {
             return;
         }
     }
-}
-
-void NightState::attackGuard(int x, int y) {
-    // この関数は使用されなくなった（通常のバトル形式に変更）
 }
 
 void NightState::checkCastleEntrance() {
@@ -1586,19 +1407,9 @@ void NightState::fromJson(const nlohmann::json& j) {
         for (const auto& posJson : j["killedResidentPositions"]) {
             int x = posJson["x"];
             int y = posJson["y"];
-            // 重複チェック
-            bool found = false;
-            for (const auto& existingPos : killedResidentPositions) {
-                if (existingPos.first == x && existingPos.second == y) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                killedResidentPositions.push_back({x, y});
-            }
+            killedResidentPositions.push_back({x, y});
         }
-        // totalResidentsKilledも更新
+        TownLayout::removeDuplicatePositions(killedResidentPositions);
         totalResidentsKilled = killedResidentPositions.size();
     }
     

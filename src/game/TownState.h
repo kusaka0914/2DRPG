@@ -77,6 +77,9 @@ private:
     std::vector<std::pair<int, int>> buildings;
     std::vector<std::string> buildingTypes;
     
+    // 住人の家の位置
+    std::vector<std::pair<int, int>> residentHomes;
+    
     // 城の位置（画面中央）
     int castleX, castleY;
     bool hasVisitedCastle;
@@ -202,9 +205,10 @@ private:
     void exitBuilding();
     
     bool isValidPosition(int x, int y) const;
-    bool isNearNPC(int x, int y) const;
     bool isCollidingWithBuilding(int x, int y) const;
     bool isCollidingWithNPC(int x, int y) const;
     NPC* getNearbyNPC(int x, int y);
+    const NPC* getNearbyNPC(int x, int y) const;
+    bool isNearNPC(int x, int y) const;
     void checkTrustLevels();
 }; 
