@@ -333,7 +333,7 @@
         "padding": 8,
         "playerWinFormat": "{playerName}が{turns}ターン分の攻撃を実行！",
         "enemyWinFormat": "敵が{turns}ターン分の攻撃を実行！",
-        "drawFormat": "両方がダメージを受ける",
+        "drawFormat": "相打ち！",
         "hesitateFormat": "{playerName}はメンタルの影響で攻撃をためらいました。"
       },
       "attackText": {

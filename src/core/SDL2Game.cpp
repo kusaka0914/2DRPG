@@ -645,6 +645,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/UI/vs.png", "vs_image");
     graphics.loadTexture("assets/textures/UI/title_logo.png", "title_logo");
     graphics.loadTexture("assets/textures/UI/title_bg.png", "title_bg");
+    graphics.loadTexture("assets/textures/UI/life.png", "life");
     // オブジェクト画像
     graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     graphics.loadTexture("assets/textures/objects/desk.png", "desk");

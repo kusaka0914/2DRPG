@@ -263,10 +263,10 @@ private:
      * @brief 敵の特殊技を適用
      * @param enemyType 敵の種類
      * @param baseDamage 基本ダメージ
-     * @param effectMessage 特殊技の効果メッセージ（出力用）
      * @return 最終ダメージ
      */
-    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage);
+    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage);
+    std::string getEnemySpecialSkillEffectMessage(EnemyType enemyType);
     
     /**
      * @brief 敵の特殊技効果を処理（ターン終了時）

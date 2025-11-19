@@ -1011,7 +1011,7 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     // 住民戦の場合は、住民名を少し上に移動し、その下にlife.pngを3つ横並びで表示
     if (enemy->isResident()) {
         // 住民名を少し上に移動（通常より30ピクセル上）
-        int residentNameOffsetY = -80; // 通常の-50から-80に変更
+        int residentNameOffsetY = -40; // 通常の-50から-80に変更
         SDL_Texture* enemyNameTexture = graphics->createTextTexture(enemyNameText, "default", enemyNameColor);
         if (enemyNameTexture) {
             int textWidth, textHeight;
@@ -1029,7 +1029,7 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
         // life.pngを3つ横並びで表示（住民名の下）
         SDL_Texture* lifeTexture = graphics->getTexture("life");
         if (lifeTexture) {
-            int lifeSize = 30; // life.pngの表示サイズ
+            int lifeSize = 50; // life.pngの表示サイズ
             int lifeSpacing = 5; // life.pngの間隔
             int totalWidth = lifeSize * 3 + lifeSpacing * 2;
             int startX = enemyX - totalWidth / 2;
