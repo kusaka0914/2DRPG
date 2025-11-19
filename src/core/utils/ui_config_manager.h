@@ -288,9 +288,27 @@ namespace UIConfig {
     
     // GameOverState用
     struct UIGameOverConfig {
-        UITextConfig title;
-        UITextConfig reason;
-        UITextConfig instruction;
+        struct {
+            UITextConfig text;
+            UIRectConfig background;
+            SDL_Color backgroundColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
+        } title;
+        struct {
+            UITextConfig text;
+            UIRectConfig background;
+            SDL_Color backgroundColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
+        } reason;
+        struct {
+            UITextConfig text;
+            UIRectConfig background;
+            SDL_Color backgroundColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
+        } instruction;
+        struct {
+            int baseSize = 300;  // 画像のベースサイズ
+        } image;
     };
     
     // EndingState用

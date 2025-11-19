@@ -60,6 +60,8 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
 }
 
 void BattleState::enter() {
+    // 特殊技効果をリセット
+    player->getPlayerStats().resetEnemySkillEffects();
     loadBattleImages();
     
     std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
@@ -3017,6 +3019,7 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                 if (cmd == 0) {
                     int baseDamage = player->calculateDamageWithBonus(*enemy);
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
+                    damage = applyPlayerAttackSkillEffects(damage);
                     enemy->takeDamage(damage);
                     effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                     float shakeIntensity = stats.hasThreeWinStreak ? 30.0f : 20.0f;
@@ -3037,6 +3040,7 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
                     // 攻撃魔法：通常の攻撃と同じ攻撃力（MP消費なし）
                         int baseDamage = player->calculateDamageWithBonus(*enemy);
                     int damage = static_cast<int>(baseDamage * damageMultiplier); // 攻撃魔法は通常の攻撃と同じ
+                        damage = applyPlayerAttackSkillEffects(damage);
                         enemy->takeDamage(damage);
                         effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                         float shakeIntensity = stats.hasThreeWinStreak ? 35.0f : 25.0f;
@@ -3468,11 +3472,24 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                         // ダミーのダメージエントリ（damage == 0）の場合はダメージ適用をスキップ
                         if (damage > 0) {
                             if (isPlayerHit) {
+                                // 特殊技の場合は特殊技を適用
+                                if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty()) {
+                                    damage = applyEnemySpecialSkill(enemy->getType(), damage);
+                                    std::string msg = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】！\n";
+                                    addBattleLog(msg);
+                                } else {
+                                    std::string msg = enemy->getTypeName() + "の攻撃！\n";
+                                    addBattleLog(msg);
+                                }
+                                
                                 player->takeDamage(damage);
                                 effectManager->triggerHitEffect(damage, playerX, playerY, true);
                                 float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
                                 float shakeDuration = 0.3f;
                                 effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
+                                
+                                std::string damageMsg = player->getName() + "は" + std::to_string(damage) + "のダメージを受けた！";
+                                addBattleLog(damageMsg);
                             } else {
                                 enemy->takeDamage(damage);
                                 effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
@@ -3795,13 +3812,254 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                 return;
             }
         }
-        
-        // リセット（フェーズが変更されていない場合のみ）
-        animationController->resetResultAnimation();
-        currentExecutingTurn = 0;
-        executeDelayTimer = 0.0f;
-        damageAppliedInAnimation = false;
-        pendingDamages.clear();
-        phaseTimer = 0;
     }
+}
+
+int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> percentDis(0, 99);
+    std::uniform_int_distribution<> chaosDis(0, 2);
+    
+    auto& skillEffects = player->getPlayerStats().getEnemySkillEffects();
+    int finalDamage = baseDamage;
+    
+    switch (enemyType) {
+        case EnemyType::SLIME:
+            // 通常攻撃 + 次のプレイヤーの攻撃を50%軽減
+            skillEffects.playerAttackReduction = 0.5f;
+            addBattleLog("粘液が体を覆った！次の攻撃が弱くなる！");
+            break;
+            
+        case EnemyType::GOBLIN:
+            // 通常ダメージの1.2倍
+            finalDamage = static_cast<int>(baseDamage * 1.2f);
+            break;
+            
+        case EnemyType::ORC:
+            // HP50%以下なら通常ダメージの1.5倍、それ以上なら1.2倍
+            if (enemy->getHp() <= enemy->getMaxHp() * 0.5f) {
+                finalDamage = static_cast<int>(baseDamage * 1.5f);
+                addBattleLog("怒りで力が増した！");
+            } else {
+                finalDamage = static_cast<int>(baseDamage * 1.2f);
+            }
+            break;
+            
+        case EnemyType::DRAGON:
+            // 通常ダメージ + 火傷状態（3ターン、毎ターンHPの3%を削る）
+            skillEffects.burnTurns = 3;
+            skillEffects.burnDamageRatio = 0.03f;
+            addBattleLog("炎のブレスが体を焼いた！火傷状態になった！");
+            break;
+            
+        case EnemyType::SKELETON:
+            // 通常ダメージ + 次攻撃を受けた時にそのダメージの30%をプレイヤーに与える
+            skillEffects.hasCounterOnNextAttack = true;
+            skillEffects.counterDamageRatio = 0.3f;
+            addBattleLog("骨の壁が構築された！次の攻撃が跳ね返される！");
+            break;
+            
+        case EnemyType::GHOST:
+            // 通常 + 次のプレイヤー攻撃の失敗率を50%向上
+            skillEffects.attackFailureRateIncrease = 0.5f;
+            addBattleLog("呪いの触手が体を絡みついた！攻撃が当たりにくくなった！");
+            break;
+            
+        case EnemyType::VAMPIRE:
+            // 通常 + 与えたダメージの20%回復
+            {
+                int healAmount = static_cast<int>(baseDamage * 0.2f);
+                enemy->heal(healAmount);
+                addBattleLog("血を吸い取られた！" + enemy->getTypeName() + "は" + std::to_string(healAmount) + "回復した！");
+            }
+            break;
+            
+        case EnemyType::DEMON_SOLDIER:
+            // 通常 + 5%の確率でプレイヤーを即死させる
+            if (percentDis(gen) < 5) {
+                player->takeDamage(player->getHp());
+                addBattleLog("地獄の一撃が直撃した！即死した！");
+                return baseDamage; // 既にダメージを適用したので、ここで終了
+            }
+            break;
+            
+        case EnemyType::WEREWOLF:
+            // 通常攻撃 + 裂傷（3ターン、プレイヤーのHPの5%を継続的に減らす）
+            skillEffects.bleedTurns = 3;
+            skillEffects.bleedDamageRatio = 0.05f;
+            addBattleLog("猛襲で裂傷を負った！");
+            break;
+            
+        case EnemyType::MINOTAUR:
+            // 通常の1.5倍
+            finalDamage = static_cast<int>(baseDamage * 1.5f);
+            break;
+            
+        case EnemyType::CYCLOPS:
+            // 通常の1.75倍
+            finalDamage = static_cast<int>(baseDamage * 1.75f);
+            break;
+            
+        case EnemyType::GARGOYLE:
+            // 通常 + 次に受けるダメージを80%低減
+            skillEffects.damageReduction = 0.8f;
+            addBattleLog("石の守りが発動した！次に受けるダメージが大幅に減る！");
+            break;
+            
+        case EnemyType::PHANTOM:
+            // 通常 + 次の攻撃を80%で回避できる
+            skillEffects.hasEvasion = true;
+            skillEffects.evasionRate = 0.8f;
+            addBattleLog("幻影の攻撃で体が透けた！次の攻撃を回避できる！");
+            break;
+            
+        case EnemyType::DARK_KNIGHT:
+            // 通常 + 次にプレイヤーに攻撃された時にHPの10%を削る
+            skillEffects.hasDarkKnightCounter = true;
+            addBattleLog("暗黒の一撃が体を貫いた！次の攻撃が跳ね返される！");
+            break;
+            
+        case EnemyType::ICE_GIANT:
+            // 通常 + 20%の確率で氷漬けにして次のターンコマンド選択できず一方的に攻撃される
+            if (percentDis(gen) < 20) {
+                skillEffects.isFrozen = true;
+                addBattleLog("氷結の息吹で体が凍りついた！次のターン動けない！");
+            }
+            break;
+            
+        case EnemyType::FIRE_DEMON:
+            // 通常 + 2ターンHPの10%を削る
+            skillEffects.burnTurns = 2;
+            skillEffects.burnDamageRatio = 0.1f;
+            addBattleLog("業火が体を焼いた！継続ダメージを受ける！");
+            break;
+            
+        case EnemyType::SHADOW_LORD:
+            // 通常 + 次の攻撃を無効化
+            skillEffects.hasShadowLordBlock = true;
+            addBattleLog("影の呪縛で次の攻撃が無効化される！");
+            break;
+            
+        case EnemyType::ANCIENT_DRAGON:
+            // 通常 + 1ターンプレイヤーの攻撃力を50%下げる
+            skillEffects.attackReduction = 0.5f;
+            skillEffects.attackReductionTurns = 1;
+            addBattleLog("古の咆哮で攻撃力が半減した！");
+            break;
+            
+        case EnemyType::CHAOS_BEAST:
+            // 通常 + 1ターン自分の防御力を0にする代わりに攻撃力が999になる
+            skillEffects.hasChaosBeastEffect = true;
+            skillEffects.chaosBeastDefense = 0;
+            skillEffects.chaosBeastAttack = 999;
+            skillEffects.chaosBeastTurns = 1;
+            addBattleLog("混沌の力で防御力が0になり、攻撃力が999になった！");
+            break;
+            
+        case EnemyType::ELDER_GOD: {
+            // 通常なしでプレイヤーのHPを1にする
+            int currentHp = player->getHp();
+            if (currentHp > 1) {
+                player->takeDamage(currentHp - 1);
+                addBattleLog("神の裁きでHPが1になった！");
+            }
+            return 0; // 通常ダメージはなし
+        }
+            
+        case EnemyType::DEMON_LORD:
+            // 通常ダメージ（魔王の特殊技は別途実装可能）
+            break;
+            
+        default:
+            break;
+    }
+    
+    return finalDamage;
+}
+
+void BattleState::processEnemySkillEffects() {
+    auto& skillEffects = player->getPlayerStats().getEnemySkillEffects();
+    
+    // 火傷の処理
+    if (skillEffects.burnTurns > 0) {
+        int burnDamage = static_cast<int>(player->getMaxHp() * skillEffects.burnDamageRatio);
+        if (burnDamage > 0) {
+            player->takeDamage(burnDamage);
+            addBattleLog("火傷で" + std::to_string(burnDamage) + "のダメージを受けた！");
+        }
+        skillEffects.burnTurns--;
+        if (skillEffects.burnTurns <= 0) {
+            skillEffects.burnDamageRatio = 0.0f;
+        }
+    }
+    
+    // 裂傷の処理
+    if (skillEffects.bleedTurns > 0) {
+        int bleedDamage = static_cast<int>(player->getMaxHp() * skillEffects.bleedDamageRatio);
+        if (bleedDamage > 0) {
+            player->takeDamage(bleedDamage);
+            addBattleLog("裂傷で" + std::to_string(bleedDamage) + "のダメージを受けた！");
+        }
+        skillEffects.bleedTurns--;
+        if (skillEffects.bleedTurns <= 0) {
+            skillEffects.bleedDamageRatio = 0.0f;
+        }
+    }
+    
+    // 攻撃力減少の処理
+    if (skillEffects.attackReductionTurns > 0) {
+        skillEffects.attackReductionTurns--;
+        if (skillEffects.attackReductionTurns <= 0) {
+            skillEffects.attackReduction = 0.0f;
+            addBattleLog("攻撃力が元に戻った！");
+        }
+    }
+    
+    // カオスビースト効果の処理
+    if (skillEffects.chaosBeastTurns > 0) {
+        skillEffects.chaosBeastTurns--;
+        if (skillEffects.chaosBeastTurns <= 0) {
+            skillEffects.hasChaosBeastEffect = false;
+            skillEffects.chaosBeastDefense = 0;
+            skillEffects.chaosBeastAttack = 0;
+            addBattleLog("混沌の力が消えた！");
+        }
+    }
+    
+    // 氷漬けの処理（次のターンで解除）
+    if (skillEffects.isFrozen) {
+        skillEffects.isFrozen = false;
+    }
+    
+    // シャドウロードのブロック効果（1回のみ）
+    if (skillEffects.hasShadowLordBlock) {
+        skillEffects.hasShadowLordBlock = false;
+    }
+}
+
+int BattleState::applyPlayerAttackSkillEffects(int baseDamage) {
+    auto& skillEffects = player->getPlayerStats().getEnemySkillEffects();
+    int finalDamage = baseDamage;
+    
+    // スライムの攻撃ダメージ軽減
+    if (skillEffects.playerAttackReduction > 0.0f) {
+        finalDamage = static_cast<int>(finalDamage * (1.0f - skillEffects.playerAttackReduction));
+        skillEffects.playerAttackReduction = 0.0f; // 1回のみ
+    }
+    
+    // エンシェントドラゴンの攻撃力減少
+    if (skillEffects.attackReduction > 0.0f) {
+        finalDamage = static_cast<int>(finalDamage * (1.0f - skillEffects.attackReduction));
+    }
+    
+    // カオスビーストの防御力0、攻撃力999
+    if (skillEffects.hasChaosBeastEffect) {
+        // 防御力0なので、ダメージ計算を変更
+        // 通常のダメージ計算ではなく、攻撃力999で計算
+        // これは特殊なので、ここでは通常のダメージ計算を維持
+        // 実際の防御力は敵側で処理する必要がある
+    }
+    
+    return finalDamage;
 }

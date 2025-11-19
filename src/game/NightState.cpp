@@ -1375,13 +1375,13 @@ void NightState::checkGameProgress() {
     if (!allResidentsKilled && allKilled) {
         allResidentsKilled = true;
         canAttackGuards = true;
-        showMessage("住民を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。");
+        showMessage("住民を全員倒せたようですね。残るは衛兵と王様だけです。\nまずは外にいる衛兵を全員倒してしまいましょう。衛兵に近づいてEnterで戦闘に入れます。");
     }
     
     if (allResidentsKilled && !allGuardsKilled && guards.empty()) {
         allGuardsKilled = true;
         canEnterCastle = true;
-        showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。");
+        showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。城の近くに行き、Enterで城に入れます。");
     }
 }
 
@@ -1397,7 +1397,7 @@ void NightState::checkGuardInteraction() {
             currentGuardY = guard.second;
             
             // メッセージを表示
-            showMessage("衛兵：「お前は何者だ！ここで何をしている！」");
+            showMessage("衛兵：「勇者！住民を襲っていたのはお前だったのか！これ以上は好きにはさせないぞ！」");
             showGuardMessage = true;
             return;
         }

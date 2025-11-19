@@ -493,28 +493,70 @@
   },
   "gameOver": {
     "title": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 200
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 550,
+          "absoluteY": 200
+        },
+        "color": [255, 0, 0, 255]
       },
-      "color": [255, 0, 0, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 540,
+          "absoluteY": 190
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "reason": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 250
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 550,
+          "absoluteY": 250
+        },
+        "color": [255, 255, 255, 255]
       },
-      "color": [255, 255, 255, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 540,
+          "absoluteY": 240
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "instruction": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 400
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 550,
+          "absoluteY": 400
+        },
+        "color": [200, 200, 200, 255]
       },
-      "color": [200, 200, 200, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 390
+        },
+        "width": 400,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "image": {
+      "baseSize": 300
     }
   },
   "ending": {

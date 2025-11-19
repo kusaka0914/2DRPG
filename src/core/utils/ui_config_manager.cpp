@@ -360,20 +360,20 @@ namespace UIConfig {
         demonCastleConfig.messageBoard.text.color = {255, 255, 255, 255};
         
         // GameOverState
-        gameOverConfig.title.position.useRelative = false;
-        gameOverConfig.title.position.absoluteX = 550.0f;
-        gameOverConfig.title.position.absoluteY = 200.0f;
-        gameOverConfig.title.color = {255, 0, 0, 255};
+        gameOverConfig.title.text.position.useRelative = false;
+        gameOverConfig.title.text.position.absoluteX = 550.0f;
+        gameOverConfig.title.text.position.absoluteY = 200.0f;
+        gameOverConfig.title.text.color = {255, 0, 0, 255};
         
-        gameOverConfig.reason.position.useRelative = false;
-        gameOverConfig.reason.position.absoluteX = 550.0f;
-        gameOverConfig.reason.position.absoluteY = 250.0f;
-        gameOverConfig.reason.color = {255, 255, 255, 255};
+        gameOverConfig.reason.text.position.useRelative = false;
+        gameOverConfig.reason.text.position.absoluteX = 550.0f;
+        gameOverConfig.reason.text.position.absoluteY = 250.0f;
+        gameOverConfig.reason.text.color = {255, 255, 255, 255};
         
-        gameOverConfig.instruction.position.useRelative = false;
-        gameOverConfig.instruction.position.absoluteX = 550.0f;
-        gameOverConfig.instruction.position.absoluteY = 400.0f;
-        gameOverConfig.instruction.color = {200, 200, 200, 255};
+        gameOverConfig.instruction.text.position.useRelative = false;
+        gameOverConfig.instruction.text.position.absoluteX = 550.0f;
+        gameOverConfig.instruction.text.position.absoluteY = 400.0f;
+        gameOverConfig.instruction.text.color = {200, 200, 200, 255};
         
         // EndingState
         endingConfig.message.position.useRelative = false;
@@ -1402,18 +1402,55 @@ namespace UIConfig {
                 auto& go = jsonData["gameOver"];
                 if (go.contains("title")) {
                     auto& cfg = go["title"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.title.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.title.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.title.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.title.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.title.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.title.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.title.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.title.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.title.borderColor);
                 }
                 if (go.contains("reason")) {
                     auto& cfg = go["reason"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.reason.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.reason.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.reason.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.reason.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.reason.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.reason.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.reason.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.reason.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.reason.borderColor);
                 }
                 if (go.contains("instruction")) {
                     auto& cfg = go["instruction"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.instruction.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.instruction.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.instruction.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.instruction.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.instruction.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.instruction.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.instruction.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.instruction.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.instruction.borderColor);
+                }
+                if (go.contains("image")) {
+                    auto& cfg = go["image"];
+                    if (cfg.contains("baseSize")) gameOverConfig.image.baseSize = cfg["baseSize"].get<int>();
                 }
             }
             

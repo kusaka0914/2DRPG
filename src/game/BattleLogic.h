@@ -42,6 +42,8 @@ public:
         int commandType;   /**< @brief コマンドタイプ（0=攻撃, 1=防御, 2=呪文）-1=未設定 */
         bool isCounterRush; /**< @brief true=カウンターラッシュ（防御で勝利した場合） */
         bool skipAnimation; /**< @brief true=攻撃アニメーションをスキップ（ステータス上昇呪文や回復呪文の場合） */
+        bool isSpecialSkill;  /**< @brief true=特殊技を使用した */
+        std::string specialSkillName;  /**< @brief 特殊技の名前（空文字列の場合は通常攻撃） */
     };
     
     /**
@@ -277,5 +279,12 @@ public:
      * @return 除外する行動タイプ（ヒント表示用）
      */
     EnemyBehaviorType getExcludedBehaviorType() const { return excludedBehaviorType; }
+    
+    /**
+     * @brief 敵の特殊技名を取得
+     * @param enemyType 敵の種類
+     * @return 特殊技名（空文字列の場合は通常攻撃）
+     */
+    static std::string getEnemySpecialSkillName(EnemyType enemyType);
 };
 

@@ -1,4 +1,5 @@
 #include "BattleLogic.h"
+#include "../entities/Enemy.h"
 #include <random>
 #include <algorithm>
 
@@ -95,7 +96,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                 if (cmd == BattleConstants::COMMAND_ATTACK) {
                     int baseDamage = calculatePlayerAttackDamage();
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
-                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false, false});
+                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false, false, false, ""});
                 } else if (cmd == BattleConstants::COMMAND_SPELL) {
                     // 呪文で勝利した場合、ダメージエントリを追加しない
                     // （後でプレイヤーが選択した呪文を実行するため）
@@ -106,16 +107,28 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                     int counterDamage = static_cast<int>(baseDamage / 5.0f * damageMultiplier);
                     // 5回のダメージエントリを追加
                     for (int j = 0; j < 5; j++) {
-                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true, false});
+                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true, false, false, ""});
                     }
                 }
             }
         }
     } else if (currentStats.enemyWins > currentStats.playerWins) {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<> skillDis(0, 99);
+        
         for (int i = 0; i < commandTurnCount; i++) {
             if (judgeRound(playerCommands[i], enemyCommands[i]) == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
                 int damage = calculateEnemyAttackDamage();
-                damages.push_back({damage, true, false, 0, 0, -1, false, false}); // true = プレイヤーがダメージを受ける
+                bool isSpecialSkill = (skillDis(gen) < 50); // 50%の確率で特殊技
+                std::string skillName = "";
+                
+                if (isSpecialSkill) {
+                    // モンスタータイプに応じた特殊技名を取得
+                    skillName = getEnemySpecialSkillName(enemy->getType());
+                }
+                
+                damages.push_back({damage, true, false, 0, 0, -1, false, false, isSpecialSkill, skillName}); // true = プレイヤーがダメージを受ける
             }
         }
     } else {
@@ -129,7 +142,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
             }
         }
         if (totalPlayerDamage > 0 || totalEnemyDamage > 0) {
-            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false, false}); // isDraw = true
+            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false, false, false, ""}); // isDraw = true
         }
     }
     
@@ -336,5 +349,54 @@ std::string BattleLogic::getNegativeBehaviorTypeHint(EnemyBehaviorType type) {
             return "呪文型ではないようだ";
     }
     return "";
+}
+
+std::string BattleLogic::getEnemySpecialSkillName(EnemyType enemyType) {
+    switch (enemyType) {
+        case EnemyType::SLIME:
+            return "粘液の壁";
+        case EnemyType::GOBLIN:
+            return "連続突き";
+        case EnemyType::ORC:
+            return "怒りの一撃";
+        case EnemyType::DRAGON:
+            return "炎のブレス";
+        case EnemyType::SKELETON:
+            return "骨の壁";
+        case EnemyType::GHOST:
+            return "呪いの触手";
+        case EnemyType::VAMPIRE:
+            return "吸血";
+        case EnemyType::DEMON_SOLDIER:
+            return "地獄の一撃";
+        case EnemyType::WEREWOLF:
+            return "猛襲";
+        case EnemyType::MINOTAUR:
+            return "突進";
+        case EnemyType::CYCLOPS:
+            return "巨大な一撃";
+        case EnemyType::GARGOYLE:
+            return "石の守り";
+        case EnemyType::PHANTOM:
+            return "幻影の攻撃";
+        case EnemyType::DARK_KNIGHT:
+            return "暗黒の一撃";
+        case EnemyType::ICE_GIANT:
+            return "氷結の息吹";
+        case EnemyType::FIRE_DEMON:
+            return "業火";
+        case EnemyType::SHADOW_LORD:
+            return "影の呪縛";
+        case EnemyType::ANCIENT_DRAGON:
+            return "古の咆哮";
+        case EnemyType::CHAOS_BEAST:
+            return "混沌の力";
+        case EnemyType::ELDER_GOD:
+            return "神の裁き";
+        case EnemyType::DEMON_LORD:
+            return "魔王の力";
+        default:
+            return "";
+    }
 }
 

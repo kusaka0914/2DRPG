@@ -55,7 +55,6 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 
 void CastleState::enter() {
     startFadeIn(0.5f);
-    
     // 保存された状態を復元（BattleStateから戻ってきた場合など）
     const nlohmann::json* savedState = player->getSavedGameState();
     if (savedState && !savedState->is_null() && 
@@ -70,10 +69,8 @@ void CastleState::enter() {
         if (!allDefeated) {
             allDefeated = true;
         }
-        // メッセージが表示されていない場合は表示する
-        if (!isShowingMessage) {
-            showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
-        }
+        // メッセージはrender()でsetupUI()の後に表示する（messageBoardが初期化されるため）
+        
         // 全員倒された場合は、王様との会話は不要なのでpendingDialogueをfalseにする
         pendingDialogue = false;
     } else {
@@ -159,6 +156,11 @@ void CastleState::render(Graphics& graphics) {
         uiJustInitialized = true;
     }
     lastReloadState = currentReloadState;
+    
+    // 全員倒された場合のメッセージを表示（setupUI()の後、messageBoardが初期化されているため）
+    if (messageBoard && kingDefeated && guardLeftDefeated && guardRightDefeated && allDefeated && !isShowingMessage) {
+        showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+    }
     
     // 会話を開始（pendingDialogueがtrueの場合、または初回の夜の街からの入場で会話がまだ開始されていない場合）
     // 全員倒された場合は会話を開始しない
@@ -359,10 +361,7 @@ void CastleState::checkAllDefeated() {
     if (kingDefeated && guardLeftDefeated && guardRightDefeated) {
         if (!allDefeated) {
             allDefeated = true;
-        }
-        // メッセージが表示されていない場合のみ表示（重複表示を防ぐ）
-        if (!isShowingMessage) {
-            showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+            // メッセージはrender()でsetupUI()の後に表示する（messageBoardが初期化されるため）
         }
     }
 }

@@ -74,7 +74,9 @@ void GameOverState::render(Graphics& graphics) {
             SDL_QueryTexture(defeatTexture, nullptr, nullptr, &imgWidth, &imgHeight);
             
             // アスペクト比を維持しながら適切なサイズで表示
-            int baseSize = 300; // ベースサイズ
+            auto& config = UIConfig::UIConfigManager::getInstance();
+            auto gameOverConfig = config.getGameOverConfig();
+            int baseSize = gameOverConfig.image.baseSize;
             float aspectRatio = static_cast<float>(imgWidth) / static_cast<float>(imgHeight);
             int displayWidth, displayHeight;
             if (imgWidth > imgHeight) {
@@ -117,7 +119,9 @@ void GameOverState::render(Graphics& graphics) {
             SDL_QueryTexture(capturedTexture, nullptr, nullptr, &imgWidth, &imgHeight);
             
             // アスペクト比を維持しながら適切なサイズで表示
-            int baseSize = 300; // ベースサイズ
+            auto& config = UIConfig::UIConfigManager::getInstance();
+            auto gameOverConfig = config.getGameOverConfig();
+            int baseSize = gameOverConfig.image.baseSize;
             float aspectRatio = static_cast<float>(imgWidth) / static_cast<float>(imgHeight);
             int displayWidth, displayHeight;
             if (imgWidth > imgHeight) {
@@ -136,6 +140,46 @@ void GameOverState::render(Graphics& graphics) {
             
             graphics.drawTexture(capturedTexture, imageX, imageY, displayWidth, displayHeight);
         }
+    }
+    
+    // テキストUIの背景を描画
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto gameOverConfig = config.getGameOverConfig();
+    
+    // title背景
+    if (titleLabel && !titleLabel->getText().empty()) {
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, gameOverConfig.title.background.position, screenWidth, screenHeight);
+        graphics.setDrawColor(gameOverConfig.title.backgroundColor.r, gameOverConfig.title.backgroundColor.g, 
+                             gameOverConfig.title.backgroundColor.b, gameOverConfig.title.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.title.background.width, gameOverConfig.title.background.height, true);
+        graphics.setDrawColor(gameOverConfig.title.borderColor.r, gameOverConfig.title.borderColor.g, 
+                             gameOverConfig.title.borderColor.b, gameOverConfig.title.borderColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.title.background.width, gameOverConfig.title.background.height);
+    }
+    
+    // reason背景
+    if (reasonLabel && !reasonLabel->getText().empty()) {
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, gameOverConfig.reason.background.position, screenWidth, screenHeight);
+        graphics.setDrawColor(gameOverConfig.reason.backgroundColor.r, gameOverConfig.reason.backgroundColor.g, 
+                             gameOverConfig.reason.backgroundColor.b, gameOverConfig.reason.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.reason.background.width, gameOverConfig.reason.background.height, true);
+        graphics.setDrawColor(gameOverConfig.reason.borderColor.r, gameOverConfig.reason.borderColor.g, 
+                             gameOverConfig.reason.borderColor.b, gameOverConfig.reason.borderColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.reason.background.width, gameOverConfig.reason.background.height);
+    }
+    
+    // instruction背景
+    if (instruction && !instruction->getText().empty()) {
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, gameOverConfig.instruction.background.position, screenWidth, screenHeight);
+        graphics.setDrawColor(gameOverConfig.instruction.backgroundColor.r, gameOverConfig.instruction.backgroundColor.g, 
+                             gameOverConfig.instruction.backgroundColor.b, gameOverConfig.instruction.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.instruction.background.width, gameOverConfig.instruction.background.height, true);
+        graphics.setDrawColor(gameOverConfig.instruction.borderColor.r, gameOverConfig.instruction.borderColor.g, 
+                             gameOverConfig.instruction.borderColor.b, gameOverConfig.instruction.borderColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.instruction.background.width, gameOverConfig.instruction.background.height);
     }
     
     ui.render(graphics);
@@ -266,21 +310,21 @@ void GameOverState::setupUI() {
     auto gameOverConfig = config.getGameOverConfig();
     
     int titleX, titleY;
-    config.calculatePosition(titleX, titleY, gameOverConfig.title.position, 1100, 650);
+    config.calculatePosition(titleX, titleY, gameOverConfig.title.text.position, 1100, 650);
     auto titleLabelPtr = std::make_unique<Label>(titleX, titleY, "GAME OVER", "default");
-    titleLabelPtr->setColor(gameOverConfig.title.color);
+    titleLabelPtr->setColor(gameOverConfig.title.text.color);
     titleLabel = titleLabelPtr.get();
     ui.addElement(std::move(titleLabelPtr));
     
     int reasonX, reasonY;
-    config.calculatePosition(reasonX, reasonY, gameOverConfig.reason.position, 1100, 650);
+    config.calculatePosition(reasonX, reasonY, gameOverConfig.reason.text.position, 1100, 650);
     auto reasonLabelPtr = std::make_unique<Label>(reasonX, reasonY, gameOverReason, "default");
-    reasonLabelPtr->setColor(gameOverConfig.reason.color);
+    reasonLabelPtr->setColor(gameOverConfig.reason.text.color);
     reasonLabel = reasonLabelPtr.get();
     ui.addElement(std::move(reasonLabelPtr));
     
     int instructionX, instructionY;
-    config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.position, 1100, 650);
+    config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.text.position, 1100, 650);
     std::string instructionText;
     if (isTargetLevelEnemy) {
         instructionText = "Rキーで再戦 / Enterキーで3分延長してフィールドに戻る";
@@ -290,7 +334,7 @@ void GameOverState::setupUI() {
         instructionText = "EnterまたはAボタンで夜の街に再スタート";
     }
     auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, instructionText, "default");
-    instructionLabelPtr->setColor(gameOverConfig.instruction.color);
+    instructionLabelPtr->setColor(gameOverConfig.instruction.text.color);
     instruction = instructionLabelPtr.get();
     ui.addElement(std::move(instructionLabelPtr));
 } 

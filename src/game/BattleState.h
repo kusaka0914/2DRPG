@@ -257,4 +257,24 @@ private:
     std::string getResidentCommandName(int command);  /**< @brief 住民のコマンド名を取得 */
     std::string getPlayerCommandNameForResident(int command);  /**< @brief プレイヤーのコマンド名を取得（住民戦用） */
     std::string getResidentBehaviorHint() const;  /**< @brief 住民の様子を取得（次の行動を推測できるヒント） */
+    
+    /**
+     * @brief 敵の特殊技を適用
+     * @param enemyType 敵の種類
+     * @param baseDamage 基本ダメージ
+     * @return 最終ダメージ
+     */
+    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage);
+    
+    /**
+     * @brief 敵の特殊技効果を処理（ターン終了時）
+     */
+    void processEnemySkillEffects();
+    
+    /**
+     * @brief プレイヤーの攻撃ダメージに特殊技効果を適用
+     * @param baseDamage 基本ダメージ
+     * @return 最終ダメージ
+     */
+    int applyPlayerAttackSkillEffects(int baseDamage);
 };
