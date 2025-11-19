@@ -276,6 +276,32 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             goldReward = 0;
             expReward = 0;
             break;
+            
+        case EnemyType::GUARD:
+            name = "衛兵";
+            hp = maxHp = 650;
+            attack = 380;
+            defense = 110;
+            level = baseLevel = 105;
+            baseHp = 650;
+            baseAttack = 380;
+            baseDefense = 110;
+            goldReward = 5000;
+            expReward = 1000;
+            break;
+            
+        case EnemyType::KING:
+            name = "王様";
+            hp = maxHp = 30;
+            attack = 8;
+            defense = 3;
+            level = baseLevel = 1;
+            baseHp = 30;
+            baseAttack = 8;
+            baseDefense = 3;
+            goldReward = 0;
+            expReward = 0;
+            break;
     }
     
     exp = 0;
@@ -311,6 +337,8 @@ std::string Enemy::getTypeName() const {
         case EnemyType::CHAOS_BEAST: return "カオスビースト";
         case EnemyType::ELDER_GOD: return "エルダーゴッド";
         case EnemyType::DEMON_LORD: return "魔王";
+        case EnemyType::GUARD: return "衛兵";
+        case EnemyType::KING: return "王様";
         default: return "";
     }
 }
@@ -436,6 +464,27 @@ void Enemy::setLevel(int newLevel) {
     
     // 敵の成長率（1レベルあたり：HP+5、攻撃+3、防御+1）
     // 攻撃成長率を+3にすることで、プレイヤーの防御成長（+2）を上回り、適切なダメージを確保
+    int hpIncrease = levelDiff * 5;
+    int attackIncrease = levelDiff * 3;
+    int defenseIncrease = levelDiff * 1;
+    
+    // ステータスを更新
+    level = newLevel;
+    maxHp = baseHp + hpIncrease;
+    hp = maxHp; // HPも全回復
+    attack = baseAttack + attackIncrease;
+    defense = baseDefense + defenseIncrease;
+}
+
+void Enemy::setLevelUnrestricted(int newLevel) {
+    if (newLevel < 1) {
+        newLevel = 1;
+    }
+    
+    // 基準レベルからの差分を計算
+    int levelDiff = newLevel - baseLevel;
+    
+    // 敵の成長率（1レベルあたり：HP+5、攻撃+3、防御+1）
     int hpIncrease = levelDiff * 5;
     int attackIncrease = levelDiff * 3;
     int defenseIncrease = levelDiff * 1;

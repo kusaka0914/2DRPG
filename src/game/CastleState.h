@@ -127,6 +127,29 @@ public:
      */
     void fromJson(const nlohmann::json& j) override;
     
+    /**
+     * @brief 衛兵を倒した時の処理
+     * @param isLeft 左衛兵かどうか
+     */
+    void onGuardDefeated(bool isLeft);
+    
+    /**
+     * @brief 王様を倒した時の処理
+     */
+    void onKingDefeated();
+    
+    /**
+     * @brief 左衛兵が倒されたかどうかを取得
+     * @return 左衛兵が倒されたかどうか
+     */
+    bool isGuardLeftDefeated() const { return guardLeftDefeated; }
+    
+    /**
+     * @brief 右衛兵が倒されたかどうかを取得
+     * @return 右衛兵が倒されたかどうか
+     */
+    bool isGuardRightDefeated() const { return guardRightDefeated; }
+    
 private:
     /**
      * @brief UIのセットアップ

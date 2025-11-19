@@ -63,8 +63,15 @@ void DemonCastleState::enter() {
     // 現在のStateの状態を保存
     saveCurrentState(player);
     
-    // ストーリーメッセージUIを既に見た場合は表示しない
-    if ((s_demonCastleFirstTime || fromCastleState) && !player->hasSeenDemonCastleStory) {
+    // ストーリーメッセージUIを表示
+    // fromCastleStateの場合は常に表示（全員を倒した後の専用ストーリー）
+    // 通常の初回訪問の場合も表示
+    if (fromCastleState) {
+        // 全員を倒した後の専用ストーリーは常に表示
+        pendingDialogue = true;
+        dialogueStep = 0;
+        isTalkingToDemon = false; // リセット
+    } else if (s_demonCastleFirstTime && !player->hasSeenDemonCastleStory) {
         pendingDialogue = true;
     }
 }
@@ -107,7 +114,8 @@ void DemonCastleState::render(Graphics& graphics) {
     }
     lastReloadState = currentReloadState;
     
-    if (uiJustInitialized && pendingDialogue) {
+    // 会話を開始（pendingDialogueがtrueの場合、または初回の城からの入場で会話がまだ開始されていない場合）
+    if (pendingDialogue || (fromCastleState && !isTalkingToDemon && !isShowingMessage)) {
         startDialogue();
         pendingDialogue = false;
     }
@@ -244,6 +252,7 @@ void DemonCastleState::nextDialogue() {
         if (fromCastleState) {
             if (stateManager) {
                 auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
+                demon->setLevelUnrestricted(150); // 魔王のレベルを150に設定
                 
                 stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
             }

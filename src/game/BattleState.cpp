@@ -1,4 +1,5 @@
 #include "BattleState.h"
+#include "CastleState.h"
 #include "NightState.h"
 #include "MainMenuState.h"
 #include "TownState.h"
@@ -288,8 +289,8 @@ void BattleState::update(float deltaTime) {
             // 初回のみコマンド選択UIを表示（handleInputでも呼ばれるが、念のため）
             // HPがMAXでない場合でも確実に表示されるように、update()でも呼ぶ
             if (currentSelectingTurn < battleLogic->getCommandTurnCount() && !isShowingOptions) {
-                selectCommandForTurn(currentSelectingTurn);
-            }
+                    selectCommandForTurn(currentSelectingTurn);
+                }
             
             // 全てのコマンドが選択された場合は敵コマンドを生成
             if (currentSelectingTurn >= battleLogic->getCommandTurnCount()) {
@@ -1892,6 +1893,53 @@ void BattleState::endBattle() {
             
             // NightStateに戻る（enter()で住民を倒した処理を実行）
             stateManager->changeState(std::make_unique<NightState>(player));
+        } else if (enemy->getType() == EnemyType::GUARD) {
+            // 衛兵との戦闘の場合、レベルで判定
+            if (enemy->getLevel() == 110) {
+                // 城の衛兵（レベル110）の場合、CastleStateに戻り、衛兵を倒した処理を実行
+                if (stateManager) {
+                    auto castleState = std::make_unique<CastleState>(player, true); // fromNightStateをtrueにする
+                    // 保存された状態を復元してから、左衛兵か右衛兵かを判定
+                    const nlohmann::json* savedState = player->getSavedGameState();
+                    if (savedState && !savedState->is_null() && 
+                        savedState->contains("stateType") && 
+                        static_cast<StateType>((*savedState)["stateType"]) == StateType::CASTLE) {
+                        castleState->fromJson(*savedState);
+                    }
+                    // まだ倒していない方を倒したとみなす
+                    if (!castleState->isGuardLeftDefeated()) {
+                        castleState->onGuardDefeated(true); // 左衛兵を倒した
+                    } else if (!castleState->isGuardRightDefeated()) {
+                        castleState->onGuardDefeated(false); // 右衛兵を倒した
+                    }
+                    // 状態を保存（倒された後の状態を保存）
+                    // saveCurrentState()は使えない（まだstateManagerに追加されていないため）、直接toJson()を呼ぶ
+                    nlohmann::json stateJson = castleState->toJson();
+                    player->setSavedGameState(stateJson);
+                    stateManager->changeState(std::move(castleState));
+                }
+            } else {
+                // 夜の街の衛兵（レベル105）の場合、NightStateに戻る
+                stateManager->changeState(std::make_unique<NightState>(player));
+            }
+        } else if (enemy->getType() == EnemyType::KING) {
+            // 王様との戦闘の場合、CastleStateに戻り、王様を倒した処理を実行
+            if (stateManager) {
+                auto castleState = std::make_unique<CastleState>(player, true); // fromNightStateをtrueにする
+                // 保存された状態を復元してから、王様を倒した処理を実行
+                const nlohmann::json* savedState = player->getSavedGameState();
+                if (savedState && !savedState->is_null() && 
+                    savedState->contains("stateType") && 
+                    static_cast<StateType>((*savedState)["stateType"]) == StateType::CASTLE) {
+                    castleState->fromJson(*savedState);
+                }
+                castleState->onKingDefeated(); // 王様を倒したことを通知
+                // 状態を保存（倒された後の状態を保存）
+                // saveCurrentState()は使えない（まだstateManagerに追加されていないため）、直接toJson()を呼ぶ
+                nlohmann::json stateJson = castleState->toJson();
+                player->setSavedGameState(stateJson);
+                stateManager->changeState(std::move(castleState));
+            }
         } else {
             if (enemy->getType() == EnemyType::DEMON_LORD) {
                 stateManager->changeState(std::make_unique<EndingState>(player));
@@ -2874,10 +2922,10 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                                         attackText = attackTextConfig.defaultSpellFormat;
                                         break;
                                 }
-                            } else {
+        } else {
                                 attackText = attackTextConfig.defaultSpellFormat;
-                            }
-                        } else {
+        }
+    } else {
                             // デフォルトメッセージ
                             attackText = attackTextConfig.defaultAttackFormat;
                         }

@@ -69,7 +69,7 @@ void TownState::enter() {
     }
     
     // 街に入った時のメッセージは削除
-    hasVisitedTown = true;
+        hasVisitedTown = true;
 }
 
 void TownState::exit() {
@@ -427,11 +427,11 @@ void TownState::setupNPCs() {
         
         // 念のため、NightStateの静的変数も確認
         if (!isKilled) {
-            const auto& killedPositions = NightState::getKilledResidentPositions();
-            for (const auto& killedPos : killedPositions) {
-                if (killedPos.first == pos.first && killedPos.second == pos.second) {
-                    isKilled = true;
-                    break;
+        const auto& killedPositions = NightState::getKilledResidentPositions();
+        for (const auto& killedPos : killedPositions) {
+            if (killedPos.first == pos.first && killedPos.second == pos.second) {
+                isKilled = true;
+                break;
                 }
             }
         }

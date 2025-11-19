@@ -574,9 +574,9 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
             int imageX = startX + (buttonWidth / 2) - (displayWidth / 2);
             int imageY = buttonY + (buttonHeight / 2) - (displayHeight / 2);
             
-            if (isSelected) {
+        if (isSelected) {
                 graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", cmdSelectConfig.selectedBorderColor);
-            }
+        }
             graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
         } else {
             // フォールバック：テキスト表示
@@ -918,15 +918,15 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
         // バーの枠線を描画
         graphics->setDrawColor(battleConfig.healthBar.borderColor.r, battleConfig.healthBar.borderColor.g, battleConfig.healthBar.borderColor.b, battleConfig.healthBar.borderColor.a);
         graphics->drawRect(barX, barY, barWidth, barHeight, false);
-        
-        // ステータス上昇呪文の状態を表示（HPの下）
-        if (player->hasNextTurnBonusActive()) {
+    
+    // ステータス上昇呪文の状態を表示（HPの下）
+    if (player->hasNextTurnBonusActive()) {
             auto& attackMultiplierConfig = battleConfig.attackMultiplier;
-            float multiplier = player->getNextTurnMultiplier();
-            int turns = player->getNextTurnBonusTurns();
-            // 倍率を文字列に変換（小数点以下1桁まで表示）
-            int multiplierInt = static_cast<int>(multiplier * 10);
-            std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
+        float multiplier = player->getNextTurnMultiplier();
+        int turns = player->getNextTurnBonusTurns();
+        // 倍率を文字列に変換（小数点以下1桁まで表示）
+        int multiplierInt = static_cast<int>(multiplier * 10);
+        std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
             // JSONからフォーマットを取得
             std::string statusText = attackMultiplierConfig.format;
             // プレースホルダーを置換（安全な方法：文字列を前後で結合）
@@ -939,18 +939,18 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
                 statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 8);
             }
             SDL_Color statusColor = attackMultiplierConfig.textColor;
-            SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
-            if (statusTexture) {
-                int textWidth, textHeight;
-                SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
+        SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
+        if (statusTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(statusTexture, nullptr, nullptr, &textWidth, &textHeight);
                 int bgX = static_cast<int>(playerX + attackMultiplierConfig.offsetX - attackMultiplierConfig.padding);
                 int bgY = static_cast<int>(playerY - playerHeight / 2 + attackMultiplierConfig.offsetY - attackMultiplierConfig.padding);
                 graphics->setDrawColor(attackMultiplierConfig.bgColor.r, attackMultiplierConfig.bgColor.g, attackMultiplierConfig.bgColor.b, BattleConstants::BATTLE_BACKGROUND_ALPHA);
                 graphics->drawRect(bgX, bgY, textWidth + attackMultiplierConfig.padding * 2, textHeight + attackMultiplierConfig.padding * 2, true);
                 graphics->setDrawColor(attackMultiplierConfig.borderColor.r, attackMultiplierConfig.borderColor.g, attackMultiplierConfig.borderColor.b, attackMultiplierConfig.borderColor.a);
                 graphics->drawRect(bgX, bgY, textWidth + attackMultiplierConfig.padding * 2, textHeight + attackMultiplierConfig.padding * 2, false);
-                SDL_DestroyTexture(statusTexture);
-            }
+            SDL_DestroyTexture(statusTexture);
+        }
             int statusTextX = static_cast<int>(playerX + attackMultiplierConfig.offsetX);
             int statusTextY = static_cast<int>(playerY - playerHeight / 2 + attackMultiplierConfig.offsetY);
             graphics->drawText(statusText, statusTextX, statusTextY, "default", statusColor);
@@ -1037,8 +1037,8 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
                 graphics->drawRect(hintBgX, hintBgY, hintWidth + padding * 2, hintHeight + padding * 2, false);
                 graphics->drawText(hintText, enemyX - 80, enemyY - enemyHeight / 2 + 250 + hintOffsetY, "default", whiteColor);
                 SDL_DestroyTexture(hintTexture);
+            }
         }
-    }
 }
 
 void BattleUI::renderTurnNumber(int turnNumber, int totalTurns, bool isDesperateMode) {

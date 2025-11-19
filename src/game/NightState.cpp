@@ -30,7 +30,7 @@ NightState::NightState(std::shared_ptr<Player> player)
       shopTexture(nullptr), weaponShopTexture(nullptr), houseTexture(nullptr), castleTexture(nullptr),
       stoneTileTexture(nullptr), residentHomeTexture(nullptr), toriiTexture(nullptr),
       messageBoard(nullptr), nightDisplayLabel(nullptr), nightOperationLabel(nullptr), isShowingMessage(false), isShowingResidentChoice(false), isShowingMercyChoice(false),
-      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), shouldReturnToTown(false), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
+      selectedChoice(0), currentTargetX(0), currentTargetY(0), showResidentKilledMessage(false), showReturnToTownMessage(false), shouldReturnToTown(false), showGuardMessage(false), showGuardKilledMessage(false), currentGuardX(0), currentGuardY(0), castleX(TownLayout::CASTLE_X), castleY(TownLayout::CASTLE_Y),
       showGameExplanation(false), explanationStep(0), explanationMessageBoard(nullptr),
       guardMoveTimer(0), guardTargetHomeIndices(), guardStayTimers(), guardsInitialized(false),
       allResidentsKilled(false), allGuardsKilled(false), canAttackGuards(false), canEnterCastle(false),
@@ -142,7 +142,15 @@ NightState::~NightState() {
 }
 
 void NightState::enter() {
-    try {        
+    try {
+        // 保存された状態を復元（BattleStateから戻ってきた場合など）
+        const nlohmann::json* savedState = player->getSavedGameState();
+        if (savedState && !savedState->is_null() && 
+            savedState->contains("stateType") && 
+            static_cast<StateType>((*savedState)["stateType"]) == StateType::NIGHT) {
+            fromJson(*savedState);
+        }
+        
         if (player) {
             player->setNightTime(true);
         }
@@ -279,9 +287,81 @@ void NightState::enter() {
             // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
         }
         
+        // 衛兵戦から戻ってきた場合の処理
+        bool guardKilledInBattle = false;
+        if (!isNewNight && currentGuardX != 0 && currentGuardY != 0) {
+            // 衛兵を倒した処理を実行
+            // メッセージを表示
+            showMessage("衛兵を倒しました。");
+            showGuardKilledMessage = true;
+            guardKilledInBattle = true;
+            
+            // 衛兵を削除
+            for (size_t i = 0; i < guards.size(); ++i) {
+                if (guards[i].first == currentGuardX && guards[i].second == currentGuardY) {
+                    guards.erase(guards.begin() + i);
+                    guardHp.erase(guardHp.begin() + i);
+                    break;
+                }
+            }
+            
+            // 位置をリセット
+            currentGuardX = 0;
+            currentGuardY = 0;
+        }
+        
+        // 住民を全て倒した状態を検出（デバッグモードなど）
+        // ただし、衛兵を倒した直後はcheckGameProgress()を呼ばない（メッセージが重複しないように）
+        if (!guardKilledInBattle) {
+            checkGameProgress();
+        } else {
+            // 衛兵を倒した直後でも、ゲーム進行状態は更新する（メッセージは表示しない）
+            // 住民を全て倒したかどうかを確認（メッセージは表示しない）
+            const auto& killedResidents = player->getKilledResidents();
+            const auto& allResidentPositions = TownLayout::RESIDENTS;
+            
+            bool allKilled = true;
+            for (const auto& residentPos : allResidentPositions) {
+                bool found = false;
+                for (const auto& killedPos : killedResidents) {
+                    if (residentPos.first == killedPos.first && residentPos.second == killedPos.second) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    allKilled = false;
+                    break;
+                }
+            }
+            
+            if (!allResidentsKilled && allKilled) {
+                allResidentsKilled = true;
+                canAttackGuards = true;
+            }
+            
+            // 全ての衛兵を倒したかどうかを確認
+            if (allResidentsKilled && !allGuardsKilled && guards.empty()) {
+                allGuardsKilled = true;
+                canEnterCastle = true;
+                // 全ての衛兵を倒したメッセージを表示（「衛兵を倒しました。」のメッセージの後に表示される）
+                // ただし、現在メッセージが表示されている場合は、次のEnterで表示する
+                if (!isShowingMessage) {
+                    showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。");
+                } else {
+                    // 現在メッセージが表示されている場合は、showGuardKilledMessageを閉じた後に表示する
+                    // フラグを設定して、handleInput()で処理する
+                    showGuardKilledMessage = false; // このフラグを再利用して、次のEnterで全衛兵倒したメッセージを表示
+                }
+            }
+        }
+        
         // メッセージ表示（住民を倒した処理でメッセージが表示されていない場合、かつ説明UIが表示されていない場合のみ）
-        if (!residentKilledInBattle && !isShowingMessage && !showGameExplanation) {
-            showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
+        if (!residentKilledInBattle && !guardKilledInBattle && !isShowingMessage && !showGameExplanation) {
+            // 住民を全て倒した場合は、別のメッセージを表示しない（checkGameProgress()で既に表示されている）
+            if (!allResidentsKilled) {
+                showMessage("夜の街に潜入しました。衛兵が近くにいない時に住民を襲撃して街を壊滅させましょう。");
+            }
         }
     } catch (const std::exception& e) {
     }
@@ -468,7 +548,37 @@ void NightState::handleInput(const InputManager& input) {
         if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
             
-            if (isShowingResidentChoice) {
+            if (showGuardKilledMessage) {
+                // 衛兵を倒したメッセージを閉じる
+                showGuardKilledMessage = false;
+                isShowingMessage = false;
+                clearMessage();
+                
+                // 全ての衛兵を倒した場合は、次のメッセージを表示
+                if (allResidentsKilled && allGuardsKilled && canEnterCastle) {
+                    showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。");
+                    return;
+                }
+                return;
+            }
+            else if (showGuardMessage) {
+                // 衛兵との戦闘を開始
+                showGuardMessage = false;
+                isShowingMessage = false;
+                
+                // 衛兵を敵として戦闘を開始
+                Enemy guardEnemy(EnemyType::GUARD);
+                guardEnemy.setLevel(105); // レベル105に設定
+                
+                if (stateManager) {
+                    // 戦闘に入る前にNightStateの状態を保存
+                    saveCurrentState(player);
+                    
+                    stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(guardEnemy)));
+                }
+                return;
+            }
+            else if (isShowingResidentChoice) {
                 isShowingMessage = false;
                 updateChoiceDisplay();
             }
@@ -1282,24 +1392,24 @@ void NightState::checkGameProgress() {
 void NightState::checkGuardInteraction() {
     for (auto& guard : guards) {
         if (GameUtils::isNearPositionEuclidean(playerX, playerY, guard.first, guard.second, 1.5f)) {
-            attackGuard(guard.first, guard.second);
+            // 戦闘に移行する前にプレイヤーの位置を保存
+            s_savedPlayerX = playerX;
+            s_savedPlayerY = playerY;
+            s_playerPositionSaved = true;
+            
+            currentGuardX = guard.first;
+            currentGuardY = guard.second;
+            
+            // メッセージを表示
+            showMessage("衛兵：「お前は何者だ！ここで何をしている！」");
+            showGuardMessage = true;
             return;
         }
     }
 }
 
 void NightState::attackGuard(int x, int y) {
-    for (size_t i = 0; i < guards.size(); ++i) {
-        if (guards[i].first == x && guards[i].second == y) {
-            guardHp[i]--;
-            
-            if (guardHp[i] <= 0) {
-                guards.erase(guards.begin() + i);
-                guardHp.erase(guardHp.begin() + i);
-            }
-            break;
-        }
-    }
+    // この関数は使用されなくなった（通常のバトル形式に変更）
 }
 
 void NightState::checkCastleEntrance() {
@@ -1369,6 +1479,10 @@ nlohmann::json NightState::toJson() const {
     j["selectedChoice"] = selectedChoice;
     j["currentTargetX"] = currentTargetX;
     j["currentTargetY"] = currentTargetY;
+    j["showGuardMessage"] = showGuardMessage;
+    j["showGuardKilledMessage"] = showGuardKilledMessage;
+    j["currentGuardX"] = currentGuardX;
+    j["currentGuardY"] = currentGuardY;
     
     // 住民の位置を保存
     nlohmann::json residentsJson = nlohmann::json::array();
@@ -1429,6 +1543,10 @@ void NightState::fromJson(const nlohmann::json& j) {
     if (j.contains("selectedChoice")) selectedChoice = j["selectedChoice"];
     if (j.contains("currentTargetX")) currentTargetX = j["currentTargetX"];
     if (j.contains("currentTargetY")) currentTargetY = j["currentTargetY"];
+    if (j.contains("showGuardMessage")) showGuardMessage = j["showGuardMessage"];
+    if (j.contains("showGuardKilledMessage")) showGuardKilledMessage = j["showGuardKilledMessage"];
+    if (j.contains("currentGuardX")) currentGuardX = j["currentGuardX"];
+    if (j.contains("currentGuardY")) currentGuardY = j["currentGuardY"];
     if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
     if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
     // gameExplanationTextsも復元

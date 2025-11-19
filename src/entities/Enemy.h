@@ -39,7 +39,9 @@ enum class EnemyType {
     ANCIENT_DRAGON, // レベル100以降
     CHAOS_BEAST,    // レベル150以降
     ELDER_GOD,      // レベル200以降
-    DEMON_LORD      /**< @brief 魔王（最終ボス） */
+    DEMON_LORD,     /**< @brief 魔王（最終ボス） */
+    GUARD,          /**< @brief 衛兵（夜の街） */
+    KING            /**< @brief 王様（城） */
 };
 
 /**
@@ -192,6 +194,13 @@ public:
      * @param newLevel 新しいレベル
      */
     void setLevel(int newLevel);
+    
+    /**
+     * @brief レベルの設定（制限なし）
+     * @details レベル制限を無視してレベルを設定する。デバッグ用途などで使用。
+     * @param newLevel 新しいレベル
+     */
+    void setLevelUnrestricted(int newLevel);
     
     /**
      * @brief 目標レベルに到達できる敵を生成

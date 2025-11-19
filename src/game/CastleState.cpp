@@ -1,6 +1,7 @@
 #include "CastleState.h"
 #include "DemonCastleState.h"
 #include "TownState.h"
+#include "BattleState.h"
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
 #include "NightState.h"
@@ -55,6 +56,31 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
 void CastleState::enter() {
     startFadeIn(0.5f);
     
+    // 保存された状態を復元（BattleStateから戻ってきた場合など）
+    const nlohmann::json* savedState = player->getSavedGameState();
+    if (savedState && !savedState->is_null() && 
+        savedState->contains("stateType") && 
+        static_cast<StateType>((*savedState)["stateType"]) == StateType::CASTLE) {
+        fromJson(*savedState);
+    }
+    
+    // 全員を倒したかどうかを再確認（状態復元後にメッセージが表示されていない場合に備える）
+    if (kingDefeated && guardLeftDefeated && guardRightDefeated) {
+        // 全員倒されている場合、allDefeatedをtrueに設定
+        if (!allDefeated) {
+            allDefeated = true;
+        }
+        // メッセージが表示されていない場合は表示する
+        if (!isShowingMessage) {
+            showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+        }
+        // 全員倒された場合は、王様との会話は不要なのでpendingDialogueをfalseにする
+        pendingDialogue = false;
+    } else {
+        // まだ全員倒されていない場合、checkAllDefeated()を呼ぶ
+        checkAllDefeated();
+    }
+    
     // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
     if (!player->hasSeenCastleStory && isTalkingToKing) {
         dialogueStep = 0;
@@ -64,7 +90,8 @@ void CastleState::enter() {
     saveCurrentState(player);
     
     // ストーリーメッセージUIを既に見た場合は表示しない
-    if ((s_castleFirstTime || fromNightState) && !player->hasSeenCastleStory) {
+    // 全員倒されていない場合のみpendingDialogueを設定（全員倒された場合は既にfalseに設定済み）
+    if (!allDefeated && (s_castleFirstTime || fromNightState) && !player->hasSeenCastleStory) {
         pendingDialogue = true;
     }
 }
@@ -133,7 +160,9 @@ void CastleState::render(Graphics& graphics) {
     }
     lastReloadState = currentReloadState;
     
-    if (uiJustInitialized && pendingDialogue) {
+    // 会話を開始（pendingDialogueがtrueの場合、または初回の夜の街からの入場で会話がまだ開始されていない場合）
+    // 全員倒された場合は会話を開始しない
+    if (!allDefeated && (pendingDialogue || (fromNightState && !player->hasSeenCastleStory && !isTalkingToKing && !isShowingMessage))) {
         startDialogue();
         pendingDialogue = false;
     }
@@ -177,6 +206,7 @@ void CastleState::handleInput(const InputManager& input) {
     
     if (isShowingMessage) {
         if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            // 全員を倒した後のメッセージの場合
             if (fromNightState && allDefeated) {
                 clearMessage();
                 // フェードアウト開始（完了時に状態遷移）
@@ -185,7 +215,13 @@ void CastleState::handleInput(const InputManager& input) {
                 }
                 return;
             }
-            nextDialogue(); // メッセージクリアではなく次の会話に進む
+            // 王様との会話中の場合は次の会話に進む
+            if (isTalkingToKing) {
+                nextDialogue();
+            } else {
+                // その他のメッセージの場合はクリア
+                clearMessage();
+            }
         }
         return; // メッセージ表示中は他の操作を無効化
     }
@@ -281,28 +317,68 @@ void CastleState::interactWithGuard() {
 }
 
 void CastleState::attackKing() {
-    kingDefeated = true;
-    showMessage("王様を倒しました！");
-    checkAllDefeated();
+    if (stateManager) {
+        // 王様を敵として戦闘を開始（レベル1）
+        Enemy kingEnemy(EnemyType::KING);
+        kingEnemy.setLevel(1);
+        
+        // 戦闘に入る前にCastleStateの状態を保存
+        saveCurrentState(player);
+        
+        stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(kingEnemy)));
+    }
 }
 
 void CastleState::attackGuardLeft() {
-    guardLeftDefeated = true;
-    showMessage("左衛兵を倒しました！");
-    checkAllDefeated();
+    if (stateManager) {
+        // 左衛兵を敵として戦闘を開始（レベル110）
+        Enemy guardEnemy(EnemyType::GUARD);
+        guardEnemy.setLevel(110);
+        
+        // 戦闘に入る前にCastleStateの状態を保存
+        saveCurrentState(player);
+        
+        stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(guardEnemy)));
+    }
 }
 
 void CastleState::attackGuardRight() {
-    guardRightDefeated = true;
-    showMessage("右衛兵を倒しました！");
-    checkAllDefeated();
+    if (stateManager) {
+        // 右衛兵を敵として戦闘を開始（レベル110）
+        Enemy guardEnemy(EnemyType::GUARD);
+        guardEnemy.setLevel(110);
+        
+        // 戦闘に入る前にCastleStateの状態を保存
+        saveCurrentState(player);
+        
+        stateManager->changeState(std::make_unique<BattleState>(player, std::make_unique<Enemy>(guardEnemy)));
+    }
 }
 
 void CastleState::checkAllDefeated() {
-    if (kingDefeated && guardLeftDefeated && guardRightDefeated && !allDefeated) {
-        allDefeated = true;
-        showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+    if (kingDefeated && guardLeftDefeated && guardRightDefeated) {
+        if (!allDefeated) {
+            allDefeated = true;
+        }
+        // メッセージが表示されていない場合のみ表示（重複表示を防ぐ）
+        if (!isShowingMessage) {
+            showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+        }
     }
+}
+
+void CastleState::onGuardDefeated(bool isLeft) {
+    if (isLeft) {
+        guardLeftDefeated = true;
+    } else {
+        guardRightDefeated = true;
+    }
+    checkAllDefeated();
+}
+
+void CastleState::onKingDefeated() {
+    kingDefeated = true;
+    checkAllDefeated();
 }
 
 void CastleState::exitToTown() {
@@ -323,7 +399,6 @@ void CastleState::nextDialogue() {
         // 会話終了
         isTalkingToKing = false;
         hasReceivedQuest = true;
-        shouldGoToDemonCastle = true;
         
         // ストーリーメッセージUIが完全に終わったことを記録
         if ((s_castleFirstTime || fromNightState) && !player->hasSeenCastleStory) {
@@ -331,11 +406,15 @@ void CastleState::nextDialogue() {
         }
         
         clearMessage();
-
         
-        // フェードアウト開始（完了時に状態遷移）
-        if (!isFading() && s_castleFirstTime) {
-            startFadeOut(0.5f);
+        // fromNightStateの場合は、魔王の城への遷移を開始しない
+        // 通常の初回訪問の場合のみ、魔王の城に遷移
+        if (!fromNightState && s_castleFirstTime) {
+            shouldGoToDemonCastle = true;
+            // フェードアウト開始（完了時に状態遷移）
+            if (!isFading()) {
+                startFadeOut(0.5f);
+            }
         }
     } else {
         showCurrentDialogue();

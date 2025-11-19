@@ -82,6 +82,9 @@ private:
     bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
     bool showReturnToTownMessage; // 街に戻るメッセージ表示フラグ（3人目を倒した後用）
     bool shouldReturnToTown; // 街に戻る処理を実行するフラグ（メッセージ表示後に使用）
+    bool showGuardMessage; // 衛兵との戦闘前のメッセージ表示フラグ
+    bool showGuardKilledMessage; // 衛兵を倒したメッセージ表示フラグ
+    int currentGuardX, currentGuardY; // 現在の戦闘対象の衛兵の位置
     
     // 夜の表示
     Label* nightDisplayLabel; // 夜の表示用ラベル
