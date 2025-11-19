@@ -190,6 +190,74 @@ void CastleState::render(Graphics& graphics) {
         graphics.drawRect(bgX, bgY, castleConfig.messageBoard.background.width, castleConfig.messageBoard.background.height);
     }
     
+    // インタラクション可能な時に「ENTER」を表示
+    if (!isShowingMessage && !isTalkingToKing) {
+        bool canInteract = false;
+        
+        // NightStateから来た場合、攻撃可能な対象の近くにいるかチェック
+        if (fromNightState) {
+            if (isNearObject(throneX, throneY) && !kingDefeated) {
+                canInteract = true;
+            } else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
+                canInteract = true;
+            } else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
+                canInteract = true;
+            }
+        }
+        
+        if (canInteract) {
+            // ROOM_OFFSETを考慮して座標を計算
+            const int SCREEN_WIDTH = 1100;
+            const int SCREEN_HEIGHT = 650;
+            const int ROOM_PIXEL_WIDTH = ROOM_WIDTH * TILE_SIZE;   // 13 * 38 = 494
+            const int ROOM_PIXEL_HEIGHT = ROOM_HEIGHT * TILE_SIZE; // 11 * 38 = 418
+            const int ROOM_OFFSET_X = (SCREEN_WIDTH - ROOM_PIXEL_WIDTH) / 2;   // (1100 - 494) / 2 = 303
+            const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
+            
+            int textX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+            int textY = ROOM_OFFSET_Y + playerY * TILE_SIZE + TILE_SIZE + 5;
+            
+            // テキストを中央揃えにするため、テキストの幅を取得して調整
+            SDL_Color textColor = {255, 255, 255, 255};
+            SDL_Texture* enterTexture = graphics.createTextTexture("ENTER", "default", textColor);
+            if (enterTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(enterTexture, nullptr, nullptr, &textWidth, &textHeight);
+                
+                // テキストサイズを小さくする（80%に縮小）
+                const float SCALE = 0.8f;
+                int scaledWidth = static_cast<int>(textWidth * SCALE);
+                int scaledHeight = static_cast<int>(textHeight * SCALE);
+                
+                // パディングを追加
+                const int PADDING = 4;
+                int bgWidth = scaledWidth + PADDING * 2;
+                int bgHeight = scaledHeight + PADDING * 2;
+                
+                // 背景の位置を計算（中央揃え）
+                int bgX = textX - bgWidth / 2;
+                int bgY = textY;
+                
+                // 黒背景を描画
+                graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                
+                // 白い枠線を描画
+                graphics.setDrawColor(255, 255, 255, 255); // 白
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                
+                // テキストを小さく描画（中央揃え）
+                int drawX = textX - scaledWidth / 2;
+                int drawY = textY + PADDING;
+                graphics.drawTexture(enterTexture, drawX, drawY, scaledWidth, scaledHeight);
+                SDL_DestroyTexture(enterTexture);
+            } else {
+                // フォールバック: drawTextを使用
+                graphics.drawText("ENTER", textX, textY, "default", textColor);
+            }
+        }
+    }
+    
     ui.render(graphics);
     
     if (nightTimerActive) {

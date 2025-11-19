@@ -521,6 +521,69 @@ void SDL2Game::initializeGame() {
             auto nightState = std::make_unique<NightState>(player);
             nightState->setRemainingGuards(1); // 衛兵を1体だけ残す
             stateManager.changeState(std::move(nightState));
+        } else if (debugStartState == "night1resident") {
+            // 夜の街のデバッグモード（レベル100、住民が残り1人の状態）：レベル100のプレイヤーを設定
+            // 初期ステータス: HP=30, MP=20, Attack=8, Defense=3, Level=1
+            // レベルアップ増加: HP+5, MP+1, Attack+2, Defense+2 per level
+            // レベル100のステータス: HP=525, MP=119, Attack=206, Defense=199
+            int targetLevel = 100;
+            player->setLevel(targetLevel);
+            
+            // レベル100のステータスを計算して設定
+            int baseHp = 30;
+            int baseMp = 20;
+            int baseAttack = 8;
+            int baseDefense = 3;
+            
+            int levelUps = targetLevel - 1; // レベル1から100まで99回レベルアップ
+            int maxHp = baseHp + levelUps * 5;
+            int maxMp = baseMp + levelUps * 1;
+            int attack = baseAttack + levelUps * 2;
+            int defense = baseDefense + levelUps * 2;
+            
+            player->setMaxHp(maxHp);
+            player->setMaxMp(maxMp);
+            player->setAttack(attack);
+            player->setDefense(defense);
+            player->heal(maxHp); // HPを最大値に設定
+            player->restoreMp(maxMp); // MPを最大値に設定
+            
+            // 進行状態を設定
+            player->setCurrentNight(4); // 4夜目
+            player->hasSeenRoomStory = true; // チュートリアル完了
+            player->hasSeenTownExplanation = true;
+            player->hasSeenFieldExplanation = true;
+            player->hasSeenFieldFirstVictoryExplanation = true;
+            player->hasSeenBattleExplanation = true;
+            player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
+            player->hasSeenResidentBattleExplanation = true; // 住民戦の説明も見たことにする
+            
+            // 信頼度を適切に設定（住民を11人倒したので）
+            player->setKingTrust(30); // 住民を倒したので王様からの信頼度は低い
+            player->setDemonTrust(80); // 住民を倒したので魔王からの信頼度は高い
+            
+            // メンタルを適度に設定（住民を11人倒したので、6人以上なので+20*11=220、ただし上限100）
+            player->setMental(100); // メンタルは最大値
+            
+            // 夜の回数を設定
+            TownState::s_nightCount = 4;
+            // 目標レベルをs_nightCountに基づいて計算（4夜目なので125）
+            TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
+            TownState::s_levelGoalAchieved = true; // 目標レベル達成済み
+            
+            // 住民を11人倒した状態にする（1人だけ残す）
+            const auto& allResidentPositions = TownLayout::RESIDENTS;
+            // 最後の1人以外を全て倒す
+            for (size_t i = 0; i < allResidentPositions.size() - 1; i++) {
+                player->addKilledResident(allResidentPositions[i].first, allResidentPositions[i].second);
+            }
+            
+            std::cout << "デバッグモード: レベル100のプレイヤーで夜の街から開始します（住民が残り1人）" << std::endl;
+            std::cout << "ステータス: HP=" << maxHp << ", MP=" << maxMp << ", Attack=" << attack << ", Defense=" << defense << std::endl;
+            std::cout << "倒した住民数: " << (allResidentPositions.size() - 1) << " / " << allResidentPositions.size() << std::endl;
+            
+            auto nightState = std::make_unique<NightState>(player);
+            stateManager.changeState(std::move(nightState));
         } else if (debugStartState == "field") {
             stateManager.changeState(std::make_unique<FieldState>(player));
         } else if (debugStartState == "battle") {

@@ -2610,7 +2610,37 @@ void BattleState::selectCommandForTurn(int turnIndex) {
         currentOptions.push_back("呪文");
     }
     
+    // 前のターンで選択したコマンドの位置にカーソルを初期化
     selectedOption = 0;
+    if (turnIndex > 0) {
+        // 前のターン（turnIndex - 1）のコマンドを取得
+        auto playerCmds = battleLogic->getPlayerCommands();
+        if (turnIndex - 1 < static_cast<int>(playerCmds.size()) && playerCmds[turnIndex - 1] >= 0) {
+            int previousCmd = playerCmds[turnIndex - 1];
+            
+            if (enemy->isResident()) {
+                // 住民戦の場合：コマンド0（攻撃）→ 0、コマンド20（身を隠す）→ 1
+                if (previousCmd == BattleConstants::COMMAND_ATTACK) {
+                    selectedOption = 0;
+                } else if (previousCmd == BattleConstants::PLAYER_COMMAND_HIDE) {
+                    selectedOption = 1;
+                }
+            } else {
+                // 通常の戦闘：コマンド0（攻撃）→ 0、コマンド1（防御）→ 1、コマンド2（呪文）→ 2
+                if (previousCmd >= 0 && previousCmd < static_cast<int>(currentOptions.size())) {
+                    selectedOption = previousCmd;
+                }
+            }
+        }
+    } else if (enemy->isResident() && currentResidentPlayerCommand >= 0) {
+        // 住民戦で1ターン目の場合、前回の戦闘のコマンドを確認
+        if (currentResidentPlayerCommand == BattleConstants::COMMAND_ATTACK) {
+            selectedOption = 0;
+        } else if (currentResidentPlayerCommand == BattleConstants::PLAYER_COMMAND_HIDE) {
+            selectedOption = 1;
+        }
+    }
+    
     isShowingOptions = true;
     
     animationController->resetCommandSelectAnimation();
@@ -2975,6 +3005,101 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                             SDL_DestroyTexture(attackTexture);
                         }
                     }
+                } else if (enemyWins > playerWins) {
+                    // 敵が勝った場合の個別攻撃メッセージを表示
+                    auto& attackTextConfig = battleConfig.winLossUI.attackText;
+                    
+                    // すべてのpendingDamagesをチェックして、特殊技名と効果メッセージの両方がある最初のターンを見つける
+                    std::string skillNameText = "";
+                    std::string effectMessageText = "";
+                    int foundIndex = -1;
+                    
+                    // まず、特殊技名と効果メッセージの両方があるターンを探す
+                    for (size_t i = 0; i < pendingDamages.size(); i++) {
+                        const auto& damageInfo = pendingDamages[i];
+                        if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty() && !damageInfo.specialSkillEffectMessage.empty()) {
+                            skillNameText = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】";
+                            effectMessageText = "（" + damageInfo.specialSkillEffectMessage + "）";
+                            foundIndex = static_cast<int>(i);
+                            break;
+                        }
+                    }
+                    
+                    // 見つからなかった場合、現在実行中のターンを使用
+                    if (foundIndex == -1) {
+                        int displayTurnIndex = currentExecutingTurn;
+                        if (displayTurnIndex >= static_cast<int>(pendingDamages.size()) && !pendingDamages.empty()) {
+                            displayTurnIndex = 0;
+                        }
+                        
+                        if (displayTurnIndex < static_cast<int>(pendingDamages.size())) {
+                            const auto& damageInfo = pendingDamages[displayTurnIndex];
+                            
+                            if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty()) {
+                                // 特殊技の場合は「敵名の【特殊技名】」を表示
+                                skillNameText = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】";
+                                // 効果メッセージがある場合は別行で表示
+                                if (!damageInfo.specialSkillEffectMessage.empty()) {
+                                    effectMessageText = "（" + damageInfo.specialSkillEffectMessage + "）";
+                                }
+                            } else {
+                                // 通常攻撃
+                                skillNameText = enemy->getTypeName() + "の攻撃！";
+                            }
+                        } else {
+                            // デフォルトメッセージ
+                            skillNameText = enemy->getTypeName() + "の攻撃！";
+                        }
+                    }
+                    
+                    // 特殊技名を表示
+                    if (!skillNameText.empty()) {
+                        SDL_Texture* skillNameTexture = graphics.createTextTexture(skillNameText, "default", attackTextConfig.color);
+                        if (skillNameTexture) {
+                            int skillNameTextWidth, skillNameTextHeight;
+                            SDL_QueryTexture(skillNameTexture, nullptr, nullptr, &skillNameTextWidth, &skillNameTextHeight);
+                            
+                            // 「〜ターン分の攻撃を実行」の下に配置
+                            int skillNameY = totalAttackY + totalAttackTextHeight + static_cast<int>(attackTextConfig.position.offsetY);
+                            
+                            int attackPadding = attackTextConfig.padding;
+                            int skillNameBgX = centerX - skillNameTextWidth / 2 - attackPadding;
+                            int skillNameBgY = skillNameY - attackPadding;
+                            
+                            // 背景黒
+                            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                            graphics.drawRect(skillNameBgX, skillNameBgY, skillNameTextWidth + attackPadding * 2, skillNameTextHeight + attackPadding * 2, true);
+                            
+                            // テキスト白
+                            graphics.drawText(skillNameText, centerX - skillNameTextWidth / 2, skillNameY, "default", attackTextConfig.color);
+                            
+                            SDL_DestroyTexture(skillNameTexture);
+                            
+                            // 効果メッセージがある場合は、特殊技名の下に表示
+                            if (!effectMessageText.empty()) {
+                                SDL_Texture* effectMessageTexture = graphics.createTextTexture(effectMessageText, "default", attackTextConfig.color);
+                                if (effectMessageTexture) {
+                                    int effectMessageTextWidth, effectMessageTextHeight;
+                                    SDL_QueryTexture(effectMessageTexture, nullptr, nullptr, &effectMessageTextWidth, &effectMessageTextHeight);
+                                    
+                                    // 特殊技名の下に配置
+                                    int effectMessageY = skillNameY + skillNameTextHeight + attackPadding;
+                                    
+                                    int effectMessageBgX = centerX - effectMessageTextWidth / 2 - attackPadding;
+                                    int effectMessageBgY = effectMessageY - attackPadding;
+                                    
+                                    // 背景黒
+                                    graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                                    graphics.drawRect(effectMessageBgX, effectMessageBgY, effectMessageTextWidth + attackPadding * 2, effectMessageTextHeight + attackPadding * 2, true);
+                                    
+                                    // テキスト白
+                                    graphics.drawText(effectMessageText, centerX - effectMessageTextWidth / 2, effectMessageY, "default", attackTextConfig.color);
+                                    
+                                    SDL_DestroyTexture(effectMessageTexture);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -3004,6 +3129,18 @@ void BattleState::prepareDamageList(float damageMultiplier) {
     }
     
     pendingDamages = battleLogic->prepareDamageList(damageMultiplier);
+    
+    // 敵が勝った場合、特殊技の効果メッセージを事前に設定（UIで同時に表示するため）
+    if (stats.enemyWins > stats.playerWins) {
+        for (size_t i = 0; i < pendingDamages.size(); i++) {
+            auto& damageInfo = pendingDamages[i];
+            if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty() && damageInfo.specialSkillEffectMessage.empty()) {
+                // 効果メッセージが空の場合、事前に取得して設定（副作用なし）
+                std::string effectMessage = getEnemySpecialSkillEffectMessage(enemy->getType());
+                damageInfo.specialSkillEffectMessage = effectMessage;
+            }
+        }
+    }
     
     // 呪文で勝利したターンのダメージエントリを削除（後でプレイヤーが選択した呪文を実行するため）
     // ただし、攻撃呪文の場合はダメージエントリを残す（既に追加されている）
@@ -3488,7 +3625,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                             if (isPlayerHit) {
                                 // 特殊技の場合は特殊技を適用
                                 if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty()) {
-                                    damage = applyEnemySpecialSkill(enemy->getType(), damage);
+                                    std::string effectMessage = "";
+                                    damage = applyEnemySpecialSkill(enemy->getType(), damage, effectMessage);
+                                    // 効果メッセージをDamageInfoに保存
+                                    pendingDamages[currentExecutingTurn].specialSkillEffectMessage = effectMessage;
                                     std::string msg = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】！\n";
                                     addBattleLog(msg);
                                 } else {
@@ -3857,7 +3997,7 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     }
 }
 
-int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
+int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::uniform_int_distribution<> percentDis(0, 99);
@@ -3865,26 +4005,31 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
     
     auto& skillEffects = player->getPlayerStats().getEnemySkillEffects();
     int finalDamage = baseDamage;
+    effectMessage = ""; // 初期化
     
     switch (enemyType) {
         case EnemyType::SLIME:
             // 通常攻撃 + 次のプレイヤーの攻撃を50%軽減
             skillEffects.playerAttackReduction = 0.5f;
+            effectMessage = "次の攻撃50%軽減";
             addBattleLog("粘液が体を覆った！次の攻撃が弱くなる！");
             break;
             
         case EnemyType::GOBLIN:
             // 通常ダメージの1.2倍
             finalDamage = static_cast<int>(baseDamage * 1.2f);
+            effectMessage = "ダメージ1.2倍";
             break;
             
         case EnemyType::ORC:
             // HP50%以下なら通常ダメージの1.5倍、それ以上なら1.2倍
             if (enemy->getHp() <= enemy->getMaxHp() * 0.5f) {
                 finalDamage = static_cast<int>(baseDamage * 1.5f);
+                effectMessage = "ダメージ1.5倍（HP50%以下）";
                 addBattleLog("怒りで力が増した！");
             } else {
                 finalDamage = static_cast<int>(baseDamage * 1.2f);
+                effectMessage = "ダメージ1.2倍";
             }
             break;
             
@@ -3892,6 +4037,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常ダメージ + 火傷状態（3ターン、毎ターンHPの3%を削る）
             skillEffects.burnTurns = 3;
             skillEffects.burnDamageRatio = 0.03f;
+            effectMessage = "火傷状態（3ターン、毎ターンHP3%減少）";
             addBattleLog("炎のブレスが体を焼いた！火傷状態になった！");
             break;
             
@@ -3899,12 +4045,14 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常ダメージ + 次攻撃を受けた時にそのダメージの30%をプレイヤーに与える
             skillEffects.hasCounterOnNextAttack = true;
             skillEffects.counterDamageRatio = 0.3f;
+            effectMessage = "次攻撃30%カウンター";
             addBattleLog("骨の壁が構築された！次の攻撃が跳ね返される！");
             break;
             
         case EnemyType::GHOST:
             // 通常 + 次のプレイヤー攻撃の失敗率を50%向上
             skillEffects.attackFailureRateIncrease = 0.5f;
+            effectMessage = "次の攻撃失敗率50%向上";
             addBattleLog("呪いの触手が体を絡みついた！攻撃が当たりにくくなった！");
             break;
             
@@ -3913,6 +4061,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             {
                 int healAmount = static_cast<int>(baseDamage * 0.2f);
                 enemy->heal(healAmount);
+                effectMessage = "与えたダメージの20%回復";
                 addBattleLog("血を吸い取られた！" + enemy->getTypeName() + "は" + std::to_string(healAmount) + "回復した！");
             }
             break;
@@ -3921,31 +4070,37 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 5%の確率でプレイヤーを即死させる
             if (percentDis(gen) < 5) {
                 player->takeDamage(player->getHp());
+                effectMessage = "5%確率で即死（発動）";
                 addBattleLog("地獄の一撃が直撃した！即死した！");
                 return baseDamage; // 既にダメージを適用したので、ここで終了
             }
+            effectMessage = "5%確率で即死（発動せず）";
             break;
             
         case EnemyType::WEREWOLF:
             // 通常攻撃 + 裂傷（3ターン、プレイヤーのHPの5%を継続的に減らす）
             skillEffects.bleedTurns = 3;
             skillEffects.bleedDamageRatio = 0.05f;
+            effectMessage = "裂傷（3ターン、毎ターンHP5%減少）";
             addBattleLog("猛襲で裂傷を負った！");
             break;
             
         case EnemyType::MINOTAUR:
             // 通常の1.5倍
             finalDamage = static_cast<int>(baseDamage * 1.5f);
+            effectMessage = "ダメージ1.5倍";
             break;
             
         case EnemyType::CYCLOPS:
             // 通常の1.75倍
             finalDamage = static_cast<int>(baseDamage * 1.75f);
+            effectMessage = "ダメージ1.75倍";
             break;
             
         case EnemyType::GARGOYLE:
             // 通常 + 次に受けるダメージを80%低減
             skillEffects.damageReduction = 0.8f;
+            effectMessage = "次に受けるダメージ80%軽減";
             addBattleLog("石の守りが発動した！次に受けるダメージが大幅に減る！");
             break;
             
@@ -3953,12 +4108,14 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 次の攻撃を80%で回避できる
             skillEffects.hasEvasion = true;
             skillEffects.evasionRate = 0.8f;
+            effectMessage = "次の攻撃80%回避";
             addBattleLog("幻影の攻撃で体が透けた！次の攻撃を回避できる！");
             break;
             
         case EnemyType::DARK_KNIGHT:
             // 通常 + 次にプレイヤーに攻撃された時にHPの10%を削る
             skillEffects.hasDarkKnightCounter = true;
+            effectMessage = "次に攻撃された時HP10%削減";
             addBattleLog("暗黒の一撃が体を貫いた！次の攻撃が跳ね返される！");
             break;
             
@@ -3966,7 +4123,10 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 20%の確率で氷漬けにして次のターンコマンド選択できず一方的に攻撃される
             if (percentDis(gen) < 20) {
                 skillEffects.isFrozen = true;
+                effectMessage = "20%確率で氷漬け（発動）";
                 addBattleLog("氷結の息吹で体が凍りついた！次のターン動けない！");
+            } else {
+                effectMessage = "20%確率で氷漬け（発動せず）";
             }
             break;
             
@@ -3974,12 +4134,14 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 2ターンHPの10%を削る
             skillEffects.burnTurns = 2;
             skillEffects.burnDamageRatio = 0.1f;
+            effectMessage = "火傷状態（2ターン、毎ターンHP10%減少）";
             addBattleLog("業火が体を焼いた！継続ダメージを受ける！");
             break;
             
         case EnemyType::SHADOW_LORD:
             // 通常 + 次の攻撃を無効化
             skillEffects.hasShadowLordBlock = true;
+            effectMessage = "次の攻撃無効化";
             addBattleLog("影の呪縛で次の攻撃が無効化される！");
             break;
             
@@ -3987,6 +4149,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 1ターンプレイヤーの攻撃力を50%下げる
             skillEffects.attackReduction = 0.5f;
             skillEffects.attackReductionTurns = 1;
+            effectMessage = "1ターン攻撃力50%低下";
             addBattleLog("古の咆哮で攻撃力が半減した！");
             break;
             
@@ -3996,6 +4159,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             skillEffects.chaosBeastDefense = 0;
             skillEffects.chaosBeastAttack = 999;
             skillEffects.chaosBeastTurns = 1;
+            effectMessage = "1ターン防御力0、攻撃力999";
             addBattleLog("混沌の力で防御力が0になり、攻撃力が999になった！");
             break;
             
@@ -4004,10 +4168,50 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             int currentHp = player->getHp();
             if (currentHp > 1) {
                 player->takeDamage(currentHp - 1);
+                effectMessage = "HPを1にする";
                 addBattleLog("神の裁きでHPが1になった！");
             }
             return 0; // 通常ダメージはなし
         }
+            
+        case EnemyType::GOBLIN_KING:
+            // 通常ダメージの1.3倍
+            finalDamage = static_cast<int>(baseDamage * 1.3f);
+            effectMessage = "ダメージ1.3倍";
+            break;
+            
+        case EnemyType::ORC_LORD:
+            // HP50%以下なら通常ダメージの1.8倍、それ以上なら1.3倍
+            if (enemy->getHp() <= enemy->getMaxHp() * 0.5f) {
+                finalDamage = static_cast<int>(baseDamage * 1.8f);
+                effectMessage = "ダメージ1.8倍（HP50%以下）";
+            } else {
+                finalDamage = static_cast<int>(baseDamage * 1.3f);
+                effectMessage = "ダメージ1.3倍";
+            }
+            break;
+            
+        case EnemyType::DRAGON_LORD:
+            // 通常ダメージ + 火傷状態（5ターン、毎ターンHPの5%を削る）
+            skillEffects.burnTurns = 5;
+            skillEffects.burnDamageRatio = 0.05f;
+            effectMessage = "火傷状態（5ターン、毎ターンHP5%減少）";
+            addBattleLog("ドラゴンの炎が体を焼いた！強力な火傷状態になった！");
+            break;
+            
+        case EnemyType::GUARD:
+            // 通常ダメージの1.15倍
+            finalDamage = static_cast<int>(baseDamage * 1.15f);
+            effectMessage = "ダメージ1.15倍";
+            break;
+            
+        case EnemyType::KING:
+            // 通常ダメージの1.2倍 + 次のプレイヤーの攻撃を30%軽減
+            finalDamage = static_cast<int>(baseDamage * 1.2f);
+            skillEffects.playerAttackReduction = 0.3f;
+            effectMessage = "ダメージ1.2倍、次の攻撃30%軽減";
+            addBattleLog("王の威厳が体を覆った！次の攻撃が弱くなる！");
+            break;
             
         case EnemyType::DEMON_LORD:
             // 通常ダメージ（魔王の特殊技は別途実装可能）
@@ -4018,6 +4222,66 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
     }
     
     return finalDamage;
+}
+
+std::string BattleState::getEnemySpecialSkillEffectMessage(EnemyType enemyType) {
+    // 効果メッセージのみを取得（副作用なし）
+    switch (enemyType) {
+        case EnemyType::SLIME:
+            return "次の攻撃50%軽減";
+        case EnemyType::GOBLIN:
+            return "ダメージ1.2倍";
+        case EnemyType::ORC:
+            // HP50%以下かどうかは実際の適用時に判定するため、ここでは一般的なメッセージを返す
+            return "ダメージ1.5倍（HP50%以下）または1.2倍";
+        case EnemyType::DRAGON:
+            return "火傷状態（3ターン、毎ターンHP3%減少）";
+        case EnemyType::SKELETON:
+            return "次攻撃30%カウンター";
+        case EnemyType::GHOST:
+            return "次の攻撃失敗率50%向上";
+        case EnemyType::VAMPIRE:
+            return "与えたダメージの20%回復";
+        case EnemyType::DEMON_SOLDIER:
+            return "5%確率で即死";
+        case EnemyType::WEREWOLF:
+            return "裂傷（3ターン、毎ターンHP5%減少）";
+        case EnemyType::MINOTAUR:
+            return "ダメージ1.5倍";
+        case EnemyType::CYCLOPS:
+            return "ダメージ1.75倍";
+        case EnemyType::GARGOYLE:
+            return "次に受けるダメージ80%軽減";
+        case EnemyType::PHANTOM:
+            return "次の攻撃80%回避";
+        case EnemyType::DARK_KNIGHT:
+            return "次に攻撃された時HP10%削減";
+        case EnemyType::ICE_GIANT:
+            return "20%確率で氷漬け";
+        case EnemyType::FIRE_DEMON:
+            return "火傷状態（2ターン、毎ターンHP10%減少）";
+        case EnemyType::SHADOW_LORD:
+            return "次の攻撃無効化";
+        case EnemyType::ANCIENT_DRAGON:
+            return "1ターン攻撃力50%低下";
+        case EnemyType::CHAOS_BEAST:
+            return "1ターン防御力0、攻撃力999";
+        case EnemyType::ELDER_GOD:
+            return "HPを1にする";
+        case EnemyType::GOBLIN_KING:
+            return "ダメージ1.3倍";
+        case EnemyType::ORC_LORD:
+            // HP50%以下かどうかは実際の適用時に判定するため、ここでは一般的なメッセージを返す
+            return "ダメージ1.8倍（HP50%以下）または1.3倍";
+        case EnemyType::DRAGON_LORD:
+            return "火傷状態（5ターン、毎ターンHP5%減少）";
+        case EnemyType::GUARD:
+            return "ダメージ1.15倍";
+        case EnemyType::KING:
+            return "ダメージ1.2倍、次の攻撃30%軽減";
+        default:
+            return "";
+    }
 }
 
 void BattleState::processEnemySkillEffects() {

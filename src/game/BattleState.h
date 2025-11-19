@@ -265,7 +265,7 @@ private:
      * @param baseDamage 基本ダメージ
      * @return 最終ダメージ
      */
-    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage);
+    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage);
     std::string getEnemySpecialSkillEffectMessage(EnemyType enemyType);
     
     /**

@@ -1,8 +1,8 @@
 {
-    "attack": 106,
-    "currentNight": 2,
-    "defense": 101,
-    "demonTrust": 100,
+    "attack": 8,
+    "currentNight": 0,
+    "defense": 3,
+    "demonTrust": 50,
     "equipment": {
         "equipment": {
             "accessory": {
@@ -24,26 +24,31 @@
         }
     },
     "evilActions": 0,
-    "exp": 195,
+    "exp": 0,
     "gameState": {
         "explanationStep": 0,
-        "playerX": 14,
-        "playerY": 14,
+        "gameExplanationTexts": [
+            "ここがフィールドです。たくさんモンスターがいますね。\nモンスターの上に表示されているのがモンスターのレベルです。",
+            "そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。\n自分のレベルに合わせて戦うモンスターを選びましょう。",
+            "そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。\nまずはモンスターがいる場所に移動してみてください。"
+        ],
+        "playerX": 21,
+        "playerY": 9,
         "showGameExplanation": false,
-        "stateType": 3
+        "stateType": 1
     },
-    "gold": 3441,
+    "gold": 0,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
     "hasSeenCastleStory": true,
     "hasSeenDemonCastleStory": true,
     "hasSeenFieldExplanation": true,
-    "hasSeenFieldFirstVictoryExplanation": true,
-    "hasSeenNightExplanation": true,
-    "hasSeenResidentBattleExplanation": true,
+    "hasSeenFieldFirstVictoryExplanation": false,
+    "hasSeenNightExplanation": false,
+    "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 275,
+    "hp": 9,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -115,42 +120,17 @@
             }
         ]
     },
-    "killedResidents": [
-        {
-            "x": 24,
-            "y": 13
-        },
-        {
-            "x": 27,
-            "y": 7
-        },
-        {
-            "x": 19,
-            "y": 8
-        },
-        {
-            "x": 19,
-            "y": 14
-        },
-        {
-            "x": 23,
-            "y": 6
-        },
-        {
-            "x": 20,
-            "y": 4
-        }
-    ],
-    "kingTrust": 55,
-    "level": 50,
-    "maxHp": 275,
-    "maxMp": 69,
-    "mental": 20,
-    "mp": 69,
+    "killedResidents": [],
+    "kingTrust": 50,
+    "level": 1,
+    "maxHp": 30,
+    "maxMp": 20,
+    "mental": 100,
+    "mp": 20,
     "name": "勇者",
-    "nightCount": 2,
-    "nightTimer": 897.8958129882813,
-    "nightTimerActive": true,
-    "targetLevel": 75,
+    "nightCount": 0,
+    "nightTimer": 0.0,
+    "nightTimerActive": false,
+    "targetLevel": 25,
     "trustLevel": 50
 }
