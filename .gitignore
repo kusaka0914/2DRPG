@@ -33,9 +33,6 @@ web/assets/
 *.gch
 *.pch
 
-# Core dumps
-core
-
 # IDE files
 .vscode/
 .idea/
@@ -121,3 +118,6 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local 
+
+.cursorrules
+3DAttraction/
