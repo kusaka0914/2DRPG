@@ -166,6 +166,7 @@ private:
     int cachedResidentCommand;  /**< @brief キャッシュされた住民のコマンド（予測表示と実際のコマンドを一致させるため） */
     int residentTurnCount;  /**< @brief 住民戦の現在のターン数（1から10まで、10ターン経過でゲームオーバー） */
     bool residentAttackFailed;  /**< @brief 住民戦で攻撃が失敗したか（メンタルが低くてためらった） */
+    int residentHitCount;  /**< @brief 住民戦で攻撃が成功した回数（3回で勝利） */
     
     // INTROフェーズ用
     float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
@@ -262,9 +263,10 @@ private:
      * @brief 敵の特殊技を適用
      * @param enemyType 敵の種類
      * @param baseDamage 基本ダメージ
+     * @param effectMessage 特殊技の効果メッセージ（出力用）
      * @return 最終ダメージ
      */
-    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage);
+    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage);
     
     /**
      * @brief 敵の特殊技効果を処理（ターン終了時）

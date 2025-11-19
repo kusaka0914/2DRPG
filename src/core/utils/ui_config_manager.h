@@ -194,7 +194,7 @@ namespace UIConfig {
                 int padding = 8;           // 背景のパディング
                 std::string playerWinFormat = "{playerName}が{turns}ターン分の攻撃を実行！";  // プレイヤー勝利時のフォーマット
                 std::string enemyWinFormat = "敵が{turns}ターン分の攻撃を実行！";  // 敵勝利時のフォーマット
-                std::string drawFormat = "両方がダメージを受ける";  // 引き分け時のフォーマット
+                std::string drawFormat = "相打ち！";  // 引き分け時のフォーマット
                 std::string hesitateFormat = "{playerName}はメンタルの影響で攻撃をためらいました。";  // 住民戦で攻撃失敗時のフォーマット
             } totalAttackText;
             
@@ -221,8 +221,8 @@ namespace UIConfig {
             float offsetX = -120.0f;      // Xオフセット（centerXからの相対位置）
             SDL_Color color = {255, 255, 255, 255};  // 色（白色）
             int padding = 8;               // 背景のパディング
-            std::string normalText = "選択: W/S 決定: Enter 戻る: Q";  // 通常時のテキスト
-            std::string residentText = "選択: W/S 決定: Enter";  // 住民戦時のテキスト
+            std::string normalText = "選択: W/S 決定: ENTER 戻る: Q";  // 通常時のテキスト
+            std::string residentText = "選択: W/S 決定: ENTER";  // 住民戦時のテキスト
         } commandHint;
         
         // ジャッジフェーズの結果表示UI設定（「勝ち！」「負け...」「引き分け」）

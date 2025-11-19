@@ -44,6 +44,7 @@ public:
         bool skipAnimation; /**< @brief true=攻撃アニメーションをスキップ（ステータス上昇呪文や回復呪文の場合） */
         bool isSpecialSkill;  /**< @brief true=特殊技を使用した */
         std::string specialSkillName;  /**< @brief 特殊技の名前（空文字列の場合は通常攻撃） */
+        std::string specialSkillEffectMessage;  /**< @brief 特殊技の効果メッセージ（空文字列の場合は効果なし） */
     };
     
     /**

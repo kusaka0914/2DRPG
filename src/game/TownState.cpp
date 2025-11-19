@@ -630,83 +630,30 @@ void TownState::drawBuildings(Graphics& graphics) {
         int y = buildings[i].second;
         std::string type = buildingTypes[i];
         
-        if (type == "shop" && shopTexture) {
-            graphics.drawTexture(shopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "weapon_shop" && weaponShopTexture) {
-            graphics.drawTexture(weaponShopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "house" && houseTexture) {
-            graphics.drawTexture(houseTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "castle" && castleTexture) {
-            graphics.drawTexture(castleTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else {
-            Uint8 r, g, b;
-            if (type == "shop") {
-                r = 139; g = 69; b = 19; // 茶色
-            } else if (type == "weapon_shop") {
-                r = 192; g = 192; b = 192; // 銀色
-            } else if (type == "house") {
-                r = 34; g = 139; b = 34; // 緑色
-            } else if (type == "castle") {
-                r = 255; g = 215; b = 0; // 金色
-            } else {
-                r = 128; g = 128; b = 128; // グレー
-            }
-            
-            graphics.setDrawColor(r, g, b, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
+        SDL_Texture* texture = nullptr;
+        if (type == "shop") {
+            texture = shopTexture;
+        } else if (type == "weapon_shop") {
+            texture = weaponShopTexture;
+        } else if (type == "house") {
+            texture = houseTexture;
+        } else if (type == "castle") {
+            texture = castleTexture;
         }
+        
+        auto [r, g, b] = TownLayout::getBuildingColor(type);
+        GameState::drawBuilding(graphics, x, y, TILE_SIZE, BUILDING_SIZE, texture, r, g, b);
     }
     
     for (const auto& home : residentHomes) {
-        int x = home.first;
-        int y = home.second;
-        
-        if (residentHomeTexture) {
-            graphics.drawTexture(residentHomeTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else {
-            graphics.setDrawColor(139, 69, 19, 255); // 茶色
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        }
+        GameState::drawBuilding(graphics, home.first, home.second, TILE_SIZE, BUILDING_SIZE,
+                               residentHomeTexture, 139, 69, 19);
     }
 }
 
 void TownState::drawGate(Graphics& graphics) {
-    int gateX = TownLayout::GATE_X;
-    int gateY = TownLayout::GATE_Y;
-    
-    if (stoneTileTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        graphics.drawTexture(stoneTileTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
-    }
-    
-    if (toriiTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        // 鳥居は少し大きく描画（2タイルサイズ）
-        graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
-                           TILE_SIZE * 2, TILE_SIZE * 2);
-    } else {
-        int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
-        int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
-        graphics.setDrawColor(255, 0, 0, 255); // 赤色
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
-        graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
-    }
+    GameState::drawGate(graphics, TownLayout::GATE_X, TownLayout::GATE_Y, TILE_SIZE,
+                       stoneTileTexture, toriiTexture);
 }
 
 void TownState::drawBuildingInterior(Graphics& graphics) {

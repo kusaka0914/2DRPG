@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <tuple>
+#include <SDL2/SDL.h>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief 街の共通配置データ
@@ -100,6 +103,27 @@ struct TownLayout {
      * @param positions 位置リスト（参照渡し、重複除去後のリストが格納される）
      */
     static void removeDuplicatePositions(std::vector<std::pair<int, int>>& positions);
+    
+    /**
+     * @brief 建物タイプから色を取得
+     * @param buildingType 建物タイプ（"shop", "weapon_shop", "house", "castle"など）
+     * @return RGB色（r, g, b）
+     */
+    static std::tuple<Uint8, Uint8, Uint8> getBuildingColor(const std::string& buildingType);
+    
+    /**
+     * @brief 位置リストをJSON配列に変換
+     * @param positions 位置リスト
+     * @return JSON配列
+     */
+    static nlohmann::json positionsToJson(const std::vector<std::pair<int, int>>& positions);
+    
+    /**
+     * @brief JSON配列から位置リストに変換
+     * @param j JSON配列
+     * @return 位置リスト
+     */
+    static std::vector<std::pair<int, int>> positionsFromJson(const nlohmann::json& j);
     
 private:
     /**

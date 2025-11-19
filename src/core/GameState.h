@@ -153,6 +153,33 @@ public:
                    Uint8 r = 0, Uint8 g = 255, Uint8 b = 0, Uint8 a = 255);
     
     /**
+     * @brief ゲートの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @param gateX ゲートのX座標
+     * @param gateY ゲートのY座標
+     * @param tileSize タイルサイズ
+     * @param stoneTileTexture 石タイルテクスチャ（nullptr可）
+     * @param toriiTexture 鳥居テクスチャ（nullptr可）
+     */
+    static void drawGate(Graphics& graphics, int gateX, int gateY, int tileSize,
+                        SDL_Texture* stoneTileTexture, SDL_Texture* toriiTexture);
+    
+    /**
+     * @brief 建物の描画（テクスチャまたはフォールバック色）
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @param x 建物のX座標（タイル単位）
+     * @param y 建物のY座標（タイル単位）
+     * @param tileSize タイルサイズ
+     * @param buildingSize 建物サイズ（タイル単位）
+     * @param texture 建物テクスチャ（nullptr可）
+     * @param fallbackR フォールバック色のR成分
+     * @param fallbackG フォールバック色のG成分
+     * @param fallbackB フォールバック色のB成分
+     */
+    static void drawBuilding(Graphics& graphics, int x, int y, int tileSize, int buildingSize,
+                            SDL_Texture* texture, Uint8 fallbackR, Uint8 fallbackG, Uint8 fallbackB);
+    
+    /**
      * @brief フェードアウトの開始
      * @param duration フェード時間（秒）
      * @param onComplete フェード完了時のコールバック（オプション）

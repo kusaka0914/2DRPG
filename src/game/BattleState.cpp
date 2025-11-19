@@ -31,6 +31,7 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       cachedResidentBehaviorHint(""), cachedResidentCommand(-1),
       residentTurnCount(0),
       residentAttackFailed(false),
+      residentHitCount(0),
       showGameExplanation(false), explanationStep(0),
       explanationMessageBoard(nullptr) {
     
@@ -259,6 +260,7 @@ void BattleState::update(float deltaTime) {
                 if (enemy->isResident()) {
                     battleLogic->setCommandTurnCount(1);  // 住民戦は1ターンずつ
                     residentTurnCount = 1;  // 住民戦のターン数を初期化
+                    residentHitCount = 0;  // 住民戦の攻撃成功回数を初期化
                 } else {
                     battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
                 }
@@ -614,12 +616,14 @@ void BattleState::render(Graphics& graphics) {
             params.judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
             params.residentBehaviorHint = getResidentBehaviorHint();
             params.residentTurnCount = residentTurnCount;  // 住民戦の現在のターン数
+            params.residentHitCount = residentHitCount;  // 住民戦で攻撃が成功した回数
         } else {
             params.playerCommandName = "";
             params.enemyCommandName = "";
             params.judgeResult = -999; // 未設定（battleLogicから取得）
             params.residentBehaviorHint = "";
             params.residentTurnCount = 0;  // 通常戦の場合は0
+            params.residentHitCount = 0;  // 通常戦の場合は0
         }
         
         battleUI->renderJudgeAnimation(params);
@@ -709,7 +713,8 @@ void BattleState::render(Graphics& graphics) {
         
         // HP表示
         std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
-        battleUI->renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, enemyName, false);
+        int hitCount = enemy->isResident() ? residentHitCount : 0;
+        battleUI->renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, enemyName, false, hitCount);
         
         // キャラクター描画
         if (playerTex) {
@@ -747,9 +752,11 @@ void BattleState::render(Graphics& graphics) {
         if (enemy->isResident()) {
             params.residentBehaviorHint = getResidentBehaviorHint();
             params.residentTurnCount = residentTurnCount;  // 住民戦の現在のターン数
+            params.residentHitCount = residentHitCount;  // 住民戦で攻撃が成功した回数
         } else {
             params.residentBehaviorHint = "";
             params.residentTurnCount = 0;  // 通常戦の場合は0
+            params.residentHitCount = 0;  // 通常戦の場合は0
         }
         battleUI->renderCommandSelectionUI(params);
         
@@ -1020,12 +1027,14 @@ void BattleState::render(Graphics& graphics) {
             judgeParams.judgeResult = judgeResidentTurn(currentResidentPlayerCommand, currentResidentCommand);
             judgeParams.residentBehaviorHint = getResidentBehaviorHint();
             judgeParams.residentTurnCount = residentTurnCount;
+            judgeParams.residentHitCount = residentHitCount;  // 住民戦で攻撃が成功した回数
         } else {
             judgeParams.playerCommandName = "";
             judgeParams.enemyCommandName = "";
             judgeParams.judgeResult = -999; // 未設定（battleLogicから取得）
             judgeParams.residentBehaviorHint = "";
             judgeParams.residentTurnCount = 0;
+            judgeParams.residentHitCount = 0;  // 通常戦の場合は0
         }
         
         battleUI->renderJudgeAnimation(judgeParams);
@@ -1043,6 +1052,7 @@ void BattleState::render(Graphics& graphics) {
             params.isDesperateMode = false;
             params.hasThreeWinStreak = false;
             params.residentBehaviorHint = getResidentBehaviorHint();  // 住民戦の場合は住民の様子を渡す
+            params.residentHitCount = residentHitCount;  // 住民戦で攻撃が成功した回数
         } else {
             params.isVictory = (stats.playerWins > stats.enemyWins);
             params.isDefeat = (stats.enemyWins > stats.playerWins);
@@ -1051,6 +1061,7 @@ void BattleState::render(Graphics& graphics) {
             params.playerWins = stats.playerWins;
             params.enemyWins = stats.enemyWins;
             params.residentBehaviorHint = "";  // 通常戦の場合は空文字列
+            params.residentHitCount = 0;  // 通常戦の場合は0
         }
         
         battleUI->renderResultAnnouncement(params);
@@ -1465,6 +1476,8 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             
             if (roll <= successRate) {
                 // 攻撃成功
+            residentHitCount++;
+            
             int baseAttack = player->getTotalAttack();
             int damage = std::max(1, baseAttack - enemy->getEffectiveDefense());
             
@@ -1485,6 +1498,11 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             
             // アニメーションを開始
             animationController->resetResultAnimation();
+            
+            // 3回攻撃が当たったら勝利
+            if (residentHitCount >= 3) {
+                enemy->setHp(0);
+            }
             } else {
                 // 攻撃失敗（メンタルが低くてためらった）
                 addBattleLog("住民を倒すのをためらいました。");
@@ -2596,7 +2614,37 @@ void BattleState::selectCommandForTurn(int turnIndex) {
         currentOptions.push_back("呪文");
     }
     
+    // 前のターンで選択したコマンドの位置にカーソルを初期化
     selectedOption = 0;
+    if (turnIndex > 0) {
+        // 前のターン（turnIndex - 1）のコマンドを取得
+        auto playerCmds = battleLogic->getPlayerCommands();
+        if (turnIndex - 1 < static_cast<int>(playerCmds.size()) && playerCmds[turnIndex - 1] >= 0) {
+            int previousCmd = playerCmds[turnIndex - 1];
+            
+            if (enemy->isResident()) {
+                // 住民戦の場合：コマンド0（攻撃）→ 0、コマンド20（身を隠す）→ 1
+                if (previousCmd == BattleConstants::COMMAND_ATTACK) {
+                    selectedOption = 0;
+                } else if (previousCmd == BattleConstants::PLAYER_COMMAND_HIDE) {
+                    selectedOption = 1;
+                }
+            } else {
+                // 通常の戦闘：コマンド0（攻撃）→ 0、コマンド1（防御）→ 1、コマンド2（呪文）→ 2
+                if (previousCmd >= 0 && previousCmd < static_cast<int>(currentOptions.size())) {
+                    selectedOption = previousCmd;
+                }
+            }
+        }
+    } else if (enemy->isResident() && currentResidentPlayerCommand >= 0) {
+        // 住民戦で1ターン目の場合、前回の戦闘のコマンドを確認
+        if (currentResidentPlayerCommand == BattleConstants::COMMAND_ATTACK) {
+            selectedOption = 0;
+        } else if (currentResidentPlayerCommand == BattleConstants::PLAYER_COMMAND_HIDE) {
+            selectedOption = 1;
+        }
+    }
+    
     isShowingOptions = true;
     
     animationController->resetCommandSelectAnimation();
@@ -2814,8 +2862,8 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
     SDL_Color textColor = winLossTextConfig.color;
     
     SDL_Texture* textTexture = graphics.createTextTexture(winLossText, "default", textColor);
+    int textWidth = 0, textHeight = 0;
     if (textTexture) {
-        int textWidth, textHeight;
         SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
         
         int padding = winLossTextConfig.padding;
@@ -2830,141 +2878,145 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         graphics.drawText(winLossText, centerX - textWidth / 2, winLossY, "default", textColor);
         
         SDL_DestroyTexture(textTexture);
+    }
         
-        // 結果フェーズのみ、ターン数表示と現在実行中のターンに応じたメッセージを表示
+        // 結果フェーズのみ、現在実行中のターンに応じたメッセージを表示
         if (isResultPhase) {
-            // 1. 「〜ターン分の攻撃を実行」を常に表示（勝敗UIの下）
-            auto& totalAttackTextConfig = battleConfig.winLossUI.totalAttackText;
-            std::string totalAttackText;
-            // 住民戦で攻撃失敗時は「ためらいました」を表示
-            if (enemy->isResident() && residentAttackFailed) {
-                totalAttackText = totalAttackTextConfig.hesitateFormat;
-                size_t pos = totalAttackText.find("{playerName}");
-                if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + player->getName() + totalAttackText.substr(pos + 12);
+            // 「〜ターン分の攻撃を実行」の位置を計算（表示されないが、個別攻撃メッセージの位置計算に使用）
+            int totalAttackY = winLossY + textHeight + static_cast<int>(battleConfig.winLossUI.totalAttackText.position.offsetY);
+            
+            // 現在実行中のターンに応じたメッセージを表示
+            if (playerWins > enemyWins) {
+                auto& attackTextConfig = battleConfig.winLossUI.attackText;
+                std::string attackText;
+                
+                // 現在実行中のターンに対応するメッセージを生成
+                // skipAnimationがtrueの場合でも、テキストは表示する必要があるため、
+                // pendingDamagesを全てチェックして、最初に見つかったコマンドを表示する
+                int displayTurnIndex = currentExecutingTurn;
+                // skipAnimationがtrueでcurrentExecutingTurnが既にインクリメントされている場合、
+                // 最初のpendingDamagesエントリを表示する
+                if (displayTurnIndex >= static_cast<int>(pendingDamages.size()) && !pendingDamages.empty()) {
+                    displayTurnIndex = 0;
                 }
-            } else if (playerWins > enemyWins) {
-                totalAttackText = totalAttackTextConfig.playerWinFormat;
-                size_t pos = totalAttackText.find("{playerName}");
-                if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + player->getName() + totalAttackText.substr(pos + 12);
+                
+                if (displayTurnIndex < static_cast<int>(pendingDamages.size())) {
+                    const auto& damageInfo = pendingDamages[displayTurnIndex];
+                    
+                    if (damageInfo.commandType == BattleConstants::COMMAND_ATTACK) {
+                        attackText = attackTextConfig.attackFormat;
+                    } else if (damageInfo.commandType == BattleConstants::COMMAND_DEFEND) {
+                        attackText = attackTextConfig.rushFormat;
+                    } else if (damageInfo.commandType == BattleConstants::COMMAND_SPELL) {
+                        // 呪文の種類を取得
+                        auto it = executedSpellsByDamageIndex.find(displayTurnIndex);
+                        if (it != executedSpellsByDamageIndex.end()) {
+                            SpellType spellType = it->second;
+                            switch (spellType) {
+                                case SpellType::STATUS_UP:
+                                    attackText = attackTextConfig.statusUpSpellFormat;
+                                    break;
+                                case SpellType::HEAL:
+                                    attackText = attackTextConfig.healSpellFormat;
+                                    break;
+                                case SpellType::ATTACK:
+                                    attackText = attackTextConfig.attackSpellFormat;
+                                    break;
+                                default:
+                                    attackText = attackTextConfig.defaultSpellFormat;
+                                    break;
+                            }
+                        } else {
+                            attackText = attackTextConfig.defaultSpellFormat;
+                        }
+                    } else {
+                        // デフォルトメッセージ
+                        attackText = attackTextConfig.defaultAttackFormat;
+                    }
+                    
+                    // プレースホルダーを置換（安全な方法：文字列を前後で結合）
+                    size_t pos = attackText.find("{playerName}");
+                    if (pos != std::string::npos) {
+                        attackText = attackText.substr(0, pos) + player->getName() + attackText.substr(pos + 12);
+                    }
                 }
-                pos = totalAttackText.find("{turns}");
-                if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(playerWins) + totalAttackText.substr(pos + 8);
+                
+                if (!attackText.empty()) {
+                    SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", attackTextConfig.color);
+                    if (attackTexture) {
+                        int attackTextWidth, attackTextHeight;
+                        SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
+                        
+                        // 勝敗UIの下に直接配置（「〜ターン分の攻撃を実行」は表示しない）
+                        int attackY = totalAttackY + static_cast<int>(attackTextConfig.position.offsetY);
+                        int attackPadding = attackTextConfig.padding;
+                        int attackBgX = centerX - attackTextWidth / 2 - attackPadding;
+                        int attackBgY = attackY - attackPadding;
+                        
+                        // 背景黒
+                        graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                        graphics.drawRect(attackBgX, attackBgY, attackTextWidth + attackPadding * 2, attackTextHeight + attackPadding * 2, true);
+                        
+                        // テキスト白
+                        graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", attackTextConfig.color);
+                        
+                        SDL_DestroyTexture(attackTexture);
+                    }
                 }
             } else if (enemyWins > playerWins) {
-                totalAttackText = totalAttackTextConfig.enemyWinFormat;
-                size_t pos = totalAttackText.find("{turns}");
-                if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(enemyWins) + totalAttackText.substr(pos + 8);
+                // 敵が勝った場合の個別攻撃メッセージを表示
+                auto& attackTextConfig = battleConfig.winLossUI.attackText;
+                std::string attackText;
+                
+                // 現在実行中のターンに対応するメッセージを生成
+                int displayTurnIndex = currentExecutingTurn;
+                if (displayTurnIndex >= static_cast<int>(pendingDamages.size()) && !pendingDamages.empty()) {
+                    displayTurnIndex = 0;
                 }
-            } else {
-                totalAttackText = totalAttackTextConfig.drawFormat;
-            }
-            
-            SDL_Texture* totalAttackTexture = graphics.createTextTexture(totalAttackText, "default", totalAttackTextConfig.color);
-            if (totalAttackTexture) {
-                int totalAttackTextWidth, totalAttackTextHeight;
-                SDL_QueryTexture(totalAttackTexture, nullptr, nullptr, &totalAttackTextWidth, &totalAttackTextHeight);
                 
-                // 勝敗UIの下に配置（JSONから設定を取得）
-                int totalAttackY = winLossY + textHeight + static_cast<int>(totalAttackTextConfig.position.offsetY);
-                int totalAttackPadding = totalAttackTextConfig.padding;
-                int totalAttackBgX = centerX - totalAttackTextWidth / 2 - totalAttackPadding;
-                int totalAttackBgY = totalAttackY - totalAttackPadding;
-                
-                // 背景黒
-                graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                graphics.drawRect(totalAttackBgX, totalAttackBgY, totalAttackTextWidth + totalAttackPadding * 2, totalAttackTextHeight + totalAttackPadding * 2, true);
-                
-                // テキスト白
-                graphics.drawText(totalAttackText, centerX - totalAttackTextWidth / 2, totalAttackY, "default", totalAttackTextConfig.color);
-                
-                SDL_DestroyTexture(totalAttackTexture);
-                
-                // 2. 現在実行中のターンに応じたメッセージを表示（「〜ターン分の攻撃を実行」の下）
-                if (playerWins > enemyWins) {
-                    auto& attackTextConfig = battleConfig.winLossUI.attackText;
-                    std::string attackText;
+                if (displayTurnIndex < static_cast<int>(pendingDamages.size())) {
+                    const auto& damageInfo = pendingDamages[displayTurnIndex];
                     
-                    // 現在実行中のターンに対応するメッセージを生成
-                    // skipAnimationがtrueの場合でも、テキストは表示する必要があるため、
-                    // pendingDamagesを全てチェックして、最初に見つかったコマンドを表示する
-                    int displayTurnIndex = currentExecutingTurn;
-                    // skipAnimationがtrueでcurrentExecutingTurnが既にインクリメントされている場合、
-                    // 最初のpendingDamagesエントリを表示する
-                    if (displayTurnIndex >= static_cast<int>(pendingDamages.size()) && !pendingDamages.empty()) {
-                        displayTurnIndex = 0;
+                    // 特殊技の効果メッセージがある場合は、それを表示（「〜ターン分の攻撃を実行」の代わり）
+                    if (!damageInfo.specialSkillEffectMessage.empty()) {
+                        attackText = damageInfo.specialSkillEffectMessage;
+                    } else if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty()) {
+                        // 特殊技名のみ表示
+                        attackText = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】！";
+                    } else {
+                        // 通常攻撃
+                        attackText = enemy->getTypeName() + "の攻撃！";
                     }
-                    
-                    if (displayTurnIndex < static_cast<int>(pendingDamages.size())) {
-                        const auto& damageInfo = pendingDamages[displayTurnIndex];
+                } else {
+                    // デフォルトメッセージ
+                    attackText = enemy->getTypeName() + "の攻撃！";
+                }
+                
+                if (!attackText.empty()) {
+                    SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", attackTextConfig.color);
+                    if (attackTexture) {
+                        int attackTextWidth, attackTextHeight;
+                        SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
                         
-                        if (damageInfo.commandType == BattleConstants::COMMAND_ATTACK) {
-                            attackText = attackTextConfig.attackFormat;
-                        } else if (damageInfo.commandType == BattleConstants::COMMAND_DEFEND) {
-                            attackText = attackTextConfig.rushFormat;
-                        } else if (damageInfo.commandType == BattleConstants::COMMAND_SPELL) {
-                            // 呪文の種類を取得
-                            auto it = executedSpellsByDamageIndex.find(displayTurnIndex);
-                            if (it != executedSpellsByDamageIndex.end()) {
-                                SpellType spellType = it->second;
-                                switch (spellType) {
-                                    case SpellType::STATUS_UP:
-                                        attackText = attackTextConfig.statusUpSpellFormat;
-                                        break;
-                                    case SpellType::HEAL:
-                                        attackText = attackTextConfig.healSpellFormat;
-                                        break;
-                                    case SpellType::ATTACK:
-                                        attackText = attackTextConfig.attackSpellFormat;
-                                        break;
-                                    default:
-                                        attackText = attackTextConfig.defaultSpellFormat;
-                                        break;
-                                }
-        } else {
-                                attackText = attackTextConfig.defaultSpellFormat;
-        }
-    } else {
-                            // デフォルトメッセージ
-                            attackText = attackTextConfig.defaultAttackFormat;
-                        }
+                        // 勝敗UIの下に直接配置（「〜ターン分の攻撃を実行」は表示しない）
+                        int attackY = totalAttackY + static_cast<int>(attackTextConfig.position.offsetY);
                         
-                        // プレースホルダーを置換（安全な方法：文字列を前後で結合）
-                        size_t pos = attackText.find("{playerName}");
-                        if (pos != std::string::npos) {
-                            attackText = attackText.substr(0, pos) + player->getName() + attackText.substr(pos + 12);
-                        }
-                    }
-                    
-                    if (!attackText.empty()) {
-                        SDL_Texture* attackTexture = graphics.createTextTexture(attackText, "default", attackTextConfig.color);
-                        if (attackTexture) {
-                            int attackTextWidth, attackTextHeight;
-                            SDL_QueryTexture(attackTexture, nullptr, nullptr, &attackTextWidth, &attackTextHeight);
-                            
-                            // 「〜ターン分の攻撃を実行」の下に配置（JSONから設定を取得）
-                            int attackY = totalAttackY + totalAttackTextHeight + static_cast<int>(attackTextConfig.position.offsetY);
-                            int attackPadding = attackTextConfig.padding;
-                            int attackBgX = centerX - attackTextWidth / 2 - attackPadding;
-                            int attackBgY = attackY - attackPadding;
-                            
-                            // 背景黒
-                            graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                            graphics.drawRect(attackBgX, attackBgY, attackTextWidth + attackPadding * 2, attackTextHeight + attackPadding * 2, true);
-                            
-                            // テキスト白
-                            graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", attackTextConfig.color);
-                            
-                            SDL_DestroyTexture(attackTexture);
-                        }
+                        int attackPadding = attackTextConfig.padding;
+                        int attackBgX = centerX - attackTextWidth / 2 - attackPadding;
+                        int attackBgY = attackY - attackPadding;
+                        
+                        // 背景黒
+                        graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
+                        graphics.drawRect(attackBgX, attackBgY, attackTextWidth + attackPadding * 2, attackTextHeight + attackPadding * 2, true);
+                        
+                        // テキスト白
+                        graphics.drawText(attackText, centerX - attackTextWidth / 2, attackY, "default", attackTextConfig.color);
+                        
+                        SDL_DestroyTexture(attackTexture);
                     }
                 }
             }
         }
-    }
 }
 
 void BattleState::judgeBattle() {
@@ -3080,7 +3132,7 @@ void BattleState::executeWinningTurns(float damageMultiplier) {
             if (battleLogic->judgeRound(playerCmds[i], enemyCmds[i]) == 0) {
                 if (!hasDraw) {
                     hasDraw = true;
-                    addBattleLog("相打ち！両方がダメージを受けた！");
+                    addBattleLog("相打ち！");
                 }
                 int playerDamage = enemy->getAttack() / 2;
                 int enemyDamage = player->calculateDamageWithBonus(*enemy) / 2;
@@ -3473,10 +3525,26 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                         if (damage > 0) {
                             if (isPlayerHit) {
                                 // 特殊技の場合は特殊技を適用
-                                if (damageInfo.isSpecialSkill && !damageInfo.specialSkillName.empty()) {
-                                    damage = applyEnemySpecialSkill(enemy->getType(), damage);
-                                    std::string msg = enemy->getTypeName() + "の【" + damageInfo.specialSkillName + "】！\n";
-                                    addBattleLog(msg);
+                                if (damageInfo.isSpecialSkill) {
+                                    // 特殊技名が空の場合は取得を試みる
+                                    std::string skillName = damageInfo.specialSkillName;
+                                    if (skillName.empty()) {
+                                        skillName = BattleLogic::getEnemySpecialSkillName(enemy->getType());
+                                    }
+                                    
+                                    // 特殊技名が取得できた場合のみ特殊技として扱う
+                                    if (!skillName.empty()) {
+                                        std::string effectMessage = "";
+                                        damage = applyEnemySpecialSkill(enemy->getType(), damage, effectMessage);
+                                        // 効果メッセージをDamageInfoに保存
+                                        pendingDamages[currentExecutingTurn].specialSkillEffectMessage = effectMessage;
+                                        std::string msg = enemy->getTypeName() + "の【" + skillName + "】！\n";
+                                        addBattleLog(msg);
+                                    } else {
+                                        // 特殊技名が取得できない場合は通常攻撃として扱う
+                                        std::string msg = enemy->getTypeName() + "の攻撃！\n";
+                                        addBattleLog(msg);
+                                    }
                                 } else {
                                     std::string msg = enemy->getTypeName() + "の攻撃！\n";
                                     addBattleLog(msg);
@@ -3815,7 +3883,7 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
     }
 }
 
-int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
+int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::uniform_int_distribution<> percentDis(0, 99);
@@ -3823,12 +3891,14 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
     
     auto& skillEffects = player->getPlayerStats().getEnemySkillEffects();
     int finalDamage = baseDamage;
+    effectMessage = ""; // 初期化
     
     switch (enemyType) {
         case EnemyType::SLIME:
             // 通常攻撃 + 次のプレイヤーの攻撃を50%軽減
             skillEffects.playerAttackReduction = 0.5f;
-            addBattleLog("粘液が体を覆った！次の攻撃が弱くなる！");
+            effectMessage = "粘液が体を覆った！次の攻撃が弱くなる！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::GOBLIN:
@@ -3840,7 +3910,8 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // HP50%以下なら通常ダメージの1.5倍、それ以上なら1.2倍
             if (enemy->getHp() <= enemy->getMaxHp() * 0.5f) {
                 finalDamage = static_cast<int>(baseDamage * 1.5f);
-                addBattleLog("怒りで力が増した！");
+                effectMessage = "怒りで力が増した！";
+                addBattleLog(effectMessage);
             } else {
                 finalDamage = static_cast<int>(baseDamage * 1.2f);
             }
@@ -3850,20 +3921,23 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常ダメージ + 火傷状態（3ターン、毎ターンHPの3%を削る）
             skillEffects.burnTurns = 3;
             skillEffects.burnDamageRatio = 0.03f;
-            addBattleLog("炎のブレスが体を焼いた！火傷状態になった！");
+            effectMessage = "炎のブレスが体を焼いた！火傷状態になった！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::SKELETON:
             // 通常ダメージ + 次攻撃を受けた時にそのダメージの30%をプレイヤーに与える
             skillEffects.hasCounterOnNextAttack = true;
             skillEffects.counterDamageRatio = 0.3f;
-            addBattleLog("骨の壁が構築された！次の攻撃が跳ね返される！");
+            effectMessage = "骨の壁が構築された！次の攻撃が跳ね返される！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::GHOST:
             // 通常 + 次のプレイヤー攻撃の失敗率を50%向上
             skillEffects.attackFailureRateIncrease = 0.5f;
-            addBattleLog("呪いの触手が体を絡みついた！攻撃が当たりにくくなった！");
+            effectMessage = "呪いの触手が体を絡みついた！攻撃が当たりにくくなった！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::VAMPIRE:
@@ -3871,7 +3945,8 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             {
                 int healAmount = static_cast<int>(baseDamage * 0.2f);
                 enemy->heal(healAmount);
-                addBattleLog("血を吸い取られた！" + enemy->getTypeName() + "は" + std::to_string(healAmount) + "回復した！");
+                effectMessage = "血を吸い取られた！" + enemy->getTypeName() + "は" + std::to_string(healAmount) + "回復した！";
+                addBattleLog(effectMessage);
             }
             break;
             
@@ -3879,7 +3954,8 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 5%の確率でプレイヤーを即死させる
             if (percentDis(gen) < 5) {
                 player->takeDamage(player->getHp());
-                addBattleLog("地獄の一撃が直撃した！即死した！");
+                effectMessage = "地獄の一撃が直撃した！即死した！";
+                addBattleLog(effectMessage);
                 return baseDamage; // 既にダメージを適用したので、ここで終了
             }
             break;
@@ -3888,7 +3964,8 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常攻撃 + 裂傷（3ターン、プレイヤーのHPの5%を継続的に減らす）
             skillEffects.bleedTurns = 3;
             skillEffects.bleedDamageRatio = 0.05f;
-            addBattleLog("猛襲で裂傷を負った！");
+            effectMessage = "猛襲で裂傷を負った！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::MINOTAUR:
@@ -3904,27 +3981,31 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
         case EnemyType::GARGOYLE:
             // 通常 + 次に受けるダメージを80%低減
             skillEffects.damageReduction = 0.8f;
-            addBattleLog("石の守りが発動した！次に受けるダメージが大幅に減る！");
+            effectMessage = "石の守りが発動した！次に受けるダメージが大幅に減る！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::PHANTOM:
             // 通常 + 次の攻撃を80%で回避できる
             skillEffects.hasEvasion = true;
             skillEffects.evasionRate = 0.8f;
-            addBattleLog("幻影の攻撃で体が透けた！次の攻撃を回避できる！");
+            effectMessage = "幻影の攻撃で体が透けた！次の攻撃を回避できる！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::DARK_KNIGHT:
             // 通常 + 次にプレイヤーに攻撃された時にHPの10%を削る
             skillEffects.hasDarkKnightCounter = true;
-            addBattleLog("暗黒の一撃が体を貫いた！次の攻撃が跳ね返される！");
+            effectMessage = "暗黒の一撃が体を貫いた！次の攻撃が跳ね返される！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::ICE_GIANT:
             // 通常 + 20%の確率で氷漬けにして次のターンコマンド選択できず一方的に攻撃される
             if (percentDis(gen) < 20) {
                 skillEffects.isFrozen = true;
-                addBattleLog("氷結の息吹で体が凍りついた！次のターン動けない！");
+                effectMessage = "氷結の息吹で体が凍りついた！次のターン動けない！";
+                addBattleLog(effectMessage);
             }
             break;
             
@@ -3932,20 +4013,23 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             // 通常 + 2ターンHPの10%を削る
             skillEffects.burnTurns = 2;
             skillEffects.burnDamageRatio = 0.1f;
-            addBattleLog("業火が体を焼いた！継続ダメージを受ける！");
+            effectMessage = "業火が体を焼いた！継続ダメージを受ける！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::SHADOW_LORD:
             // 通常 + 次の攻撃を無効化
             skillEffects.hasShadowLordBlock = true;
-            addBattleLog("影の呪縛で次の攻撃が無効化される！");
+            effectMessage = "影の呪縛で次の攻撃が無効化される！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::ANCIENT_DRAGON:
             // 通常 + 1ターンプレイヤーの攻撃力を50%下げる
             skillEffects.attackReduction = 0.5f;
             skillEffects.attackReductionTurns = 1;
-            addBattleLog("古の咆哮で攻撃力が半減した！");
+            effectMessage = "古の咆哮で攻撃力が半減した！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::CHAOS_BEAST:
@@ -3954,7 +4038,8 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             skillEffects.chaosBeastDefense = 0;
             skillEffects.chaosBeastAttack = 999;
             skillEffects.chaosBeastTurns = 1;
-            addBattleLog("混沌の力で防御力が0になり、攻撃力が999になった！");
+            effectMessage = "混沌の力で防御力が0になり、攻撃力が999になった！";
+            addBattleLog(effectMessage);
             break;
             
         case EnemyType::ELDER_GOD: {
@@ -3962,13 +4047,51 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage) {
             int currentHp = player->getHp();
             if (currentHp > 1) {
                 player->takeDamage(currentHp - 1);
-                addBattleLog("神の裁きでHPが1になった！");
+                effectMessage = "神の裁きでHPが1になった！";
+                addBattleLog(effectMessage);
             }
             return 0; // 通常ダメージはなし
         }
             
         case EnemyType::DEMON_LORD:
             // 通常ダメージ（魔王の特殊技は別途実装可能）
+            break;
+            
+        case EnemyType::GOBLIN_KING:
+            // 通常ダメージの1.3倍
+            finalDamage = static_cast<int>(baseDamage * 1.3f);
+            break;
+            
+        case EnemyType::ORC_LORD:
+            // HP50%以下なら通常ダメージの1.8倍、それ以上なら1.3倍
+            if (enemy->getHp() <= enemy->getMaxHp() * 0.5f) {
+                finalDamage = static_cast<int>(baseDamage * 1.8f);
+                effectMessage = "オークの怒りが頂点に達した！";
+                addBattleLog(effectMessage);
+            } else {
+                finalDamage = static_cast<int>(baseDamage * 1.3f);
+            }
+            break;
+            
+        case EnemyType::DRAGON_LORD:
+            // 通常ダメージ + 火傷状態（5ターン、毎ターンHPの5%を削る）
+            skillEffects.burnTurns = 5;
+            skillEffects.burnDamageRatio = 0.05f;
+            effectMessage = "ドラゴンの炎が体を焼いた！強力な火傷状態になった！";
+            addBattleLog(effectMessage);
+            break;
+            
+        case EnemyType::GUARD:
+            // 通常ダメージの1.15倍
+            finalDamage = static_cast<int>(baseDamage * 1.15f);
+            break;
+            
+        case EnemyType::KING:
+            // 通常ダメージの1.2倍 + 次のプレイヤーの攻撃を30%軽減
+            finalDamage = static_cast<int>(baseDamage * 1.2f);
+            skillEffects.playerAttackReduction = 0.3f;
+            effectMessage = "王の威厳が体を覆った！次の攻撃が弱くなる！";
+            addBattleLog(effectMessage);
             break;
             
         default:

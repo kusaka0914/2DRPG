@@ -96,7 +96,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                 if (cmd == BattleConstants::COMMAND_ATTACK) {
                     int baseDamage = calculatePlayerAttackDamage();
                     int damage = static_cast<int>(baseDamage * damageMultiplier);
-                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false, false, false, ""});
+                    damages.push_back({damage, false, false, 0, 0, BattleConstants::COMMAND_ATTACK, false, false, false, "", ""});
                 } else if (cmd == BattleConstants::COMMAND_SPELL) {
                     // 呪文で勝利した場合、ダメージエントリを追加しない
                     // （後でプレイヤーが選択した呪文を実行するため）
@@ -107,7 +107,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                     int counterDamage = static_cast<int>(baseDamage / 5.0f * damageMultiplier);
                     // 5回のダメージエントリを追加
                     for (int j = 0; j < 5; j++) {
-                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true, false, false, ""});
+                        damages.push_back({counterDamage, false, false, 0, 0, BattleConstants::COMMAND_DEFEND, true, false, false, "", ""});
                     }
                 }
             }
@@ -126,9 +126,13 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
                 if (isSpecialSkill) {
                     // モンスタータイプに応じた特殊技名を取得
                     skillName = getEnemySpecialSkillName(enemy->getType());
+                    // 特殊技名が取得できた場合のみ特殊技として扱う
+                    if (skillName.empty()) {
+                        isSpecialSkill = false;
+                    }
                 }
                 
-                damages.push_back({damage, true, false, 0, 0, -1, false, false, isSpecialSkill, skillName}); // true = プレイヤーがダメージを受ける
+                damages.push_back({damage, true, false, 0, 0, -1, false, false, isSpecialSkill, skillName, ""}); // true = プレイヤーがダメージを受ける
             }
         }
     } else {
@@ -142,7 +146,7 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
             }
         }
         if (totalPlayerDamage > 0 || totalEnemyDamage > 0) {
-            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false, false, false, ""}); // isDraw = true
+            damages.push_back({0, false, true, totalPlayerDamage, totalEnemyDamage, -1, false, false, false, "", ""}); // isDraw = true
         }
     }
     
@@ -395,6 +399,16 @@ std::string BattleLogic::getEnemySpecialSkillName(EnemyType enemyType) {
             return "神の裁き";
         case EnemyType::DEMON_LORD:
             return "魔王の力";
+        case EnemyType::GOBLIN_KING:
+            return "ゴブリンの怒り";
+        case EnemyType::ORC_LORD:
+            return "オークの猛攻";
+        case EnemyType::DRAGON_LORD:
+            return "ドラゴンの咆哮";
+        case EnemyType::GUARD:
+            return "衛兵の一撃";
+        case EnemyType::KING:
+            return "王の威厳";
         default:
             return "";
     }

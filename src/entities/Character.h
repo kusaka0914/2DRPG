@@ -76,6 +76,12 @@ public:
     int getHp() const { return hp; }
     
     /**
+     * @brief HPの設定
+     * @param newHp 新しいHP
+     */
+    void setHp(int newHp) { hp = std::max(0, std::min(maxHp, newHp)); if (hp <= 0) isAlive = false; }
+    
+    /**
      * @brief 最大HPの取得
      * @return 最大HP
      */

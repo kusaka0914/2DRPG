@@ -1,4 +1,6 @@
 #include "TownLayout.h"
+#include <SDL2/SDL.h>
+#include <tuple>
 
 const std::vector<std::pair<int, int>> TownLayout::BUILDINGS = {
     {8, 10},   // 道具屋（2x2）
@@ -163,4 +165,41 @@ void TownLayout::removeDuplicatePositions(std::vector<std::pair<int, int>>& posi
         }
     }
     positions = result;
+}
+
+std::tuple<Uint8, Uint8, Uint8> TownLayout::getBuildingColor(const std::string& buildingType) {
+    if (buildingType == "shop") {
+        return std::make_tuple(139, 69, 19); // 茶色
+    } else if (buildingType == "weapon_shop") {
+        return std::make_tuple(192, 192, 192); // 銀色
+    } else if (buildingType == "house") {
+        return std::make_tuple(34, 139, 34); // 緑色
+    } else if (buildingType == "castle") {
+        return std::make_tuple(255, 215, 0); // 金色
+    } else {
+        return std::make_tuple(128, 128, 128); // グレー
+    }
+}
+
+nlohmann::json TownLayout::positionsToJson(const std::vector<std::pair<int, int>>& positions) {
+    nlohmann::json jsonArray = nlohmann::json::array();
+    for (const auto& pos : positions) {
+        nlohmann::json posJson;
+        posJson["x"] = pos.first;
+        posJson["y"] = pos.second;
+        jsonArray.push_back(posJson);
+    }
+    return jsonArray;
+}
+
+std::vector<std::pair<int, int>> TownLayout::positionsFromJson(const nlohmann::json& j) {
+    std::vector<std::pair<int, int>> positions;
+    if (j.is_array()) {
+        for (const auto& posJson : j) {
+            int x = posJson["x"];
+            int y = posJson["y"];
+            positions.push_back({x, y});
+        }
+    }
+    return positions;
 } 

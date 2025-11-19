@@ -250,7 +250,7 @@ namespace UIConfig {
         battleConfig.winLossUI.totalAttackText.padding = 8;
         battleConfig.winLossUI.totalAttackText.playerWinFormat = "{playerName}が{turns}ターン分の攻撃を実行！";
         battleConfig.winLossUI.totalAttackText.enemyWinFormat = "敵が{turns}ターン分の攻撃を実行！";
-        battleConfig.winLossUI.totalAttackText.drawFormat = "両方がダメージを受ける";
+        battleConfig.winLossUI.totalAttackText.drawFormat = "相打ち！";
         battleConfig.winLossUI.totalAttackText.hesitateFormat = "{playerName}はメンタルの影響で攻撃をためらいました。";
         
         battleConfig.winLossUI.attackText.position.useRelative = false;

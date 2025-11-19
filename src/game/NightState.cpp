@@ -107,11 +107,13 @@ NightState::~NightState() {
 void NightState::enter() {
     try {
         // 保存された状態を復元（BattleStateから戻ってきた場合など）
+        bool restoredFromJson = false;
         const nlohmann::json* savedState = player->getSavedGameState();
         if (savedState && !savedState->is_null() && 
             savedState->contains("stateType") && 
             static_cast<StateType>((*savedState)["stateType"]) == StateType::NIGHT) {
             fromJson(*savedState);
+            restoredFromJson = true;
         }
         
         if (player) {
@@ -141,17 +143,23 @@ void NightState::enter() {
     int previousTotalKilled = totalResidentsKilled;
         
     // 新しい夜に入る時は、1夜に倒した人数をリセット
+    // ただし、fromJson()で復元した場合は、復元された値を保持するためスキップ
     static int lastNight = -1;
     int currentNight = player->getCurrentNight();
     bool isNewNight = (lastNight != currentNight);
     
-    if (isNewNight) {
+    if (isNewNight && !restoredFromJson) {
         // 新しい夜の開始時は、residentsKilledを必ず0にリセット
+        // （fromJson()で復元した場合は、復元された値を保持するためスキップ）
         residentsKilled = 0;
         // メッセージ表示フラグもリセット
         showResidentKilledMessage = false;
         showReturnToTownMessage = false;
         shouldReturnToTown = false;
+        lastNight = currentNight;
+    } else if (restoredFromJson) {
+        // fromJson()で復元した場合は、lastNightを現在の夜に設定して、
+        // 次回のenter()で正しく判定できるようにする
         lastNight = currentNight;
     }
         
@@ -1113,83 +1121,30 @@ void NightState::drawBuildings(Graphics& graphics) {
         int y = buildings[i].second;
         std::string type = buildingTypes[i];
         
-        if (type == "shop" && shopTexture) {
-            graphics.drawTexture(shopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               TILE_SIZE * 2, TILE_SIZE * 2);
-        } else if (type == "weapon_shop" && weaponShopTexture) {
-            graphics.drawTexture(weaponShopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               TILE_SIZE * 2, TILE_SIZE * 2);
-        } else if (type == "house" && houseTexture) {
-            graphics.drawTexture(houseTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               TILE_SIZE * 2, TILE_SIZE * 2);
-        } else if (type == "castle" && castleTexture) {
-            graphics.drawTexture(castleTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               TILE_SIZE * 2, TILE_SIZE * 2);
-        } else {
-            Uint8 r, g, b;
-            if (type == "shop") {
-                r = 139; g = 69; b = 19; // 茶色
-            } else if (type == "weapon_shop") {
-                r = 192; g = 192; b = 192; // 銀色
-            } else if (type == "house") {
-                r = 34; g = 139; b = 34; // 緑色
-            } else if (type == "castle") {
-                r = 255; g = 215; b = 0; // 金色
-            } else {
-                r = 128; g = 128; b = 128; // グレー
-            }
-            
-            graphics.setDrawColor(r, g, b, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            TILE_SIZE * 2, TILE_SIZE * 2, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            TILE_SIZE * 2, TILE_SIZE * 2);
+        SDL_Texture* texture = nullptr;
+        if (type == "shop") {
+            texture = shopTexture;
+        } else if (type == "weapon_shop") {
+            texture = weaponShopTexture;
+        } else if (type == "house") {
+            texture = houseTexture;
+        } else if (type == "castle") {
+            texture = castleTexture;
         }
+        
+        auto [r, g, b] = TownLayout::getBuildingColor(type);
+        GameState::drawBuilding(graphics, x, y, TILE_SIZE, 2, texture, r, g, b);
     }
     
     for (const auto& home : residentHomes) {
-        int x = home.first;
-        int y = home.second;
-        
-        if (residentHomeTexture) {
-            graphics.drawTexture(residentHomeTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               TILE_SIZE * 2, TILE_SIZE * 2);
-        } else {
-            graphics.setDrawColor(139, 69, 19, 255); // 茶色
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            TILE_SIZE * 2, TILE_SIZE * 2, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            TILE_SIZE * 2, TILE_SIZE * 2);
-        }
+        GameState::drawBuilding(graphics, home.first, home.second, TILE_SIZE, 2,
+                               residentHomeTexture, 139, 69, 19);
     }
 }
 
 void NightState::drawGate(Graphics& graphics) {
-    int gateX = TownLayout::GATE_X;
-    int gateY = TownLayout::GATE_Y;
-    
-    if (stoneTileTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        graphics.drawTexture(stoneTileTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
-    }
-    
-    if (toriiTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        // 鳥居は少し大きく描画（2タイルサイズ）
-        graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
-                           TILE_SIZE * 2, TILE_SIZE * 2);
-    } else {
-        int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
-        int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
-        graphics.setDrawColor(255, 0, 0, 255); // 赤色
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
-        graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
-    }
+    GameState::drawGate(graphics, TownLayout::GATE_X, TownLayout::GATE_Y, TILE_SIZE,
+                       stoneTileTexture, toriiTexture);
 }
 
 void NightState::checkGameProgress() {
@@ -1303,34 +1258,13 @@ nlohmann::json NightState::toJson() const {
     j["currentGuardY"] = currentGuardY;
     
     // 住民の位置を保存
-    nlohmann::json residentsJson = nlohmann::json::array();
-    for (const auto& pos : residents) {
-        nlohmann::json posJson;
-        posJson["x"] = pos.first;
-        posJson["y"] = pos.second;
-        residentsJson.push_back(posJson);
-    }
-    j["residents"] = residentsJson;
+    j["residents"] = TownLayout::positionsToJson(residents);
     
     // 衛兵の位置を保存
-    nlohmann::json guardsJson = nlohmann::json::array();
-    for (const auto& pos : guards) {
-        nlohmann::json posJson;
-        posJson["x"] = pos.first;
-        posJson["y"] = pos.second;
-        guardsJson.push_back(posJson);
-    }
-    j["guards"] = guardsJson;
+    j["guards"] = TownLayout::positionsToJson(guards);
     
     // 倒した住民の位置を保存
-    nlohmann::json killedResidentsJson = nlohmann::json::array();
-    for (const auto& pos : killedResidentPositions) {
-        nlohmann::json posJson;
-        posJson["x"] = pos.first;
-        posJson["y"] = pos.second;
-        killedResidentsJson.push_back(posJson);
-    }
-    j["killedResidentPositions"] = killedResidentsJson;
+    j["killedResidentPositions"] = TownLayout::positionsToJson(killedResidentPositions);
     
     // 衛兵のHPを保存
     nlohmann::json guardHpJson = nlohmann::json::array();
@@ -1383,32 +1317,17 @@ void NightState::fromJson(const nlohmann::json& j) {
     
     // 住民の位置を復元
     if (j.contains("residents") && j["residents"].is_array()) {
-        residents.clear();
-        for (const auto& posJson : j["residents"]) {
-            int x = posJson["x"];
-            int y = posJson["y"];
-            residents.push_back({x, y});
-        }
+        residents = TownLayout::positionsFromJson(j["residents"]);
     }
     
     // 衛兵の位置を復元
     if (j.contains("guards") && j["guards"].is_array()) {
-        guards.clear();
-        for (const auto& posJson : j["guards"]) {
-            int x = posJson["x"];
-            int y = posJson["y"];
-            guards.push_back({x, y});
-        }
+        guards = TownLayout::positionsFromJson(j["guards"]);
     }
     
     // 倒した住民の位置を復元（重複を除去）
     if (j.contains("killedResidentPositions") && j["killedResidentPositions"].is_array()) {
-        killedResidentPositions.clear();
-        for (const auto& posJson : j["killedResidentPositions"]) {
-            int x = posJson["x"];
-            int y = posJson["y"];
-            killedResidentPositions.push_back({x, y});
-        }
+        killedResidentPositions = TownLayout::positionsFromJson(j["killedResidentPositions"]);
         TownLayout::removeDuplicatePositions(killedResidentPositions);
         totalResidentsKilled = killedResidentPositions.size();
     }

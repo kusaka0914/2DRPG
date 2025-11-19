@@ -41,6 +41,7 @@ public:
         int judgeResult;  /**< @brief 判定結果（住民戦用、-999=未設定の場合はbattleLogicから取得） */
         std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
         int residentTurnCount;  /**< @brief 住民戦の現在のターン数（住民戦用、0の場合は通常の表示） */
+        int residentHitCount;  /**< @brief 住民戦で攻撃が成功した回数（住民戦用、0の場合は通常の表示） */
     };
     
     /**
@@ -55,6 +56,7 @@ public:
         const std::vector<std::string>* currentOptions;  /**< @brief ポインタに変更（参照はデフォルトコンストラクタを削除するため） */
         std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
         int residentTurnCount;  /**< @brief 住民戦の現在のターン数（住民戦用、0の場合は通常の表示） */
+        int residentHitCount;  /**< @brief 住民戦で攻撃が成功した回数（住民戦用、0の場合は通常の表示） */
     };
     
     /**
@@ -69,6 +71,7 @@ public:
         int playerWins;
         int enemyWins;
         std::string residentBehaviorHint;  /**< @brief 住民の様子（住民戦用、空文字列の場合は通常のヒントを表示） */
+        int residentHitCount;  /**< @brief 住民戦で攻撃が成功した回数（住民戦用、0の場合は通常の表示） */
     };
 
 private:
@@ -148,6 +151,7 @@ public:
      * @details プレイヤーと敵のHPバーをキャラクターの頭上に表示する。
      * 現在HPと最大HPの比率に応じてバーの長さが変わる。
      * 住民戦の場合は、通常のヒント表示の代わりに住民の様子を表示する。
+     * 住民戦の場合は、住民名を少し上に移動し、その下にlife.pngを3つ横並びで表示する。
      * 
      * @param playerX プレイヤーのX座標
      * @param playerY プレイヤーのY座標
@@ -156,9 +160,11 @@ public:
      * @param playerHeight プレイヤーの高さ
      * @param enemyHeight 敵の高さ
      * @param residentBehaviorHint 住民の様子（住民戦の場合のみ、デフォルトは空文字列）
+     * @param hideEnemyUI 敵のUIを非表示にするか（デフォルト: false）
+     * @param residentHitCount 住民戦で攻撃が成功した回数（住民戦の場合のみ、デフォルト: 0）
      */
     void renderHP(int playerX, int playerY, int enemyX, int enemyY,
-                  int playerHeight, int enemyHeight, const std::string& residentBehaviorHint = "", bool hideEnemyUI = false);
+                  int playerHeight, int enemyHeight, const std::string& residentBehaviorHint = "", bool hideEnemyUI = false, int residentHitCount = 0);
     
     /**
      * @brief ターン数表示（共通）

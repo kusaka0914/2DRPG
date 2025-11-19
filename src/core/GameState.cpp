@@ -247,6 +247,45 @@ void GameState::drawCharacterWithTexture(Graphics& graphics, SDL_Texture* textur
     }
 }
 
+void GameState::drawGate(Graphics& graphics, int gateX, int gateY, int tileSize,
+                        SDL_Texture* stoneTileTexture, SDL_Texture* toriiTexture) {
+    if (stoneTileTexture) {
+        int drawX = gateX * tileSize;
+        int drawY = gateY * tileSize;
+        graphics.drawTexture(stoneTileTexture, drawX, drawY, tileSize, tileSize);
+    }
+    
+    if (toriiTexture) {
+        int drawX = gateX * tileSize;
+        int drawY = gateY * tileSize;
+        // 鳥居は少し大きく描画（2タイルサイズ）
+        graphics.drawTexture(toriiTexture, drawX - tileSize/2, drawY - tileSize, 
+                           tileSize * 2, tileSize * 2);
+    } else {
+        int drawX = gateX * tileSize + tileSize/4;
+        int drawY = gateY * tileSize - tileSize/2;
+        graphics.setDrawColor(255, 0, 0, 255); // 赤色
+        graphics.drawRect(drawX, drawY, tileSize * 1.5, tileSize * 1.5, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(drawX, drawY, tileSize * 1.5, tileSize * 1.5, false);
+    }
+}
+
+void GameState::drawBuilding(Graphics& graphics, int x, int y, int tileSize, int buildingSize,
+                             SDL_Texture* texture, Uint8 fallbackR, Uint8 fallbackG, Uint8 fallbackB) {
+    if (texture) {
+        graphics.drawTexture(texture, x * tileSize, y * tileSize, 
+                           buildingSize * tileSize, buildingSize * tileSize);
+    } else {
+        graphics.setDrawColor(fallbackR, fallbackG, fallbackB, 255);
+        graphics.drawRect(x * tileSize, y * tileSize, 
+                        buildingSize * tileSize, buildingSize * tileSize, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(x * tileSize, y * tileSize, 
+                        buildingSize * tileSize, buildingSize * tileSize, false);
+    }
+}
+
 void GameState::startFadeOut(float duration, std::function<void()> onComplete) {
     isFadingOut = true;
     isFadingIn = false;
