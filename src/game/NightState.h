@@ -84,6 +84,7 @@ private:
     bool shouldReturnToTown; // 街に戻る処理を実行するフラグ（メッセージ表示後に使用）
     bool showGuardMessage; // 衛兵との戦闘前のメッセージ表示フラグ
     bool showGuardKilledMessage; // 衛兵を倒したメッセージ表示フラグ
+    bool showAllGuardsKilledMessage; // 全ての衛兵を倒したメッセージ表示フラグ
     int currentGuardX, currentGuardY; // 現在の戦闘対象の衛兵の位置
     
     // 夜の表示
@@ -185,6 +186,12 @@ public:
      * @param y 住民のY座標
      */
     void handleResidentKilled(int x, int y);
+    
+    /**
+     * @brief デバッグ用：衛兵を指定数だけ残す
+     * @param remainingCount 残す衛兵の数
+     */
+    void setRemainingGuards(int remainingCount);
     
 private:
     /**

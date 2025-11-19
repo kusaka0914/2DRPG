@@ -325,7 +325,8 @@ void SDL2Game::initializeGame() {
             std::cout << "ステータス: HP=" << maxHp << ", MP=" << maxMp << ", Attack=" << attack << ", Defense=" << defense << std::endl;
             std::cout << "倒した住民数: " << allResidentPositions.size() << std::endl;
             
-            stateManager.changeState(std::make_unique<NightState>(player));
+            auto nightState = std::make_unique<NightState>(player);
+            stateManager.changeState(std::move(nightState));
         } else if (debugStartState == "castle100") {
             // 城のデバッグモード（レベル100、住民・衛兵全員倒した後）：レベル100のプレイヤーを設定
             // 初期ステータス: HP=30, MP=20, Attack=8, Defense=3, Level=1
@@ -457,6 +458,69 @@ void SDL2Game::initializeGame() {
             
             // 魔王の城の状態から開始（fromCastleState = true）
             stateManager.changeState(std::make_unique<DemonCastleState>(player, true));
+        } else if (debugStartState == "night1guard") {
+            // 夜の街のデバッグモード（レベル100、住民全員倒した後、衛兵1体のみ残り）：レベル100のプレイヤーを設定
+            // 初期ステータス: HP=30, MP=20, Attack=8, Defense=3, Level=1
+            // レベルアップ増加: HP+5, MP+1, Attack+2, Defense+2 per level
+            // レベル100のステータス: HP=525, MP=119, Attack=206, Defense=199
+            int targetLevel = 100;
+            player->setLevel(targetLevel);
+            
+            // レベル100のステータスを計算して設定
+            int baseHp = 30;
+            int baseMp = 20;
+            int baseAttack = 8;
+            int baseDefense = 3;
+            
+            int levelUps = targetLevel - 1; // レベル1から100まで99回レベルアップ
+            int maxHp = baseHp + levelUps * 5;
+            int maxMp = baseMp + levelUps * 1;
+            int attack = baseAttack + levelUps * 2;
+            int defense = baseDefense + levelUps * 2;
+            
+            player->setMaxHp(maxHp);
+            player->setMaxMp(maxMp);
+            player->setAttack(attack);
+            player->setDefense(defense);
+            player->heal(maxHp); // HPを最大値に設定
+            player->restoreMp(maxMp); // MPを最大値に設定
+            
+            // 進行状態を設定
+            player->setCurrentNight(4); // 4夜目（住民を全て倒した後）
+            player->hasSeenRoomStory = true; // チュートリアル完了
+            player->hasSeenTownExplanation = true;
+            player->hasSeenFieldExplanation = true;
+            player->hasSeenFieldFirstVictoryExplanation = true;
+            player->hasSeenBattleExplanation = true;
+            player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
+            player->hasSeenResidentBattleExplanation = true; // 住民戦の説明も見たことにする
+            
+            // 信頼度を適切に設定（レベル100なので高い信頼度）
+            player->setKingTrust(30); // 住民を倒したので王様からの信頼度は低い
+            player->setDemonTrust(80); // 住民を倒したので魔王からの信頼度は高い
+            
+            // メンタルを適度に設定（住民を12人倒したので、6人以上なので+20*12=240、ただし上限100）
+            player->setMental(100); // メンタルは最大値
+            
+            // 夜の回数を設定（住民を全て倒した後なので4夜目）
+            TownState::s_nightCount = 4;
+            // 目標レベルをs_nightCountに基づいて計算（4夜目なので125）
+            TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
+            TownState::s_levelGoalAchieved = true; // 目標レベル達成済み
+            
+            // 全ての住民を倒した状態にする
+            const auto& allResidentPositions = TownLayout::RESIDENTS;
+            for (const auto& pos : allResidentPositions) {
+                player->addKilledResident(pos.first, pos.second);
+            }
+            
+            std::cout << "デバッグモード: レベル100のプレイヤーで夜の街から開始します（住民全員倒した後、衛兵1体のみ残り）" << std::endl;
+            std::cout << "ステータス: HP=" << maxHp << ", MP=" << maxMp << ", Attack=" << attack << ", Defense=" << defense << std::endl;
+            std::cout << "倒した住民数: " << allResidentPositions.size() << std::endl;
+            
+            auto nightState = std::make_unique<NightState>(player);
+            nightState->setRemainingGuards(1); // 衛兵を1体だけ残す
+            stateManager.changeState(std::move(nightState));
         } else if (debugStartState == "field") {
             stateManager.changeState(std::make_unique<FieldState>(player));
         } else if (debugStartState == "battle") {
@@ -465,7 +529,7 @@ void SDL2Game::initializeGame() {
             stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
         } else {
             std::cerr << "警告: 不明なデバッグ状態 '" << debugStartState << "'。メインメニューから開始します。" << std::endl;
-            std::cerr << "利用可能な状態: room, town, night, night100, castle100, castle, demon, demon100, field, battle" << std::endl;
+            std::cerr << "利用可能な状態: room, town, night, night100, night1guard, castle100, castle, demon, demon100, field, battle" << std::endl;
             stateManager.changeState(std::make_unique<MainMenuState>(player));
         }
     } else {

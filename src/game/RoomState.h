@@ -38,11 +38,9 @@ private:
     // 部屋のオブジェクト位置
     int bedX, bedY;      // ベッド
     int deskX, deskY;    // 机
-    int chestX, chestY;  // 宝箱
     int doorX, doorY;    // 出口ドア
     
     // ゲーム状態
-    bool hasOpenedChest; // 宝箱を開けたか
     bool isFirstTime;    // 初回プレイか
     bool isShowingMessage; // メッセージ表示中か
     
@@ -53,8 +51,6 @@ private:
     // 画像テクスチャ
     SDL_Texture* playerTexture;
     SDL_Texture* deskTexture;
-    SDL_Texture* chestClosedTexture;
-    SDL_Texture* chestOpenTexture;
     SDL_Texture* bedTexture;
     SDL_Texture* houseTileTexture;
     
@@ -172,10 +168,10 @@ private:
     bool isValidPosition(int x, int y) const;
     
     /**
-     * @brief オブジェクトの近くにいるかどうかの判定
+     * @brief オブジェクトの近くにいるかどうかの判定（上下左右のみ）
      * @param x X座標
      * @param y Y座標
-     * @return オブジェクトの近くにいるか
+     * @return オブジェクトの近くにいるか（上下左右のみ）
      */
     bool isNearObject(int x, int y) const;
     
@@ -193,11 +189,6 @@ private:
      * @brief 机との相互作用
      */
     void interactWithDesk();
-    
-    /**
-     * @brief 宝箱との相互作用
-     */
-    void interactWithChest();
     
     /**
      * @brief 街への退出

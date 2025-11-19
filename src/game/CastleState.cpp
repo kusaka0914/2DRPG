@@ -608,5 +608,9 @@ bool CastleState::isValidPosition(int x, int y) const {
 }
 
 bool CastleState::isNearObject(int x, int y) const {
-    return GameState::isNearObject(playerX, playerY, x, y);
+    // 上下左右のみに限定（斜めは除外）
+    int dx = abs(playerX - x);
+    int dy = abs(playerY - y);
+    // 上下左右のみ：dx==0かつdy<=1、またはdx<=1かつdy==0
+    return (dx == 0 && dy <= 1) || (dx <= 1 && dy == 0);
 } 

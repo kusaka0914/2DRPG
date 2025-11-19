@@ -24,23 +24,23 @@
         }
     },
     "evilActions": 0,
-    "exp": 2000,
+    "exp": 1000,
     "gameState": {
         "allDefeated": false,
         "castleFirstTime": true,
-        "dialogueStep": 3,
-        "fromNightState": false,
+        "dialogueStep": 1,
+        "fromNightState": true,
         "guardLeftDefeated": false,
         "guardRightDefeated": false,
-        "hasReceivedQuest": false,
-        "isTalkingToKing": true,
+        "hasReceivedQuest": true,
+        "isTalkingToKing": false,
         "kingDefeated": false,
         "playerX": 4,
         "playerY": 4,
         "shouldGoToDemonCastle": false,
         "stateType": 4
     },
-    "gold": 10000,
+    "gold": 5000,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
     "hasSeenCastleStory": true,
@@ -51,7 +51,7 @@
     "hasSeenResidentBattleExplanation": true,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 443,
+    "hp": 261,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -173,7 +173,7 @@
             "y": 4
         }
     ],
-    "kingTrust": 30,
+    "kingTrust": 33,
     "level": 100,
     "maxHp": 525,
     "maxMp": 119,

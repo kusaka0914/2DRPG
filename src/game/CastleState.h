@@ -232,10 +232,10 @@ private:
     bool isValidPosition(int x, int y) const;
     
     /**
-     * @brief オブジェクトの近くにいるかどうかの判定
+     * @brief オブジェクトの近くにいるかどうかの判定（上下左右のみ）
      * @param x X座標
      * @param y Y座標
-     * @return オブジェクトの近くにいるか
+     * @return オブジェクトの近くにいるか（上下左右のみ）
      */
     bool isNearObject(int x, int y) const;
     

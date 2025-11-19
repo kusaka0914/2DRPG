@@ -14,7 +14,7 @@ static bool s_roomFirstTime = true;
 RoomState::RoomState(std::shared_ptr<Player> player)
     : player(player), playerX(3), playerY(2), 
       messageBoard(nullptr), howtooperateBoard(nullptr), isShowingMessage(false),
-      hasOpenedChest(false), bedTexture(nullptr), houseTileTexture(nullptr),
+      bedTexture(nullptr), houseTileTexture(nullptr),
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       pendingWelcomeMessage(false), pendingMessage("") {
     isFadingOut = false;
@@ -207,15 +207,12 @@ void RoomState::setupUI(Graphics& graphics) {
 void RoomState::setupRoom() {
     bedX = 1; bedY = 1;      // ベッド（左上）
     deskX = 5; deskY = 1;    // 机（右上）
-    chestX = 5; chestY = 2;  // 宝箱（机の下）
     doorX = 3; doorY = 4;    // ドア（下部中央）
 }
 
 void RoomState::loadTextures(Graphics& graphics) {
     playerTexture = graphics.loadTexture("assets/textures/characters/player.png", "player");
     deskTexture = graphics.loadTexture("assets/textures/objects/desk.png", "desk");
-    chestClosedTexture = graphics.loadTexture("assets/textures/objects/closed_box.png", "chest_closed");
-    chestOpenTexture = graphics.loadTexture("assets/textures/objects/open_box.png", "chest_open");
     bedTexture = graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     houseTileTexture = graphics.loadTexture("assets/textures/tiles/housetile.png", "house_tile");
 }
@@ -232,9 +229,6 @@ void RoomState::checkInteraction() {
     }
     else if (isNearObject(deskX, deskY)) {
         interactWithDesk();
-    }
-    else if (isNearObject(chestX, chestY)) {
-        interactWithChest();
     }
     else if (isNearObject(doorX, doorY)) {
         exitToTown();
@@ -307,28 +301,6 @@ void RoomState::drawRoomObjects(Graphics& graphics) {
         graphics.drawRect(ROOM_OFFSET_X + deskX * TILE_SIZE, ROOM_OFFSET_Y + deskY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
     
-    if (hasOpenedChest) {
-        SDL_Texture* openBoxTexture = graphics.getTexture("open_box");
-        if (openBoxTexture) {
-            graphics.drawTexture(openBoxTexture, ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        } else {
-            graphics.setDrawColor(160, 160, 160, 255); // グレー（開いた状態）
-            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
-    } else {
-        SDL_Texture* closedBoxTexture = graphics.getTexture("closed_box");
-        if (closedBoxTexture) {
-            graphics.drawTexture(closedBoxTexture, ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        } else {
-            graphics.setDrawColor(255, 215, 0, 255); // ゴールド色
-            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(ROOM_OFFSET_X + chestX * TILE_SIZE, ROOM_OFFSET_Y + chestY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
-    }
-    
     graphics.setDrawColor(160, 82, 45, 255);
     graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
     graphics.setDrawColor(0, 0, 0, 255);
@@ -361,8 +333,7 @@ bool RoomState::isValidPosition(int x, int y) const {
     }
     
     if ((x >= bedX && x < bedX + 1 && y == bedY) ||  // ベッド（1マス分）
-        (x == deskX && y == deskY) ||                // 机
-        (x == chestX && y == chestY)) {              // 宝箱
+        (x == deskX && y == deskY)) {                // 机
         return false;
     }
     
@@ -370,7 +341,11 @@ bool RoomState::isValidPosition(int x, int y) const {
 }
 
 bool RoomState::isNearObject(int objX, int objY) const {
-    return GameState::isNearObject(playerX, playerY, objX, objY);
+    // 上下左右のみに限定（斜めは除外）
+    int dx = abs(playerX - objX);
+    int dy = abs(playerY - objY);
+    // 上下左右のみ：dx==0かつdy<=1、またはdx<=1かつdy==0
+    return (dx == 0 && dy <= 1) || (dx <= 1 && dy == 0);
 }
 
 void RoomState::showWelcomeMessage() {
@@ -378,22 +353,12 @@ void RoomState::showWelcomeMessage() {
 }
 
 void RoomState::interactWithBed() {
-    showMessage("ふかふかのベッドです。\nここでぐっすり眠っていました。\nHPが全回復しました！");
+    showMessage("ふかふかのベッドです。\nここでぐっすり眠っていました。");
     player->heal(player->getMaxHp());
 }
 
 void RoomState::interactWithDesk() {
-    showMessage("勉強机です。\n冒険者の心得: 「危険な時は町に逃げ込むこと。\nアイテムを有効活用すること。」");
-}
-
-void RoomState::interactWithChest() {
-    if (!hasOpenedChest) {
-        showMessage("宝箱を開けました！\n冒険用のお金が入っていました。\n100ゴールドを手に入れた！");
-        player->gainGold(100);
-        hasOpenedChest = true;
-    } else {
-        showMessage("空の宝箱です。すでに中身は取り出しました。");
-    }
+    showMessage("勉強机です。\n冒険者の心得: 「相手の傾向をしっかりと見極めること！」");
 }
 
 void RoomState::exitToTown() {
