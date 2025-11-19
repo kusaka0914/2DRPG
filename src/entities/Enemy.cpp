@@ -20,11 +20,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::GOBLIN:
             name = "ゴブリン";
             hp = maxHp = 50;
-            attack = 18;
+            attack = 50;
             defense = 6;
             level = baseLevel = 5;
             baseHp = 50;
-            baseAttack = 18;
+            baseAttack = 26;
             baseDefense = 6;
             goldReward = 8;
             expReward = 50;
@@ -37,7 +37,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             defense = 13;
             level = baseLevel = 10;
             baseHp = 95;
-            baseAttack = 32;
+            baseAttack = 42;
             baseDefense = 13;
             goldReward = 15;
             expReward = 100;
@@ -50,7 +50,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             defense = 18;
             level = baseLevel = 15;
             baseHp = 125;
-            baseAttack = 42;
+            baseAttack = 58;
             baseDefense = 18;
             goldReward = 50;
             expReward = 150;
@@ -59,11 +59,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::SKELETON:
             name = "スケルトン";
             hp = maxHp = 160;
-            attack = 52;
+            attack = 74;
             defense = 23;
             level = baseLevel = 20;
             baseHp = 160;
-            baseAttack = 52;
+            baseAttack = 74;
             baseDefense = 23;
             goldReward = 80;
             expReward = 200;
@@ -72,11 +72,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::GHOST:
             name = "ゴースト";
             hp = maxHp = 190;
-            attack = 62;
+            attack = 90;
             defense = 28;
             level = baseLevel = 25;
             baseHp = 190;
-            baseAttack = 62;
+            baseAttack = 90;
             baseDefense = 28;
             goldReward = 120;
             expReward = 250;
@@ -85,11 +85,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::VAMPIRE:
             name = "ヴァンパイア";
             hp = maxHp = 220;
-            attack = 72;
+            attack = 106;
             defense = 33;
             level = baseLevel = 30;
             baseHp = 220;
-            baseAttack = 72;
+            baseAttack = 106;
             baseDefense = 33;
             goldReward = 200;
             expReward = 300;
@@ -98,11 +98,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::DEMON_SOLDIER:
             name = "デーモンソルジャー";
             hp = maxHp = 250;
-            attack = 150;
+            attack = 122;
             defense = 38;
             level = baseLevel = 35;
             baseHp = 250;
-            baseAttack = 150;
+            baseAttack = 122;
             baseDefense = 38;
             goldReward = 300;
             expReward = 350;
@@ -111,11 +111,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::WEREWOLF:
             name = "ウェアウルフ";
             hp = maxHp = 285;
-            attack = 165;
+            attack = 138;
             defense = 43;
             level = baseLevel = 40;
             baseHp = 285;
-            baseAttack = 165;
+            baseAttack = 138;
             baseDefense = 43;
             goldReward = 400;
             expReward = 400;
@@ -124,11 +124,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::MINOTAUR:
             name = "ミノタウロス";
             hp = maxHp = 315;
-            attack = 180;
+            attack = 154;
             defense = 48;
             level = baseLevel = 45;
             baseHp = 315;
-            baseAttack = 180;
+            baseAttack = 154;
             baseDefense = 48;
             goldReward = 500;
             expReward = 450;
@@ -137,11 +137,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::CYCLOPS:
             name = "サイクロプス";
             hp = maxHp = 345;
-            attack = 195;
+            attack = 170;
             defense = 53;
             level = baseLevel = 50;
             baseHp = 345;
-            baseAttack = 195;
+            baseAttack = 170;
             baseDefense = 53;
             goldReward = 600;
             expReward = 500;
@@ -150,11 +150,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::GARGOYLE:
             name = "ガーゴイル";
             hp = maxHp = 375;
-            attack = 210;
+            attack = 186;
             defense = 58;
             level = baseLevel = 55;
             baseHp = 375;
-            baseAttack = 210;
+            baseAttack = 186;
             baseDefense = 58;
             goldReward = 650;
             expReward = 550;
@@ -163,11 +163,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::PHANTOM:
             name = "ファントム";
             hp = maxHp = 405;
-            attack = 225;
+            attack = 202;
             defense = 63;
             level = baseLevel = 60;
             baseHp = 405;
-            baseAttack = 225;
+            baseAttack = 202;
             baseDefense = 63;
             goldReward = 800;
             expReward = 600;
@@ -176,11 +176,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::DARK_KNIGHT:
             name = "ダークナイト";
             hp = maxHp = 435;
-            attack = 240;
+            attack = 218;
             defense = 68;
             level = baseLevel = 65;
             baseHp = 435;
-            baseAttack = 240;
+            baseAttack = 218;
             baseDefense = 68;
             goldReward = 1000;
             expReward = 650;
@@ -189,11 +189,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::ICE_GIANT:
             name = "アイスジャイアント";
             hp = maxHp = 465;
-            attack = 255;
+            attack = 234;
             defense = 73;
             level = baseLevel = 70;
             baseHp = 465;
-            baseAttack = 255;
+            baseAttack = 234;
             baseDefense = 73;
             goldReward = 1200;
             expReward = 700;
@@ -202,11 +202,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::FIRE_DEMON:
             name = "ファイアデーモン";
             hp = maxHp = 500;
-            attack = 270;
+            attack = 250;
             defense = 78;
             level = baseLevel = 75;
             baseHp = 500;
-            baseAttack = 270;
+            baseAttack = 250;
             baseDefense = 78;
             goldReward = 1400;
             expReward = 750;
@@ -215,11 +215,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::SHADOW_LORD:
             name = "シャドウロード";
             hp = maxHp = 530;
-            attack = 285;
+            attack = 266;
             defense = 83;
             level = baseLevel = 80;
             baseHp = 530;
-            baseAttack = 285;
+            baseAttack = 266;
             baseDefense = 83;
             goldReward = 1600;
             expReward = 800;
@@ -228,11 +228,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::ANCIENT_DRAGON:
             name = "エンシェントドラゴン";
             hp = maxHp = 560;
-            attack = 300;
+            attack = 282;
             defense = 88;
             level = baseLevel = 85;
             baseHp = 560;
-            baseAttack = 300;
+            baseAttack = 282;
             baseDefense = 88;
             goldReward = 2000;
             expReward = 850;
@@ -241,11 +241,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::CHAOS_BEAST:
             name = "カオスビースト";
             hp = maxHp = 590;
-            attack = 315;
+            attack = 298;
             defense = 93;
             level = baseLevel = 90;
             baseHp = 590;
-            baseAttack = 315;
+            baseAttack = 298;
             baseDefense = 93;
             goldReward = 2500;
             expReward = 900;
@@ -254,11 +254,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::ELDER_GOD:
             name = "エルダーゴッド";
             hp = maxHp = 620;
-            attack = 330;
+            attack = 314;
             defense = 98;
             level = baseLevel = 95;
             baseHp = 620;
-            baseAttack = 330;
+            baseAttack = 314;
             baseDefense = 98;
             goldReward = 3000;
             expReward = 950;
@@ -267,7 +267,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::DEMON_LORD:
             name = "魔王";
             hp = maxHp = 700;
-            attack = 353;
+            attack = 330;
             defense = 105;
             level = baseLevel = 100;
             baseHp = 700;
@@ -280,11 +280,11 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
         case EnemyType::GUARD:
             name = "衛兵";
             hp = maxHp = 650;
-            attack = 380;
+            attack = 346;
             defense = 110;
             level = baseLevel = 105;
             baseHp = 650;
-            baseAttack = 380;
+            baseAttack = 330;
             baseDefense = 110;
             goldReward = 5000;
             expReward = 1000;

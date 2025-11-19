@@ -590,6 +590,167 @@ void SDL2Game::initializeGame() {
             // バトルから開始（スライムとの戦闘）
             auto enemy = std::make_unique<Enemy>(EnemyType::SLIME);
             stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_slime") {
+            // スライムとの戦闘（プレイヤーと敵ともにレベル1）
+            int enemyLevel = 1;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::SLIME);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_goblin") {
+            // ゴブリンとの戦闘（プレイヤーと敵ともにレベル5）
+            int enemyLevel = 5;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::GOBLIN);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_orc") {
+            // オークとの戦闘（プレイヤーと敵ともにレベル10）
+            int enemyLevel = 10;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::ORC);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_dragon") {
+            // ドラゴンとの戦闘（プレイヤーと敵ともにレベル15）
+            int enemyLevel = 15;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::DRAGON);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_skeleton") {
+            // スケルトンとの戦闘（プレイヤーと敵ともにレベル20）
+            int enemyLevel = 20;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::SKELETON);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_ghost") {
+            // ゴーストとの戦闘（プレイヤーと敵ともにレベル25）
+            int enemyLevel = 25;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::GHOST);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_vampire") {
+            // ヴァンパイアとの戦闘（プレイヤーと敵ともにレベル30）
+            int enemyLevel = 30;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::VAMPIRE);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_demon_soldier") {
+            // デーモンソルジャーとの戦闘（プレイヤーと敵ともにレベル35）
+            int enemyLevel = 35;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::DEMON_SOLDIER);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_werewolf") {
+            // ウェアウルフとの戦闘（プレイヤーと敵ともにレベル40）
+            int enemyLevel = 40;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::WEREWOLF);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_minotaur") {
+            // ミノタウロスとの戦闘（プレイヤーと敵ともにレベル45）
+            int enemyLevel = 45;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::MINOTAUR);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_cyclops") {
+            // サイクロプスとの戦闘（プレイヤーと敵ともにレベル50）
+            int enemyLevel = 50;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::CYCLOPS);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_gargoyle") {
+            // ガーゴイルとの戦闘（プレイヤーと敵ともにレベル55）
+            int enemyLevel = 55;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::GARGOYLE);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_phantom") {
+            // ファントムとの戦闘（プレイヤーと敵ともにレベル60）
+            int enemyLevel = 60;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::PHANTOM);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_dark_knight") {
+            // ダークナイトとの戦闘（プレイヤーと敵ともにレベル65）
+            int enemyLevel = 65;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::DARK_KNIGHT);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_ice_giant") {
+            // アイスジャイアントとの戦闘（プレイヤーと敵ともにレベル70）
+            int enemyLevel = 70;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::ICE_GIANT);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_fire_demon") {
+            // ファイアデーモンとの戦闘（プレイヤーと敵ともにレベル75）
+            int enemyLevel = 75;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::FIRE_DEMON);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_shadow_lord") {
+            // シャドウロードとの戦闘（プレイヤーと敵ともにレベル80）
+            int enemyLevel = 80;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::SHADOW_LORD);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_ancient_dragon") {
+            // エンシェントドラゴンとの戦闘（プレイヤーと敵ともにレベル85）
+            int enemyLevel = 85;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::ANCIENT_DRAGON);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_chaos_beast") {
+            // カオスビーストとの戦闘（プレイヤーと敵ともにレベル90）
+            int enemyLevel = 90;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::CHAOS_BEAST);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_elder_god") {
+            // エルダーゴッドとの戦闘（プレイヤーと敵ともにレベル95）
+            int enemyLevel = 95;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::ELDER_GOD);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_demon_lord") {
+            // 魔王との戦闘（プレイヤーと敵ともにレベル100）
+            int enemyLevel = 100;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_guard") {
+            // 衛兵との戦闘（プレイヤーと敵ともにレベル105）
+            int enemyLevel = 105;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::GUARD);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+        } else if (debugStartState == "battle_king") {
+            // 王様との戦闘（プレイヤーと敵ともにレベル1）
+            int enemyLevel = 1;
+            setupPlayerForBattle(player, enemyLevel);
+            auto enemy = std::make_unique<Enemy>(EnemyType::KING);
+            enemy->setLevel(enemyLevel);
+            stateManager.changeState(std::make_unique<BattleState>(player, std::move(enemy)));
         } else {
             std::cerr << "警告: 不明なデバッグ状態 '" << debugStartState << "'。メインメニューから開始します。" << std::endl;
             std::cerr << "利用可能な状態: room, town, night, night100, night1guard, castle100, castle, demon, demon100, field, battle" << std::endl;
@@ -714,4 +875,41 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/objects/desk.png", "desk");
     graphics.loadTexture("assets/textures/objects/closed_box.png", "closed_box");
     graphics.loadTexture("assets/textures/objects/open_box.png", "open_box");
+}
+
+void SDL2Game::setupPlayerForBattle(std::shared_ptr<Player> player, int level) {
+    // プレイヤーのレベルを設定
+    player->setLevel(level);
+    
+    // 初期ステータス: HP=30, MP=20, Attack=8, Defense=3, Level=1
+    // レベルアップ増加: HP+5, MP+1, Attack+2, Defense+2 per level
+    int baseHp = 30;
+    int baseMp = 20;
+    int baseAttack = 8;
+    int baseDefense = 3;
+    
+    int levelUps = level - 1; // レベル1から指定レベルまで
+    int maxHp = baseHp + levelUps * 5;
+    int maxMp = baseMp + levelUps * 1;
+    int attack = baseAttack + levelUps * 2;
+    int defense = baseDefense + levelUps * 2;
+    
+    player->setMaxHp(maxHp);
+    player->setMaxMp(maxMp);
+    player->setAttack(attack);
+    player->setDefense(defense);
+    player->heal(maxHp); // HPを最大値に設定
+    player->restoreMp(maxMp); // MPを最大値に設定
+    
+    // 説明を見たことにする
+    player->hasSeenRoomStory = true;
+    player->hasSeenTownExplanation = true;
+    player->hasSeenFieldExplanation = true;
+    player->hasSeenFieldFirstVictoryExplanation = true;
+    player->hasSeenBattleExplanation = true;
+    player->hasSeenNightExplanation = true;
+    player->hasSeenResidentBattleExplanation = true;
+    
+    std::cout << "デバッグモード: レベル" << level << "のプレイヤーで戦闘を開始します" << std::endl;
+    std::cout << "ステータス: HP=" << maxHp << ", MP=" << maxMp << ", Attack=" << attack << ", Defense=" << defense << std::endl;
 } 
