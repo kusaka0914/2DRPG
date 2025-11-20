@@ -4617,18 +4617,49 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
     }
     
     // ダメージリストの準備（初回のみ）
-    if (pendingDamages.empty()) {
+    // LAST_CHANCE_JUDGE_RESULTフェーズでは、前のフェーズで設定されたpendingDamagesをクリアして、
+    // 改めて5ターン分のダメージを準備する必要がある
+    static bool damageListPrepared = false;
+    if (!damageListPrepared) {
         // 勝利数が3以上の場合のみ、ダメージリストを準備
         if (playerWins >= 3) {
-            float multiplier = 1.0f; // 最後のチャンスモードでは倍率なし
+            float multiplier = 1.5f; // 最後のチャンスモードでは1.5倍
             std::cout << "[DEBUG] LAST_CHANCE: prepareDamageList()を呼び出します。playerWins=" << playerWins 
                       << ", commandTurnCount=" << battleLogic->getCommandTurnCount() << std::endl;
             prepareDamageList(multiplier);
-            std::cout << "[DEBUG] LAST_CHANCE: prepareDamageList()完了。pendingDamages.size()=" << pendingDamages.size() << std::endl;
+            std::cout << "[DEBUG] LAST_CHANCE: prepareDamageList()完了。pendingDamages.size()=" << pendingDamages.size() 
+                      << ", spellWinTurns.size()=" << spellWinTurns.size() << std::endl;
             for (size_t i = 0; i < pendingDamages.size(); i++) {
                 std::cout << "[DEBUG] LAST_CHANCE: pendingDamages[" << i << "] - damage=" << pendingDamages[i].damage 
                           << ", commandType=" << pendingDamages[i].commandType << std::endl;
             }
+            
+            // 窮地モードでは、呪文で勝利したターンも含めて、全ての勝利ターンでダメージを適用する
+            // 呪文で勝利したターンについては、自動で攻撃魔法を選択してダメージを適用する
+            for (int turnIndex : spellWinTurns) {
+                int baseAttack = player->getTotalAttack();
+                if (player->hasNextTurnBonusActive()) {
+                    baseAttack = static_cast<int>(baseAttack * player->getNextTurnMultiplier());
+                }
+                int baseDamage = baseAttack;
+                int damage = std::max(1, static_cast<int>((baseDamage - enemy->getEffectiveDefense()) * multiplier));
+                
+                if (damage > 0) {
+                    BattleLogic::DamageInfo spellDamage;
+                    spellDamage.damage = damage;
+                    spellDamage.isPlayerHit = false;
+                    spellDamage.isDraw = false;
+                    spellDamage.playerDamage = 0;
+                    spellDamage.enemyDamage = 0;
+                    spellDamage.commandType = BattleConstants::COMMAND_SPELL;
+                    spellDamage.isCounterRush = false;
+                    spellDamage.skipAnimation = false;
+                    pendingDamages.push_back(spellDamage);
+                    std::cout << "[DEBUG] LAST_CHANCE: 呪文で勝利したターン" << turnIndex << "のダメージを追加。damage=" << damage << std::endl;
+                }
+            }
+            
+            std::cout << "[DEBUG] LAST_CHANCE: 呪文ダメージ追加後。pendingDamages.size()=" << pendingDamages.size() << std::endl;
             
             // prepareDamageList()は全ての勝利ターンのダメージを準備する
             // 防御で勝利した場合は5回のダメージエントリが追加されるため、
@@ -4661,6 +4692,7 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
             }
             return;
         }
+        damageListPrepared = true;
     }
     
     // アニメーション更新（結果発表アニメーション用）
@@ -4756,7 +4788,14 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                         // 敵が倒れたかチェック
                         if (!enemy->getIsAlive()) {
                             // 敵が倒れたら勝利
+                            std::cout << "[DEBUG] LAST_CHANCE: ダメージ適用時に敵が倒れました。checkBattleEnd()を呼びます。" << std::endl;
                             checkBattleEnd();
+                            // checkBattleEnd()でフェーズが変更された場合は処理を終了
+                            if (currentPhase != BattlePhase::LAST_CHANCE_JUDGE_RESULT) {
+                                std::cout << "[DEBUG] LAST_CHANCE: フェーズが変更されました。currentPhase=" << static_cast<int>(currentPhase) << std::endl;
+                                return;
+                            }
+                            std::cout << "[DEBUG] LAST_CHANCE: 警告！checkBattleEnd()後もフェーズが変更されていません！" << std::endl;
                             return;
                         }
                     }
@@ -4800,10 +4839,18 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
             // 敵が倒れたかチェック
             if (!enemy->getIsAlive()) {
                 // 敵が倒れたら勝利
+                std::cout << "[DEBUG] LAST_CHANCE: 全ダメージ適用完了後に敵が倒れました。checkBattleEnd()を呼びます。" << std::endl;
                 checkBattleEnd();
+                // checkBattleEnd()でフェーズが変更された場合は処理を終了
+                if (currentPhase != BattlePhase::LAST_CHANCE_JUDGE_RESULT) {
+                    std::cout << "[DEBUG] LAST_CHANCE: フェーズが変更されました。currentPhase=" << static_cast<int>(currentPhase) << std::endl;
+                    return;
+                }
+                std::cout << "[DEBUG] LAST_CHANCE: 警告！checkBattleEnd()後もフェーズが変更されていません！" << std::endl;
                 return;
             } else {
                 // 敵が倒れなかった場合、敵から攻撃を受けてゲームオーバー
+                std::cout << "[DEBUG] LAST_CHANCE: 敵が倒れませんでした。敵の攻撃を受けてゲームオーバー..." << std::endl;
                 int enemyDamage = battleLogic->calculateEnemyAttackDamage();
                 player->takeDamage(enemyDamage);
                 addBattleLog("敵が倒れませんでした。敵の攻撃を受けてゲームオーバー...");
