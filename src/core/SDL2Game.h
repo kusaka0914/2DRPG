@@ -107,11 +107,4 @@ private:
      * @return 前フレームからの経過時間（秒）
      */
     float calculateDeltaTime();
-    
-    /**
-     * @brief 戦闘用にプレイヤーのレベルとステータスを設定
-     * @param player プレイヤーへの共有ポインタ
-     * @param level 設定するレベル
-     */
-    static void setupPlayerForBattle(std::shared_ptr<Player> player, int level);
-}; 
+   
