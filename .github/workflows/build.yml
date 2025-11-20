@@ -46,48 +46,48 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config Release --target DragonQuestRPG
+        run: cmake --build build --config Release --target FallenHeroAndTheDoomedCapital
 
       - name: Gather files
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist\DragonQuestRPG | Out-Null
+          New-Item -ItemType Directory -Force -Path dist\FallenHeroAndTheDoomedCapital | Out-Null
           
           # 実行ファイルのパスを確認（Visual Studioジェネレーターの出力パス）
-          $exePath = "build\Release\DragonQuestRPG.exe"
+          $exePath = "build\Release\FallenHeroAndTheDoomedCapital.exe"
           if (-not (Test-Path $exePath)) {
             # 代替パスを試す
-            $exePath = "build\x64\Release\DragonQuestRPG.exe"
+            $exePath = "build\x64\Release\FallenHeroAndTheDoomedCapital.exe"
             if (-not (Test-Path $exePath)) {
-              Write-Error "実行ファイルが見つかりません: build\Release\DragonQuestRPG.exe または build\x64\Release\DragonQuestRPG.exe"
+              Write-Error "実行ファイルが見つかりません: build\Release\FallenHeroAndTheDoomedCapital.exe または build\x64\Release\FallenHeroAndTheDoomedCapital.exe"
               exit 1
             }
           }
           
-          Copy-Item $exePath dist\DragonQuestRPG\DragonQuestRPG.exe
-          if (Test-Path assets) { Copy-Item assets dist\DragonQuestRPG\assets -Recurse }
+          Copy-Item $exePath dist\FallenHeroAndTheDoomedCapital\FallenHeroAndTheDoomedCapital.exe
+          if (Test-Path assets) { Copy-Item assets dist\FallenHeroAndTheDoomedCapital\assets -Recurse }
           
           # vcpkgから必要なDLLをコピー
           $vcpkgInstalled = "$env:VCPKG_ROOT\installed\x64-windows\bin"
           if (Test-Path $vcpkgInstalled) {
-            Copy-Item "$vcpkgInstalled\*.dll" dist\DragonQuestRPG\ -ErrorAction SilentlyContinue
+            Copy-Item "$vcpkgInstalled\*.dll" dist\FallenHeroAndTheDoomedCapital\ -ErrorAction SilentlyContinue
           }
 
           # 起動BATを生成
           @'
           @echo off
           cd /d "%~dp0"
-          DragonQuestRPG.exe
+          FallenHeroAndTheDoomedCapital.exe
           pause
-          '@ | Out-File -Encoding ascii dist\DragonQuestRPG\start_game.bat
+          '@ | Out-File -Encoding ascii dist\FallenHeroAndTheDoomedCapital\start_game.bat
 
-          Compress-Archive -Path dist\DragonQuestRPG -DestinationPath DragonQuestRPG_win_${{ github.ref_name }}.zip -Force
+          Compress-Archive -Path dist\FallenHeroAndTheDoomedCapital -DestinationPath FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
-          path: DragonQuestRPG_win_${{ github.ref_name }}.zip
+          path: FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip
 
   build-macos:
     runs-on: macos-latest
@@ -109,28 +109,28 @@ jobs:
 
       - name: Gather files
         run: |
-          mkdir -p dist/DragonQuestRPG
-          cp build/DragonQuestRPG dist/DragonQuestRPG/
-          if [ -d "assets" ]; then cp -r assets dist/DragonQuestRPG/assets; fi
+          mkdir -p dist/FallenHeroAndTheDoomedCapital
+          cp build/FallenHeroAndTheDoomedCapital dist/FallenHeroAndTheDoomedCapital/
+          if [ -d "assets" ]; then cp -r assets dist/FallenHeroAndTheDoomedCapital/assets; fi
           
           # 起動スクリプトを生成
-          cat > dist/DragonQuestRPG/start_game.sh << 'EOF'
+          cat > dist/FallenHeroAndTheDoomedCapital/start_game.sh << 'EOF'
           #!/bin/bash
           cd "$(dirname "$0")"
-          ./DragonQuestRPG
+          ./FallenHeroAndTheDoomedCapital
           EOF
-          chmod +x dist/DragonQuestRPG/start_game.sh
+          chmod +x dist/FallenHeroAndTheDoomedCapital/start_game.sh
 
           # zipファイルを作成
           cd dist
-          zip -r ../DragonQuestRPG_mac_${{ github.ref_name }}.zip DragonQuestRPG
+          zip -r ../FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip FallenHeroAndTheDoomedCapital
           cd ..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-zip
-          path: DragonQuestRPG_mac_${{ github.ref_name }}.zip
+          path: FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip
 
   create-release:
     needs: [build-windows, build-macos]
@@ -146,7 +146,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows-zip/DragonQuestRPG_win_${{ github.ref_name }}.zip
-            artifacts/macos-zip/DragonQuestRPG_mac_${{ github.ref_name }}.zip
+            artifacts/windows-zip/FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip
+            artifacts/macos-zip/FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip
           generate_release_notes: true
 

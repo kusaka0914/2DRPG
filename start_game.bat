@@ -36,10 +36,10 @@ if errorlevel 1 (
 
 REM ゲームを起動
 echo ゲームを起動中・・・
-if exist "Release\DragonQuestRPG.exe" (
-    Release\DragonQuestRPG.exe
-) else if exist "DragonQuestRPG.exe" (
-    DragonQuestRPG.exe
+if exist "Release\FallenHeroAndTheDoomedCapital.exe" (
+    Release\FallenHeroAndTheDoomedCapital.exe
+) else if exist "FallenHeroAndTheDoomedCapital.exe" (
+    FallenHeroAndTheDoomedCapital.exe
 ) else (
     echo 実行ファイルが見つかりません。
     pause

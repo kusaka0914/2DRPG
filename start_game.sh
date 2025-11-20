@@ -35,7 +35,7 @@ fi
 
 # ゲームを起動
 echo "ゲームを起動中・・・"
-./DragonQuestRPG
+./FallenHeroAndTheDoomedCapital
 
 cd ..
 

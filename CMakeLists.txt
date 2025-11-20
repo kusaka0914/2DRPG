@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DragonQuestRPG VERSION 1.0.0 LANGUAGES CXX)
+project(FallenHeroAndTheDoomedCapital VERSION 1.0.0 LANGUAGES CXX)
 
 # C++標準を設定
 set(CMAKE_CXX_STANDARD 17)

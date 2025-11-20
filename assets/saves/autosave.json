@@ -1,7 +1,7 @@
 {
-    "attack": 14,
+    "attack": 8,
     "currentNight": 0,
-    "defense": 9,
+    "defense": 3,
     "demonTrust": 50,
     "equipment": {
         "equipment": {
@@ -24,27 +24,32 @@
         }
     },
     "evilActions": 0,
-    "exp": 21,
+    "exp": 0,
     "gameState": {
         "explanationStep": 0,
-        "playerX": 11,
+        "gameExplanationTexts": [
+            "ここがフィールドです。たくさんモンスターがいますね。\nモンスターの上に表示されているのがモンスターのレベルです。",
+            "そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。\n自分のレベルに合わせて戦うモンスターを選びましょう。",
+            "そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。\nまずはモンスターがいる場所に移動してみてください。"
+        ],
+        "playerX": 25,
         "playerY": 8,
         "showGameExplanation": false,
         "stateType": 1
     },
-    "gold": 10,
+    "gold": 0,
     "goodActions": 0,
-    "hasSeenBattleExplanation": true,
+    "hasSeenBattleExplanation": false,
     "hasSeenCastleStory": true,
     "hasSeenDemonCastleStory": true,
     "hasSeenFieldExplanation": true,
-    "hasSeenFieldFirstVictoryExplanation": true,
-    "hasSeenLastChanceExplanation": true,
+    "hasSeenFieldFirstVictoryExplanation": false,
+    "hasSeenLastChanceExplanation": false,
     "hasSeenNightExplanation": false,
     "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 45,
+    "hp": 30,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -117,16 +122,16 @@
         ]
     },
     "killedResidents": [],
-    "kingTrust": 56,
-    "level": 4,
-    "maxHp": 45,
-    "maxMp": 23,
+    "kingTrust": 50,
+    "level": 1,
+    "maxHp": 30,
+    "maxMp": 20,
     "mental": 100,
-    "mp": 23,
+    "mp": 20,
     "name": "勇者",
     "nightCount": 0,
-    "nightTimer": 843.2824096679688,
-    "nightTimerActive": true,
+    "nightTimer": 0.0,
+    "nightTimerActive": false,
     "targetLevel": 25,
     "trustLevel": 50
 }
