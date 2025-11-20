@@ -6,6 +6,7 @@
 #include "NightState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -36,6 +37,9 @@ void RoomState::enter() {
     
     // 現在のStateの状態を保存
     saveCurrentState(player);
+    
+    // room.oggを再生（自室に入場して魔王の城に入るまでの間）
+    AudioManager::getInstance().playMusic("room", -1);
     
     // ストーリーメッセージUIを既に見た場合は表示しない
     if (s_roomFirstTime && !player->hasSeenRoomStory) {

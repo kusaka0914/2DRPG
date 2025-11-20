@@ -20,6 +20,7 @@ Player::Player(const std::string& name)
             hasSeenFieldFirstVictoryExplanation(false),
             hasSeenBattleExplanation(false),
             hasSeenResidentBattleExplanation(false),
+            hasSeenLastChanceExplanation(false),
             hasSeenNightExplanation(false),
              hasSeenRoomStory(false),
              hasSeenCastleStory(false),
@@ -299,6 +300,7 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
     j["hasSeenFieldFirstVictoryExplanation"] = hasSeenFieldFirstVictoryExplanation;
     j["hasSeenBattleExplanation"] = hasSeenBattleExplanation;
     j["hasSeenResidentBattleExplanation"] = hasSeenResidentBattleExplanation;
+    j["hasSeenLastChanceExplanation"] = hasSeenLastChanceExplanation;
     j["hasSeenNightExplanation"] = hasSeenNightExplanation;
     
     // ストーリーメッセージUIの完了状態
@@ -440,6 +442,7 @@ bool Player::loadGame(const std::string& filename, float& nightTimer, bool& nigh
         if (j.contains("hasSeenFieldFirstVictoryExplanation")) hasSeenFieldFirstVictoryExplanation = j["hasSeenFieldFirstVictoryExplanation"];
         if (j.contains("hasSeenBattleExplanation")) hasSeenBattleExplanation = j["hasSeenBattleExplanation"];
         if (j.contains("hasSeenResidentBattleExplanation")) hasSeenResidentBattleExplanation = j["hasSeenResidentBattleExplanation"];
+        if (j.contains("hasSeenLastChanceExplanation")) hasSeenLastChanceExplanation = j["hasSeenLastChanceExplanation"];
         if (j.contains("hasSeenNightExplanation")) hasSeenNightExplanation = j["hasSeenNightExplanation"];
         
         // ストーリーメッセージUIの完了状態

@@ -1,8 +1,8 @@
 {
-    "attack": 36,
-    "currentNight": 0,
-    "defense": 31,
-    "demonTrust": 50,
+    "attack": 56,
+    "currentNight": 1,
+    "defense": 51,
+    "demonTrust": 60,
     "equipment": {
         "equipment": {
             "accessory": {
@@ -25,7 +25,108 @@
     },
     "evilActions": 0,
     "exp": 0,
-    "gameOverExit": true,
+    "gameState": {
+        "allGuardsKilled": false,
+        "allResidentsKilled": false,
+        "canAttackGuards": false,
+        "canEnterCastle": false,
+        "currentGuardX": 0,
+        "currentGuardY": 0,
+        "currentTargetX": 19,
+        "currentTargetY": 14,
+        "guardHp": [
+            2,
+            2,
+            2,
+            2
+        ],
+        "guards": [
+            {
+                "x": 21,
+                "y": 5
+            },
+            {
+                "x": 17,
+                "y": 13
+            },
+            {
+                "x": 17,
+                "y": 7
+            },
+            {
+                "x": 1,
+                "y": 6
+            }
+        ],
+        "isShowingMercyChoice": false,
+        "isShowingResidentChoice": false,
+        "isStealthMode": true,
+        "killedResidentPositions": [
+            {
+                "x": 19,
+                "y": 14
+            }
+        ],
+        "playerX": 18,
+        "playerY": 15,
+        "residents": [
+            {
+                "x": 3,
+                "y": 7
+            },
+            {
+                "x": 7,
+                "y": 6
+            },
+            {
+                "x": 11,
+                "y": 8
+            },
+            {
+                "x": 5,
+                "y": 10
+            },
+            {
+                "x": 19,
+                "y": 8
+            },
+            {
+                "x": 23,
+                "y": 6
+            },
+            {
+                "x": 27,
+                "y": 7
+            },
+            {
+                "x": 6,
+                "y": 13
+            },
+            {
+                "x": 24,
+                "y": 13
+            },
+            {
+                "x": 3,
+                "y": 14
+            },
+            {
+                "x": 20,
+                "y": 4
+            }
+        ],
+        "residentsKilled": 1,
+        "selectedChoice": 0,
+        "shouldReturnToTown": false,
+        "showAllGuardsKilledMessage": false,
+        "showGuardKilledMessage": false,
+        "showGuardMessage": false,
+        "showResidentKilledMessage": false,
+        "showReturnToTownMessage": false,
+        "stateType": 6,
+        "stealthLevel": 1,
+        "totalResidentsKilled": 1
+    },
     "gold": 0,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
@@ -33,11 +134,12 @@
     "hasSeenDemonCastleStory": false,
     "hasSeenFieldExplanation": true,
     "hasSeenFieldFirstVictoryExplanation": true,
+    "hasSeenLastChanceExplanation": false,
     "hasSeenNightExplanation": true,
-    "hasSeenResidentBattleExplanation": true,
+    "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 0,
+    "hp": 150,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -109,17 +211,22 @@
             }
         ]
     },
-    "killedResidents": [],
-    "kingTrust": 50,
-    "level": 15,
-    "maxHp": 100,
-    "maxMp": 34,
-    "mental": 100,
-    "mp": 34,
+    "killedResidents": [
+        {
+            "x": 19,
+            "y": 14
+        }
+    ],
+    "kingTrust": 40,
+    "level": 25,
+    "maxHp": 150,
+    "maxMp": 44,
+    "mental": 50,
+    "mp": 44,
     "name": "勇者",
-    "nightCount": 0,
+    "nightCount": 1,
     "nightTimer": 0.0,
     "nightTimerActive": false,
-    "targetLevel": 0,
+    "targetLevel": 50,
     "trustLevel": 50
 }

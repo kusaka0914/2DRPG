@@ -80,6 +80,7 @@ private:
     Enemy* enemy;
     BattleLogic* battleLogic;
     BattleAnimationController* animationController;
+    bool hasUsedLastChanceMode;  /**< @brief 最後のチャンスモードを使用したか */
 
 public:
     /**
@@ -95,6 +96,12 @@ public:
      */
     BattleUI(Graphics* graphics, std::shared_ptr<Player> player, Enemy* enemy,
              BattleLogic* battleLogic, BattleAnimationController* animationController);
+    
+    /**
+     * @brief 最後のチャンスモード使用フラグを設定
+     * @param hasUsed 最後のチャンスモードを使用したか
+     */
+    void setHasUsedLastChanceMode(bool hasUsed);
     
     /**
      * @brief 読み合い判定の視覚的演出

@@ -10,6 +10,7 @@
 #include "../io/InputManager.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include "../utils/TownLayout.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -105,6 +106,10 @@ NightState::~NightState() {
 }
 
 void NightState::enter() {
+    // 夜の街に入った時は night.ogg を再生
+    AudioManager::getInstance().stopMusic();
+    AudioManager::getInstance().playMusic("night", -1);
+    
     try {
         // 保存された状態を復元（BattleStateから戻ってきた場合など）
         bool restoredFromJson = false;
@@ -649,9 +654,9 @@ void NightState::handleInput(const InputManager& input) {
                 showResidentKilledMessage = false;
                 // 魔王の信頼度が上がったメッセージを表示
                 if (totalResidentsKilled <= 6) {
-                    showMessage("住民を倒しました。\n勇者: ああぁぁぁぁ、ごめんなさい。倒さないと私が魔王にやられちゃうんだ、、\n\n魔王からの信頼度 +10 メンタル -20");
+                    showMessage("住民を倒しました。\n勇者: ああぁぁぁ！！本当にごめんなさい。私じゃ魔王に勝てないから仕方ないのよ・・・\n\n魔王からの信頼度 +10 メンタル -20");
                 } else {
-                    showMessage("住民を倒しました。\n勇者: ふふっ、だんだん楽しくなってきたぁ、、！\n\n魔王からの信頼度 +10 メンタル +20");
+                    showMessage("住民を倒しました。\n勇者: フフッ！！だんだん楽シクなってきたヨォ！！\n\n魔王からの信頼度 +10 メンタル +20");
                 }
                 // 3人目を倒した場合は、次のメッセージで街に戻る処理を実行するフラグを設定
                 // ただし、住民を全て倒した場合はメッセージを表示しない
@@ -846,7 +851,7 @@ void NightState::attackResident(int x, int y) {
     choiceOptions.push_back("倒す");
     choiceOptions.push_back("倒さない");
     
-    showMessage("住民：「お願いします！助けてください！\n私には家族がいるんです、、！」");
+    showMessage("住民：「勇者様！？なぜこのようなことを！？お許しください！\n私には家族がいるんです・・・！どうか・・・」");
     isShowingResidentChoice = true;
     selectedChoice = 0;
 }
@@ -911,7 +916,7 @@ void NightState::executeResidentChoice(int choice) {
         player->changeDemonTrust(-10);
         player->changeMental(20);
         
-        showMessage("住民：「ありがとうございます！本当にありがとうございます！」\n魔王からの信頼度 -10 メンタル +20");
+        showMessage("住民：「ありがとうございます！本当にありがとうございます！この事は絶対に秘密にしますから！」\n魔王からの信頼度 -10 メンタル +20");
         return;
     }
     
@@ -1326,7 +1331,7 @@ void NightState::checkGuardInteraction() {
             currentGuardY = guard.second;
             
             // メッセージを表示
-            showMessage("衛兵：「勇者！住民を襲っていたのはお前だったのか！これ以上は好きにはさせないぞ！」");
+            showMessage("衛兵：「勇者！やはりお前だったのか！俺はお前が怪しいと思っていたんだ！これ以上は好きにはさせない！」");
             showGuardMessage = true;
             return;
         }

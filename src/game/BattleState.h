@@ -36,6 +36,10 @@ enum class BattlePhase {
     DESPERATE_JUDGE,        // 読み合い判定（6ターン、各ターン結果を順に表示）
     DESPERATE_JUDGE_RESULT, // 結果発表（窮地モード）
     DESPERATE_EXECUTE,      /**< @brief 実行（ダメージ倍率あり） */
+    LAST_CHANCE_INTRO,      /**< @brief 最後のチャンスモード：イントロ（終焉突破UI表示） */
+    LAST_CHANCE_COMMAND_SELECT, /**< @brief 最後のチャンスモード：5ターン分のコマンド選択 */
+    LAST_CHANCE_JUDGE,      /**< @brief 最後のチャンスモード：読み合い判定（5ターン） */
+    LAST_CHANCE_JUDGE_RESULT, /**< @brief 最後のチャンスモード：結果発表 */
     RESIDENT_TURN_RESULT,    /**< @brief 住民との戦闘用：ターン結果処理（ダメージ適用など） */
     // 既存のフェーズ（後方互換性のため残す）
     PLAYER_TURN,            /**< @brief プレイヤーのターン（古いシステム） */
@@ -140,6 +144,13 @@ private:
     // isDesperateModeはBattleLogicで管理（単一責任の原則）
     int currentSelectingTurn;          // 現在選択中のターン（0から開始）
     bool isFirstCommandSelection;      // 最初のコマンド選択か（窮地モード判定用）
+    bool hasUsedLastChanceMode;        // 最後のチャンスモードを使用したか
+    bool damageListPrepared;           /**< @brief ダメージリストが準備されたか */
+    bool enemyAttackStarted;           /**< @brief 敵の攻撃アニメーションが開始されたか */
+    float enemyAttackTimer;             /**< @brief 敵の攻撃アニメーションタイマー（秒） */
+    bool battleMusicStarted;           /**< @brief 戦闘BGMが開始されたか */
+    bool lastChanceIntroMusicStopped;  /**< @brief 終焉解放イントロで音楽が停止されたか */
+    bool adversityMusicStarted;        /**< @brief 終焉解放コマンド選択で音楽が開始されたか */
     
     // EXECUTEフェーズ用
     int currentExecutingTurn;          // 現在実行中のターン（0から開始）
@@ -198,6 +209,7 @@ private:
     void hideMessage();
     void setupGameExplanation();
     void setupResidentBattleExplanation();
+    void setupLastChanceExplanation();
     void showExplanationMessage(const std::string& message);
     void clearExplanationMessage();
     void loadBattleImages();
@@ -233,6 +245,7 @@ private:
     // 重複コードの共通化（DRY原則）
     void updateJudgePhase(float deltaTime, bool isDesperateMode);
     void updateJudgeResultPhase(float deltaTime, bool isDesperateMode);
+    void updateLastChanceJudgeResultPhase(float deltaTime);
     
     // 勝敗UI表示用
     void renderWinLossUI(Graphics& graphics, bool isResultPhase = false);

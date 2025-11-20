@@ -82,6 +82,7 @@ namespace BattleConstants {
     // コマンド定数
     constexpr int NORMAL_TURN_COUNT = 3;
     constexpr int DESPERATE_TURN_COUNT = 6;
+    constexpr int LAST_CHANCE_TURN_COUNT = 5;
     constexpr int COMMAND_ATTACK = 0;
     constexpr int COMMAND_DEFEND = 1;
     constexpr int COMMAND_SPELL = 2;

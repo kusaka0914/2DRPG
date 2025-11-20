@@ -10,6 +10,7 @@
 #include "../entities/Enemy.h"
 #include "../core/utils/ui_config_manager.h"
 #include "../core/GameState.h"
+#include "../core/AudioManager.h"
 #include "../utils/TownLayout.h"
 #include <iostream>
 #include <string>
@@ -25,6 +26,11 @@ SDL2Game::~SDL2Game() {
 bool SDL2Game::initialize() {
     if (!graphics.initialize("ドラクエ風RPG", SCREEN_WIDTH, SCREEN_HEIGHT)) {
         std::cerr << "グラフィックス初期化に失敗しました。" << std::endl;
+        return false;
+    }
+    
+    if (!AudioManager::getInstance().initialize()) {
+        std::cerr << "オーディオ初期化に失敗しました。" << std::endl;
         return false;
     }
     
@@ -50,6 +56,7 @@ void SDL2Game::run() {
 }
 
 void SDL2Game::cleanup() {
+    AudioManager::getInstance().cleanup();
     graphics.cleanup();
 }
 
@@ -786,6 +793,29 @@ void SDL2Game::loadResources() {
     }
     // 画像リソース読み込み
     loadGameImages();
+    
+    // BGM読み込み
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/title.ogg", "title");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/room.ogg", "room");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/demon.ogg", "demon");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/field.ogg", "field");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/battle.ogg", "battle");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/adversity.ogg", "adversity");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/gameover.ogg", "gameover");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/night.ogg", "night");
+    
+    // 効果音読み込み
+    AudioManager::getInstance().loadSound("assets/audio/se/decide.ogg", "decide");
+    AudioManager::getInstance().loadSound("assets/audio/se/button.ogg", "button");
+    AudioManager::getInstance().loadSound("assets/audio/se/drum.ogg", "drum");
+    AudioManager::getInstance().loadSound("assets/audio/se/drum2.ogg", "drum2");
+    AudioManager::getInstance().loadSound("assets/audio/se/attack.ogg", "attack");
+    AudioManager::getInstance().loadSound("assets/audio/se/result.ogg", "result");
+    AudioManager::getInstance().loadSound("assets/audio/se/rush.ogg", "rush");
+    AudioManager::getInstance().loadSound("assets/audio/se/command.ogg", "command");
+    AudioManager::getInstance().loadSound("assets/audio/se/intro.ogg", "intro");
+    // BGM読み込み（クリア曲）
+    AudioManager::getInstance().loadMusic("assets/audio/se/clear.ogg", "clear");
 }
 
 float SDL2Game::calculateDeltaTime() {
@@ -805,6 +835,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/characters/player_field.png", "player_field");
     graphics.loadTexture("assets/textures/characters/player_defeat.png", "player_defeat");
     graphics.loadTexture("assets/textures/characters/player_captured.png", "player_captured");
+    graphics.loadTexture("assets/textures/characters/player_adversity.png", "player_adversity");
     graphics.loadTexture("assets/textures/characters/king.png", "king");
     graphics.loadTexture("assets/textures/characters/king.png", "enemy_王様"); // 戦闘画面用
     graphics.loadTexture("assets/textures/characters/guard.png", "guard");

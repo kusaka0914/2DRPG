@@ -112,7 +112,8 @@ void CastleState::update(float deltaTime) {
             }
         } else if (s_castleFirstTime) {
             if (stateManager) {
-                stateManager->changeState(std::make_unique<DemonCastleState>(player));
+                // 最初の方のイベントで王様の城から魔王の城に入る際はdemon.oggを流す
+                stateManager->changeState(std::make_unique<DemonCastleState>(player, true));
                 s_castleFirstTime = false;
             }
         }

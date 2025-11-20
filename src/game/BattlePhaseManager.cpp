@@ -56,6 +56,22 @@ BattlePhaseManager::PhaseTransitionResult BattlePhaseManager::updatePhase(
             // ダメージ適用完了後、BattleState側で直接COMMAND_SELECTまたはENDへ遷移
             break;
             
+        case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
+            if (context.currentSelectingTurn >= battleLogic->getCommandTurnCount()) {
+                result.shouldTransition = true;
+                result.nextPhase = BattlePhase::LAST_CHANCE_JUDGE;
+                result.resetTimer = true;
+            }
+            break;
+            
+        case BattlePhase::LAST_CHANCE_JUDGE:
+            break;
+            
+        case BattlePhase::LAST_CHANCE_JUDGE_RESULT:
+            // LAST_CHANCE_JUDGE_RESULTフェーズ内で全処理を完結するため、自動遷移は行わない
+            // ダメージ適用完了後、BattleState側で直接ENDへ遷移
+            break;
+            
         default:
             break;
     }
@@ -76,6 +92,9 @@ bool BattlePhaseManager::shouldTransitionToNextPhase(
         case BattlePhase::DESPERATE_COMMAND_SELECT:
             return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
             
+        case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
+            return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
+            
         default:
             return false;
     }
@@ -93,6 +112,9 @@ BattlePhase BattlePhaseManager::getNextPhase(
             
         case BattlePhase::DESPERATE_COMMAND_SELECT:
             return BattlePhase::DESPERATE_JUDGE;
+            
+        case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
+            return BattlePhase::LAST_CHANCE_JUDGE;
             
         default:
             return currentPhase;

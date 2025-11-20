@@ -208,28 +208,19 @@ void BattleLogic::generateEnemyCommands() {
     int attackProb, defendProb, spellProb;
     switch (enemyBehaviorType) {
         case EnemyBehaviorType::ATTACK_TYPE:
-            // attackProb = 65;
-            // defendProb = 10;
-            // spellProb = 25;
-            attackProb = 100;
-            defendProb = 0;
-            spellProb = 0;
+            attackProb = 60;
+            defendProb = 10;
+            spellProb = 30;
             break;
         case EnemyBehaviorType::DEFEND_TYPE:
-            // attackProb = 25;
-            // defendProb = 65;
-            // spellProb = 10;
-            attackProb = 0;
-            defendProb = 100;
-            spellProb = 0;
+            attackProb = 30;
+            defendProb = 60;
+            spellProb = 10;
             break;
         case EnemyBehaviorType::SPELL_TYPE:
-            // attackProb = 10;
-            // defendProb = 25;
-            // spellProb = 65;
-            attackProb = 0;
-            defendProb = 0;
-            spellProb = 100;
+            attackProb = 10;
+            defendProb = 30;
+            spellProb = 60;
             break;
     }
     

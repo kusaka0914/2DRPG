@@ -287,7 +287,7 @@
         },
         "baseWidth": 400,
         "baseHeight": 40,
-        "color": [255, 215, 0, 255],
+        "color": [255, 255, 0, 255],
         "format": "3連勝！ダメージ{multiplier}倍ボーナス！"
       },
       "damageBonus": {
@@ -496,16 +496,16 @@
       "text": {
         "position": {
           "useRelative": false,
-          "absoluteX": 550,
-          "absoluteY": 200
+          "absoluteX": 490,
+          "absoluteY": 153
         },
         "color": [255, 0, 0, 255]
       },
       "background": {
         "position": {
           "useRelative": false,
-          "absoluteX": 540,
-          "absoluteY": 190
+          "absoluteX": 440,
+          "absoluteY": 140
         },
         "width": 200,
         "height": 40
@@ -517,16 +517,16 @@
       "text": {
         "position": {
           "useRelative": false,
-          "absoluteX": 550,
-          "absoluteY": 250
+          "absoluteX": 460,
+          "absoluteY": 200
         },
         "color": [255, 255, 255, 255]
       },
       "background": {
         "position": {
           "useRelative": false,
-          "absoluteX": 540,
-          "absoluteY": 240
+          "absoluteX": 440,
+          "absoluteY": 190
         },
         "width": 200,
         "height": 40

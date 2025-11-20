@@ -7,6 +7,7 @@
 #include "../gfx/Graphics.h"
 #include "../io/InputManager.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 
 GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& reason, 
@@ -26,6 +27,9 @@ GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& 
 
 void GameOverState::enter() {
     setupUI();
+    // ゲームオーバー時は gameover.ogg を再生
+    AudioManager::getInstance().stopMusic();
+    AudioManager::getInstance().playMusic("gameover", -1);
 }
 
 void GameOverState::exit() {
@@ -327,11 +331,11 @@ void GameOverState::setupUI() {
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.text.position, 1100, 650);
     std::string instructionText;
     if (isTargetLevelEnemy) {
-        instructionText = "Rキーで再戦 / Enterキーで3分延長してフィールドに戻る";
+        instructionText = "再戦 : Rキー / 3分延長してフィールドに戻る : ENTER";
     } else if (hasBattleEnemyInfo) {
-        instructionText = "EnterまたはAボタンで再戦";
+        instructionText = "再戦 : ENTER";
     } else {
-        instructionText = "EnterまたはAボタンで夜の街に再スタート";
+        instructionText = "再スタート : ENTER";
     }
     auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, instructionText, "default");
     instructionLabelPtr->setColor(gameOverConfig.instruction.text.color);

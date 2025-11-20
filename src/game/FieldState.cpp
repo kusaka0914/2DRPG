@@ -9,6 +9,7 @@
 #include "NightState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <random>
 #include <vector>
@@ -94,6 +95,10 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 
 void FieldState::enter() {
     loadFieldImages();
+    
+    // field.oggを再生（街とフィールドで流す、既に再生中なら続けて再生）
+    // playMusic()内で既に同じ音楽が再生中の場合は何もしないため、stopMusic()は呼ばない
+    AudioManager::getInstance().playMusic("field", -1);
     
     // 初回フィールド説明を表示するかチェック
     // 説明UIを既に見た場合は表示しない

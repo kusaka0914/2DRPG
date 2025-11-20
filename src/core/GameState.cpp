@@ -1,6 +1,7 @@
 #include "GameState.h"
 #include "../entities/Player.h"
 #include "../game/TownState.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <cmath>
 #include <algorithm>
@@ -66,6 +67,9 @@ void GameState::showMessage(const std::string& message, Label* messageBoard, boo
     if (messageBoard) {
         messageBoard->setText(message);
         isShowingMessage = true;
+        
+        // メッセージ表示時に効果音を再生
+        AudioManager::getInstance().playSound("decide", 0);
     }
 }
 
