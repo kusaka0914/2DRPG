@@ -1337,7 +1337,7 @@ void BattleState::render(Graphics& graphics) {
         }
         pos = statusText.find("{turns}");
         if (pos != std::string::npos) {
-            statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 8);
+            statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 7);
         }
         SDL_Color statusColor = attackMultiplierConfig.textColor;
         SDL_Texture* statusTexture = graphics.createTextTexture(statusText, "default", statusColor);
@@ -3214,13 +3214,13 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                 }
                 pos = totalAttackText.find("{turns}");
                 if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(playerWins) + totalAttackText.substr(pos + 8);
+                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(playerWins) + totalAttackText.substr(pos + 7);
                 }
             } else if (enemyWins > playerWins) {
                 totalAttackText = totalAttackTextConfig.enemyWinFormat;
                 size_t pos = totalAttackText.find("{turns}");
                 if (pos != std::string::npos) {
-                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(enemyWins) + totalAttackText.substr(pos + 8);
+                    totalAttackText = totalAttackText.substr(0, pos) + std::to_string(enemyWins) + totalAttackText.substr(pos + 7);
                 }
             } else {
                 totalAttackText = totalAttackTextConfig.drawFormat;

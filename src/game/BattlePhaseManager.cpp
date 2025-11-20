@@ -89,35 +89,4 @@ bool BattlePhaseManager::shouldTransitionToNextPhase(
         case BattlePhase::COMMAND_SELECT:
             return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
             
-        case BattlePhase::DESPERATE_COMMAND_SELECT:
-            return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
-            
-        case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
-            return context.currentSelectingTurn >= battleLogic->getCommandTurnCount();
-            
-        default:
-            return false;
-    }
-}
-
-BattlePhase BattlePhaseManager::getNextPhase(
-    BattlePhase currentPhase, const PhaseUpdateContext& context) const {
-    
-    switch (currentPhase) {
-        case BattlePhase::INTRO:
-            return BattlePhase::COMMAND_SELECT;
-            
-        case BattlePhase::COMMAND_SELECT:
-            return BattlePhase::JUDGE;
-            
-        case BattlePhase::DESPERATE_COMMAND_SELECT:
-            return BattlePhase::DESPERATE_JUDGE;
-            
-        case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
-            return BattlePhase::LAST_CHANCE_JUDGE;
-            
-        default:
-            return currentPhase;
-    }
-}
-
+        case B
