@@ -24,7 +24,7 @@
         }
     },
     "evilActions": 0,
-    "exp": 0,
+    "exp": 96,
     "gameState": {
         "allGuardsKilled": false,
         "allResidentsKilled": false,
@@ -42,20 +42,20 @@
         ],
         "guards": [
             {
-                "x": 21,
-                "y": 5
-            },
-            {
                 "x": 17,
                 "y": 13
             },
             {
-                "x": 17,
-                "y": 7
+                "x": 3,
+                "y": 9
+            },
+            {
+                "x": 3,
+                "y": 9
             },
             {
                 "x": 1,
-                "y": 6
+                "y": 13
             }
         ],
         "isShowingMercyChoice": false,
@@ -67,7 +67,7 @@
                 "y": 14
             }
         ],
-        "playerX": 18,
+        "playerX": 19,
         "playerY": 15,
         "residents": [
             {
@@ -127,14 +127,14 @@
         "stealthLevel": 1,
         "totalResidentsKilled": 1
     },
-    "gold": 0,
+    "gold": 312,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
-    "hasSeenCastleStory": false,
-    "hasSeenDemonCastleStory": false,
+    "hasSeenCastleStory": true,
+    "hasSeenDemonCastleStory": true,
     "hasSeenFieldExplanation": true,
     "hasSeenFieldFirstVictoryExplanation": true,
-    "hasSeenLastChanceExplanation": false,
+    "hasSeenLastChanceExplanation": true,
     "hasSeenNightExplanation": true,
     "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
@@ -217,16 +217,16 @@
             "y": 14
         }
     ],
-    "kingTrust": 40,
+    "kingTrust": 79,
     "level": 25,
     "maxHp": 150,
     "maxMp": 44,
-    "mental": 50,
+    "mental": 80,
     "mp": 44,
     "name": "勇者",
     "nightCount": 1,
     "nightTimer": 0.0,
     "nightTimerActive": false,
-    "targetLevel": 50,
+    "targetLevel": 25,
     "trustLevel": 50
 }

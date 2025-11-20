@@ -1328,17 +1328,8 @@ void BattleState::render(Graphics& graphics) {
         // 倍率を文字列に変換（小数点以下1桁まで表示）
         int multiplierInt = static_cast<int>(multiplier * 10);
         std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
-        // JSONからフォーマットを取得
-        std::string statusText = attackMultiplierConfig.format;
-        // プレースホルダーを置換（安全な方法：文字列を前後で結合）
-        size_t pos = statusText.find("{multiplier}");
-        if (pos != std::string::npos) {
-            statusText = statusText.substr(0, pos) + multiplierStr + statusText.substr(pos + 13);
-        }
-        pos = statusText.find("{turns}");
-        if (pos != std::string::npos) {
-            statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 7);
-        }
+        // プレースホルダーを使わずに直接文字列を組み立て（文字化けを防ぐため）
+        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
         SDL_Color statusColor = attackMultiplierConfig.textColor;
         SDL_Texture* statusTexture = graphics.createTextTexture(statusText, "default", statusColor);
         if (statusTexture) {
