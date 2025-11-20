@@ -1,8 +1,8 @@
 {
-    "attack": 56,
-    "currentNight": 1,
-    "defense": 51,
-    "demonTrust": 80,
+    "attack": 14,
+    "currentNight": 0,
+    "defense": 9,
+    "demonTrust": 50,
     "equipment": {
         "equipment": {
             "accessory": {
@@ -24,27 +24,27 @@
         }
     },
     "evilActions": 0,
-    "exp": 0,
+    "exp": 21,
     "gameState": {
         "explanationStep": 0,
         "playerX": 10,
-        "playerY": 14,
+        "playerY": 13,
         "showGameExplanation": false,
         "stateType": 1
     },
-    "gold": 0,
+    "gold": 10,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
-    "hasSeenCastleStory": false,
-    "hasSeenDemonCastleStory": false,
+    "hasSeenCastleStory": true,
+    "hasSeenDemonCastleStory": true,
     "hasSeenFieldExplanation": true,
     "hasSeenFieldFirstVictoryExplanation": true,
-    "hasSeenLastChanceExplanation": false,
-    "hasSeenNightExplanation": true,
-    "hasSeenResidentBattleExplanation": true,
+    "hasSeenLastChanceExplanation": true,
+    "hasSeenNightExplanation": false,
+    "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 150,
+    "hp": 45,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -116,30 +116,17 @@
             }
         ]
     },
-    "killedResidents": [
-        {
-            "x": 19,
-            "y": 14
-        },
-        {
-            "x": 24,
-            "y": 13
-        },
-        {
-            "x": 27,
-            "y": 7
-        }
-    ],
-    "kingTrust": 20,
-    "level": 25,
-    "maxHp": 150,
-    "maxMp": 44,
-    "mental": 10,
-    "mp": 44,
+    "killedResidents": [],
+    "kingTrust": 56,
+    "level": 4,
+    "maxHp": 45,
+    "maxMp": 23,
+    "mental": 100,
+    "mp": 23,
     "name": "勇者",
-    "nightCount": 1,
-    "nightTimer": 863.7481689453125,
+    "nightCount": 0,
+    "nightTimer": 873.48291015625,
     "nightTimerActive": true,
-    "targetLevel": 50,
+    "targetLevel": 25,
     "trustLevel": 50
 }
