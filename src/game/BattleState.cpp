@@ -385,6 +385,20 @@ void BattleState::update(float deltaTime) {
             updateJudgePhase(deltaTime, false); // 通常戦と同じ（isDesperateMode=false）
             break;
             
+        case BattlePhase::LAST_CHANCE_INTRO: {
+            phaseTimer += deltaTime;
+            
+            // 2秒後にコマンド選択フェーズに遷移
+            if (phaseTimer >= 3.0f) {
+                currentPhase = BattlePhase::LAST_CHANCE_COMMAND_SELECT;
+                battleLogic->setCommandTurnCount(BattleConstants::LAST_CHANCE_TURN_COUNT);
+                initializeCommandSelection();
+                phaseTimer = 0.0f;
+                addBattleLog("最後のチャンス！5ターンで勝負だ！");
+            }
+            break;
+        }
+            
         case BattlePhase::LAST_CHANCE_JUDGE_RESULT: {
             // フェーズが既に変更されている場合は処理をスキップ
             if (currentPhase != BattlePhase::LAST_CHANCE_JUDGE_RESULT) {
@@ -515,6 +529,58 @@ void BattleState::render(Graphics& graphics) {
             // 背景画像を画面全体に描画（画面サイズに完全に合わせて描画、アスペクト比は無視）
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         }
+    }
+    
+    // LAST_CHANCE_INTROフェーズの特別な描画
+    if (currentPhase == BattlePhase::LAST_CHANCE_INTRO) {
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        
+        // 背景画像を描画
+        SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
+        if (bgTexture) {
+            graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
+        }
+        
+        // 「終焉突破」テキストを画面中央に表示（3倍サイズ）
+        std::string text = "終焉解放";
+        SDL_Color textColor = {255, 0, 0, 255}; // 金色
+        
+        // テキストをテクスチャとして取得
+        SDL_Texture* textTexture = graphics.createTextTexture(text, "default", textColor);
+        if (textTexture) {
+            int textWidth, textHeight;
+            SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+            
+            // 3倍サイズに拡大
+            constexpr float scale = 2.0f;
+            int scaledWidth = static_cast<int>(textWidth * scale);
+            int scaledHeight = static_cast<int>(textHeight * scale);
+            
+            // 画面中央に配置
+            int textX = (screenWidth - scaledWidth) / 2;
+            int textY = (screenHeight - scaledHeight) / 2;
+            
+            // 背景を描画（パディング付き、スケールに応じて調整）
+            constexpr int padding = 20;
+            int bgX = textX - padding;
+            int bgY = textY - padding;
+            int bgWidth = scaledWidth + padding * 2;
+            int bgHeight = scaledHeight + padding * 2;
+            
+            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+            graphics.setDrawColor(255, 0, 0, 255);
+            graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+            
+            // テキストを3倍サイズで描画
+            graphics.drawTexture(textTexture, textX, textY, scaledWidth, scaledHeight);
+            
+            SDL_DestroyTexture(textTexture);
+        }
+        
+        graphics.present();
+        return;
     }
     
     // INTROフェーズの特別な描画
@@ -720,7 +786,11 @@ void BattleState::render(Graphics& graphics) {
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
-        SDL_Texture* playerTex = graphics.getTexture("player");
+        // 窮地モードではplayer_adversity.pngを使用
+        SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics.getTexture("player_adversity") : graphics.getTexture("player");
+        if (!playerTex && hasUsedLastChanceMode) {
+            playerTex = graphics.getTexture("player"); // フォールバック
+        }
         int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
         if (playerTex) {
             int textureWidth, textureHeight;
@@ -882,7 +952,11 @@ void BattleState::render(Graphics& graphics) {
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
-        SDL_Texture* playerTex = graphics.getTexture("player");
+        // 窮地モードではplayer_adversity.pngを使用
+        SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics.getTexture("player_adversity") : graphics.getTexture("player");
+        if (!playerTex && hasUsedLastChanceMode) {
+            playerTex = graphics.getTexture("player"); // フォールバック
+        }
         
         // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
         int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
@@ -976,7 +1050,11 @@ void BattleState::render(Graphics& graphics) {
         int playerX = playerBaseX + (int)charState.playerAttackOffsetX + (int)charState.playerHitOffsetX;
         int playerY = playerBaseY + (int)charState.playerAttackOffsetY + (int)charState.playerHitOffsetY;
         
-        SDL_Texture* playerTex = graphics.getTexture("player");
+        // 窮地モードではplayer_adversity.pngを使用
+        SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics.getTexture("player_adversity") : graphics.getTexture("player");
+        if (!playerTex && hasUsedLastChanceMode) {
+            playerTex = graphics.getTexture("player"); // フォールバック
+        }
         
         // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
         int playerHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
@@ -1178,7 +1256,11 @@ void BattleState::render(Graphics& graphics) {
         playerY += static_cast<int>(shakeState.shakeOffsetY);
     }
     
-    SDL_Texture* playerTexture = graphics.getTexture("player");
+    // 窮地モードではplayer_adversity.pngを使用
+    SDL_Texture* playerTexture = hasUsedLastChanceMode ? graphics.getTexture("player_adversity") : graphics.getTexture("player");
+    if (!playerTexture && hasUsedLastChanceMode) {
+        playerTexture = graphics.getTexture("player"); // フォールバック
+    }
     
     // 元の画像サイズを取得してアスペクト比を保持（HP表示の位置計算用）
     int playerHeight = 300;
@@ -1855,12 +1937,13 @@ void BattleState::checkBattleEnd() {
             player->setHp(1);
             // isAliveを明示的にtrueに設定（setHp()はhp <= 0の場合のみisAlive = falseを設定するため）
             player->setIsAlive(true);
-            // 最後のチャンスモードに遷移
-            currentPhase = BattlePhase::LAST_CHANCE_COMMAND_SELECT;
-            battleLogic->setCommandTurnCount(BattleConstants::LAST_CHANCE_TURN_COUNT);
-            initializeCommandSelection();
+            // BattleUIにも窮地モード開始を通知
+            if (battleUI) {
+                battleUI->setHasUsedLastChanceMode(true);
+            }
+            // 最後のチャンスモードのイントロフェーズに遷移（終焉突破UI表示）
+            currentPhase = BattlePhase::LAST_CHANCE_INTRO;
             phaseTimer = 0.0f; // タイマーをリセット
-            addBattleLog("最後のチャンス！5ターンで勝負だ！");
             return;
         }
         
@@ -4849,13 +4932,53 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                 std::cout << "[DEBUG] LAST_CHANCE: 警告！checkBattleEnd()後もフェーズが変更されていません！" << std::endl;
                 return;
             } else {
-                // 敵が倒れなかった場合、敵から攻撃を受けてゲームオーバー
-                std::cout << "[DEBUG] LAST_CHANCE: 敵が倒れませんでした。敵の攻撃を受けてゲームオーバー..." << std::endl;
-                int enemyDamage = battleLogic->calculateEnemyAttackDamage();
-                player->takeDamage(enemyDamage);
-                addBattleLog("敵が倒れませんでした。敵の攻撃を受けてゲームオーバー...");
-                checkBattleEnd();
-                return;
+                // 敵が倒れなかった場合、敵の攻撃アニメーションを表示してからダメージを適用
+                static bool enemyAttackStarted = false;
+                static float enemyAttackTimer = 0.0f;
+                
+                if (!enemyAttackStarted) {
+                    std::cout << "[DEBUG] LAST_CHANCE: 敵が倒れませんでした。敵の攻撃アニメーションを開始します。" << std::endl;
+                    enemyAttackStarted = true;
+                    enemyAttackTimer = 0.0f;
+                    animationController->resetResultAnimation();
+                    addBattleLog("敵が倒れませんでした。敵の攻撃を受けてゲームオーバー...");
+                }
+                
+                // 敵の攻撃アニメーションを更新
+                enemyAttackTimer += deltaTime;
+                float animStartTime = 0.5f;
+                float animDuration = 1.0f;
+                
+                animationController->updateResultCharacterAnimation(
+                    deltaTime, false, true, enemyAttackTimer,
+                    damageAppliedInAnimation, false,
+                    animStartTime, animDuration);
+                
+                // アニメーションのピーク時（攻撃が当たる瞬間）にダメージを適用
+                float animTime = enemyAttackTimer - animStartTime;
+                if (animTime >= 0.0f && animTime <= animDuration) {
+                    float progress = animTime / animDuration;
+                    if (progress >= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT - BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                        progress <= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT + BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                        !damageAppliedInAnimation) {
+                        
+                        int enemyDamage = battleLogic->calculateEnemyAttackDamage();
+                        player->takeDamage(enemyDamage);
+                        effectManager->triggerHitEffect(enemyDamage, playerX, playerY, true);
+                        AudioManager::getInstance().playSound("attack", 0);
+                        float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
+                        float shakeDuration = 0.3f;
+                        effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
+                        damageAppliedInAnimation = true;
+                    }
+                }
+                
+                // アニメーション完了後、ゲームオーバー
+                float animTotalDuration = animStartTime + animDuration;
+                if (enemyAttackTimer >= animTotalDuration) {
+                    checkBattleEnd();
+                    return;
+                }
             }
             
             // リセット

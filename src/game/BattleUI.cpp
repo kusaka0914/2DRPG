@@ -8,7 +8,12 @@
 BattleUI::BattleUI(Graphics* graphics, std::shared_ptr<Player> player, Enemy* enemy,
                    BattleLogic* battleLogic, BattleAnimationController* animationController)
     : graphics(graphics), player(player), enemy(enemy),
-      battleLogic(battleLogic), animationController(animationController) {
+      battleLogic(battleLogic), animationController(animationController),
+      hasUsedLastChanceMode(false) {
+}
+
+void BattleUI::setHasUsedLastChanceMode(bool hasUsed) {
+    hasUsedLastChanceMode = hasUsed;
 }
 
 void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
@@ -46,7 +51,11 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
     // graphics->setDrawColor(0, 0, 0, 100);
     // graphics->drawRect(0, 0, screenWidth, screenHeight, true);
     
-    SDL_Texture* playerTex = graphics->getTexture("player");
+    // 窮地モードではplayer_adversity.pngを使用
+    SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics->getTexture("player_adversity") : graphics->getTexture("player");
+    if (!playerTex && hasUsedLastChanceMode) {
+        playerTex = graphics->getTexture("player"); // フォールバック
+    }
     
     if (playerTex) {
         graphics->drawTextureAspectRatio(playerTex, playerBaseX, playerBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
@@ -411,7 +420,11 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     int playerBaseX, playerBaseY;
     config.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
     
-    SDL_Texture* playerTex = graphics->getTexture("player");
+    // 窮地モードではplayer_adversity.pngを使用
+    SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics->getTexture("player_adversity") : graphics->getTexture("player");
+    if (!playerTex && hasUsedLastChanceMode) {
+        playerTex = graphics->getTexture("player"); // フォールバック
+    }
     
     if (playerTex) {
         graphics->drawTextureAspectRatio(playerTex, playerBaseX, playerBaseY, BattleConstants::BATTLE_CHARACTER_SIZE);
@@ -835,7 +848,11 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
 
 void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY,
                                  int playerWidth, int playerHeight, int enemyWidth, int enemyHeight) {
-    SDL_Texture* playerTex = graphics->getTexture("player");
+    // 窮地モードではplayer_adversity.pngを使用
+    SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics->getTexture("player_adversity") : graphics->getTexture("player");
+    if (!playerTex && hasUsedLastChanceMode) {
+        playerTex = graphics->getTexture("player"); // フォールバック
+    }
     
     if (playerTex) {
         graphics->drawTextureAspectRatio(playerTex, playerX, playerY, BattleConstants::BATTLE_CHARACTER_SIZE);

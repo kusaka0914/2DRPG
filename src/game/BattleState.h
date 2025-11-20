@@ -36,6 +36,7 @@ enum class BattlePhase {
     DESPERATE_JUDGE,        // 読み合い判定（6ターン、各ターン結果を順に表示）
     DESPERATE_JUDGE_RESULT, // 結果発表（窮地モード）
     DESPERATE_EXECUTE,      /**< @brief 実行（ダメージ倍率あり） */
+    LAST_CHANCE_INTRO,      /**< @brief 最後のチャンスモード：イントロ（終焉突破UI表示） */
     LAST_CHANCE_COMMAND_SELECT, /**< @brief 最後のチャンスモード：5ターン分のコマンド選択 */
     LAST_CHANCE_JUDGE,      /**< @brief 最後のチャンスモード：読み合い判定（5ターン） */
     LAST_CHANCE_JUDGE_RESULT, /**< @brief 最後のチャンスモード：結果発表 */

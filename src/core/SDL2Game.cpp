@@ -832,6 +832,7 @@ void SDL2Game::loadGameImages() {
     graphics.loadTexture("assets/textures/characters/player_field.png", "player_field");
     graphics.loadTexture("assets/textures/characters/player_defeat.png", "player_defeat");
     graphics.loadTexture("assets/textures/characters/player_captured.png", "player_captured");
+    graphics.loadTexture("assets/textures/characters/player_adversity.png", "player_adversity");
     graphics.loadTexture("assets/textures/characters/king.png", "king");
     graphics.loadTexture("assets/textures/characters/king.png", "enemy_王様"); // 戦闘画面用
     graphics.loadTexture("assets/textures/characters/guard.png", "guard");
