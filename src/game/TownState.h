@@ -207,4 +207,8 @@ private:
     bool isValidPosition(int x, int y) const;
     bool isCollidingWithBuilding(int x, int y) const;
     bool isCollidingWithNPC(int x, int y) const;
-    NPC* getNearbyNPC(i
+    NPC* getNearbyNPC(int x, int y);
+    const NPC* getNearbyNPC(int x, int y) const;
+    bool isNearNPC(int x, int y) const;
+    void checkTrustLevels();
+}; 

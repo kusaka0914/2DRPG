@@ -737,7 +737,8 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     
     if (params.hasThreeWinStreak && params.isVictory) {
         auto& threeWinStreakConfig = battleConfig.judgeResult.threeWinStreak;
-        float streakScale = 0.5f + std::sin(resultState.resultAnimationTimer * 3.14159f * 4.0f) * 0.3f;
+        // テキストは動かないように固定スケール（1.0f）を使用
+        float streakScale = 1.0f;
         // JSONからフォーマットを取得
         std::string streakText = threeWinStreakConfig.format;
         // プレースホルダーを置換（安全な方法：文字列を前後で結合）
@@ -750,27 +751,32 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
         
         int streakTextWidth = threeWinStreakConfig.baseWidth;
         int streakTextHeight = threeWinStreakConfig.baseHeight;
-        int streakScaledWidth = (int)(streakTextWidth * streakScale);
-        int streakScaledHeight = (int)(streakTextHeight * streakScale);
+        // テキストのサイズは固定（スケール1.0f）
+        int streakScaledWidth = streakTextWidth;
+        int streakScaledHeight = streakTextHeight;
         
-        // 位置を計算（JSONから取得）
-        int streakTextX, streakTextY;
-        if (threeWinStreakConfig.position.useRelative) {
-            streakTextX = centerX - streakScaledWidth / 2;
-            streakTextY = static_cast<int>(centerY + threeWinStreakConfig.position.offsetY - streakScaledHeight / 2);
-        } else {
-            streakTextX = static_cast<int>(threeWinStreakConfig.position.absoluteX);
-            streakTextY = static_cast<int>(threeWinStreakConfig.position.absoluteY);
-        }
+        // 背景とグロー効果は固定サイズ（アニメーションなし）
+        float bgScale = 1.0f;
+        int bgScaledWidth = (int)(streakTextWidth * bgScale);
+        int bgScaledHeight = (int)(streakTextHeight * bgScale);
+        int bgX = centerX - bgScaledWidth / 2;
+        int bgY = static_cast<int>(centerY + threeWinStreakConfig.position.offsetY - bgScaledHeight / 2);
         
-        graphics->setDrawColor(255, 200, 0, 200);
-        graphics->drawRect(streakTextX - 20, streakTextY - 20, streakScaledWidth + 40, streakScaledHeight + 40, true);
+        // 背景を黒に変更
+        graphics->setDrawColor(0, 0, 0, 200);
+        graphics->drawRect(bgX - 20, bgY - 20, bgScaledWidth + 40, bgScaledHeight + 40, true);
+        // 背景の周りに白い枠線を描画（他のUIと同じスタイル）
+        graphics->setDrawColor(255, 255, 255, 255);
+        graphics->drawRect(bgX - 20, bgY - 20, bgScaledWidth + 40, bgScaledHeight + 40, false);
         
-        float glowProgress = std::sin(resultState.resultAnimationTimer * 3.14159f * 6.0f) * 0.5f + 0.5f;
-        graphics->setDrawColor(255, 255, 0, (Uint8)(glowProgress * 150));
-        graphics->drawRect(streakTextX - 30, streakTextY - 30, streakScaledWidth + 60, streakScaledHeight + 60, false);
-        graphics->drawRect(streakTextX - 25, streakTextY - 25, streakScaledWidth + 50, streakScaledHeight + 50, false);
+        // グロー効果も固定（アニメーションなし）
+        graphics->setDrawColor(255, 255, 255, 200);
+        graphics->drawRect(bgX - 30, bgY - 30, bgScaledWidth + 60, bgScaledHeight + 60, false);
+        graphics->drawRect(bgX - 25, bgY - 25, bgScaledWidth + 50, bgScaledHeight + 50, false);
         
+        // テキストを背景の中央に配置
+        int streakTextX = bgX + bgScaledWidth / 2 - streakScaledWidth / 2;
+        int streakTextY = bgY + bgScaledHeight / 2 - streakScaledHeight / 2;
         graphics->drawText(streakText, streakTextX, streakTextY, "default", streakColor);
     }
     

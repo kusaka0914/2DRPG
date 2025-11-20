@@ -148,6 +148,9 @@ private:
     bool damageListPrepared;           /**< @brief ダメージリストが準備されたか */
     bool enemyAttackStarted;           /**< @brief 敵の攻撃アニメーションが開始されたか */
     float enemyAttackTimer;             /**< @brief 敵の攻撃アニメーションタイマー（秒） */
+    bool battleMusicStarted;           /**< @brief 戦闘BGMが開始されたか */
+    bool lastChanceIntroMusicStopped;  /**< @brief 終焉解放イントロで音楽が停止されたか */
+    bool adversityMusicStarted;        /**< @brief 終焉解放コマンド選択で音楽が開始されたか */
     
     // EXECUTEフェーズ用
     int currentExecutingTurn;          // 現在実行中のターン（0から開始）

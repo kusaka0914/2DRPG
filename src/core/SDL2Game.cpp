@@ -800,6 +800,9 @@ void SDL2Game::loadResources() {
     AudioManager::getInstance().loadMusic("assets/audio/bgm/demon.ogg", "demon");
     AudioManager::getInstance().loadMusic("assets/audio/bgm/field.ogg", "field");
     AudioManager::getInstance().loadMusic("assets/audio/bgm/battle.ogg", "battle");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/adversity.ogg", "adversity");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/gameover.ogg", "gameover");
+    AudioManager::getInstance().loadMusic("assets/audio/bgm/night.ogg", "night");
     
     // 効果音読み込み
     AudioManager::getInstance().loadSound("assets/audio/se/decide.ogg", "decide");

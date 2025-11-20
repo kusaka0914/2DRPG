@@ -25,6 +25,7 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       isTargetLevelEnemy(false),
       currentSelectingTurn(0), isFirstCommandSelection(true), hasUsedLastChanceMode(false),
       damageListPrepared(false), enemyAttackStarted(false), enemyAttackTimer(0.0f),
+      battleMusicStarted(false), lastChanceIntroMusicStopped(false), adversityMusicStarted(false),
       currentJudgingTurn(0), currentExecutingTurn(0), executeDelayTimer(0.0f),
       damageAppliedInAnimation(false), waitingForSpellSelection(false),
       judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
@@ -67,8 +68,10 @@ void BattleState::enter() {
     player->getPlayerStats().resetEnemySkillEffects();
     loadBattleImages();
     
-    // INTROフェーズに入った時にフィールドBGMを停止
+    // INTROフェーズに入った時にフィールドBGMを停止（音楽はCOMMAND_SELECTフェーズで開始）
     AudioManager::getInstance().stopMusic();
+    // 再戦時に音楽が最初から再生されるようにリセット
+    battleMusicStarted = false;
     
     std::string enemyAppearMessage = enemy->getTypeName() + "が現れた！";
     battleLog = enemyAppearMessage; // battleLogLabelがまだ初期化されていないので、直接battleLogに保存
@@ -206,6 +209,11 @@ void BattleState::update(float deltaTime) {
                         battleLogic->setDesperateMode(false);
                         isFirstCommandSelection = true;
                         initializeCommandSelection();
+                        // コマンド選択フェーズに入った時にbattle.oggを再生（初回のみ）
+                        if (!battleMusicStarted) {
+                            AudioManager::getInstance().playMusic("battle", -1);
+                            battleMusicStarted = true;
+                        }
                     }
                     break;
                 case BattlePhase::JUDGE:
@@ -285,6 +293,11 @@ void BattleState::update(float deltaTime) {
                 battleLogic->setDesperateMode(false);
                 isFirstCommandSelection = true;
                 initializeCommandSelection();
+                // コマンド選択フェーズに入った時にbattle.oggを再生（初回のみ）
+                if (!battleMusicStarted) {
+                    AudioManager::getInstance().playMusic("battle", -1);
+                    battleMusicStarted = true;
+                }
             }
             break;
         }
@@ -370,6 +383,12 @@ void BattleState::update(float deltaTime) {
         }
         
         case BattlePhase::LAST_CHANCE_COMMAND_SELECT:
+            // コマンド選択に入ったら adversity.ogg を再生
+            if (!adversityMusicStarted) {
+                AudioManager::getInstance().playMusic("adversity", -1);
+                adversityMusicStarted = true;
+            }
+            
             // 通常戦のCOMMAND_SELECTと同じ処理
             if (currentSelectingTurn < battleLogic->getCommandTurnCount() && !isShowingOptions) {
                 selectCommandForTurn(currentSelectingTurn);
@@ -387,6 +406,12 @@ void BattleState::update(float deltaTime) {
             break;
             
         case BattlePhase::LAST_CHANCE_INTRO: {
+            // イントロに入ったら無音にする
+            if (!lastChanceIntroMusicStopped) {
+                AudioManager::getInstance().stopMusic();
+                lastChanceIntroMusicStopped = true;
+            }
+            
             // タイマーで遷移
             phaseTimer += deltaTime;
             
@@ -553,7 +578,7 @@ void BattleState::render(Graphics& graphics) {
         }
 
         // 「終焉突破」テキストを画面中央に表示
-        std::string text = "終焉突破";
+        std::string text = "終焉解放";
         SDL_Color textColor = {255, 0, 0, 255}; // 赤色
 
         // テキストをテクスチャとして取得
@@ -1964,6 +1989,8 @@ void BattleState::checkBattleEnd() {
             phaseTimer = 0.0f; // タイマーをリセット
             damageListPrepared = false; // ダメージリストを再度準備できるようにリセット
             enemyAttackStarted = false; // 敵の攻撃アニメーションフラグをリセット
+            lastChanceIntroMusicStopped = false; // 音楽停止フラグをリセット
+            adversityMusicStarted = false; // 音楽開始フラグをリセット
             return;
         }
         
@@ -2490,11 +2517,21 @@ void BattleState::executeSelectedOption() {
             battleLogic->setDesperateMode(true);
             currentPhase = BattlePhase::DESPERATE_COMMAND_SELECT;
             initializeCommandSelection();
+            // コマンド選択フェーズに入った時にbattle.oggを再生（初回のみ）
+            if (!battleMusicStarted) {
+                AudioManager::getInstance().playMusic("battle", -1);
+                battleMusicStarted = true;
+            }
         } else if (selected == "通常戦闘を続ける") {
             battleLogic->setCommandTurnCount(BattleConstants::NORMAL_TURN_COUNT);
             battleLogic->setDesperateMode(false);
             currentPhase = BattlePhase::COMMAND_SELECT;
             initializeCommandSelection();
+            // コマンド選択フェーズに入った時にbattle.oggを再生（初回のみ）
+            if (!battleMusicStarted) {
+                AudioManager::getInstance().playMusic("battle", -1);
+                battleMusicStarted = true;
+            }
         }
     } else if (currentPhase == BattlePhase::COMMAND_SELECT || 
                currentPhase == BattlePhase::DESPERATE_COMMAND_SELECT ||
@@ -2773,13 +2810,6 @@ std::string BattleState::getSpellDescription(int spellIndex) {
 } 
 
 void BattleState::initializeCommandSelection() {
-    // コマンド選択フェーズに入った時にbattle.oggを再生（初回のみ）
-    static bool battleMusicStarted = false;
-    if (!battleMusicStarted && currentPhase == BattlePhase::COMMAND_SELECT) {
-        AudioManager::getInstance().playMusic("battle", -1);
-        battleMusicStarted = true;
-    }
-    
     int turnCount = battleLogic->getCommandTurnCount();
     std::vector<int> playerCmds(turnCount, -1);
     std::vector<int> enemyCmds(turnCount, -1);

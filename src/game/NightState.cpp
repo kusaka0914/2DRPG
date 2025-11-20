@@ -10,6 +10,7 @@
 #include "../io/InputManager.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include "../utils/TownLayout.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -105,6 +106,10 @@ NightState::~NightState() {
 }
 
 void NightState::enter() {
+    // 夜の街に入った時は night.ogg を再生
+    AudioManager::getInstance().stopMusic();
+    AudioManager::getInstance().playMusic("night", -1);
+    
     try {
         // 保存された状態を復元（BattleStateから戻ってきた場合など）
         bool restoredFromJson = false;

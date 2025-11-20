@@ -287,7 +287,7 @@
         },
         "baseWidth": 400,
         "baseHeight": 40,
-        "color": [255, 215, 0, 255],
+        "color": [255, 255, 0, 255],
         "format": "3連勝！ダメージ{multiplier}倍ボーナス！"
       },
       "damageBonus": {
