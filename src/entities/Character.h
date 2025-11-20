@@ -64,10 +64,22 @@ public:
     std::string getName() const { return name; }
     
     /**
+     * @brief 名前の設定
+     * @param newName 新しい名前
+     */
+    void setName(const std::string& newName) { name = newName; }
+    
+    /**
      * @brief HPの取得
      * @return 現在のHP
      */
     int getHp() const { return hp; }
+    
+    /**
+     * @brief HPの設定
+     * @param newHp 新しいHP
+     */
+    void setHp(int newHp) { hp = std::max(0, std::min(maxHp, newHp)); if (hp <= 0) isAlive = false; }
     
     /**
      * @brief 最大HPの取得
@@ -116,6 +128,12 @@ public:
      * @return 生存しているか
      */
     bool getIsAlive() const { return isAlive; }
+    
+    /**
+     * @brief 生存状態の設定
+     * @param alive 生存状態
+     */
+    void setIsAlive(bool alive) { isAlive = alive; }
     
     /**
      * @brief 最大HPの設定

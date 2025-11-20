@@ -9,8 +9,10 @@
 #include "NightState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <random>
+#include <vector>
 
 static int s_staticPlayerX = 25;  // 街の入り口の近く：25
 static int s_staticPlayerY = 8;   // 16の中央：8
@@ -21,7 +23,9 @@ static bool saved = TownState::saved;
 FieldState::FieldState(std::shared_ptr<Player> player)
     : player(player), storyBox(nullptr), hasMoved(false),
       moveTimer(0), nightTimerActive(false), nightTimer(0.0f),
-      shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0) {
+      shouldRelocateMonster(false), lastBattleX(0), lastBattleY(0),
+      messageBoard(nullptr), isShowingMessage(false),
+      showGameExplanation(false), explanationStep(0) {
     
     static std::vector<std::vector<MapTile>> staticTerrainMap;
     static bool mapGenerated = false;
@@ -90,18 +94,57 @@ FieldState::FieldState(std::shared_ptr<Player> player)
 }
 
 void FieldState::enter() {
-    setupUI();
     loadFieldImages();
+    
+    // field.oggを再生（街とフィールドで流す、既に再生中なら続けて再生）
+    // playMusic()内で既に同じ音楽が再生中の場合は何もしないため、stopMusic()は呼ばない
+    AudioManager::getInstance().playMusic("field", -1);
+    
+    // 初回フィールド説明を表示するかチェック
+    // 説明UIを既に見た場合は表示しない
+    // fromJson()で復元された場合、showGameExplanationがfalseになっている可能性があるので、常にチェック
+    if (!player->hasSeenFieldExplanation) {
+        if (!showGameExplanation || gameExplanationTexts.empty()) {
+            setupGameExplanation(false);  // 初回フィールド説明
+        }
+        showGameExplanation = true;
+        explanationStep = 0;  // 確実に0に設定
+    }
+    
+    // 初勝利後の説明を表示するかチェック（レベル2になった場合）
+    // ただし、セーブデータから復元された場合は既に表示済みとみなす
+    // また、説明UIを既に見た場合は表示しない
+    // 初回フィールド説明が表示されている場合でも、初勝利後の説明を表示できるようにするため、
+    // !showGameExplanationの条件を削除（初回フィールド説明が終わった後に表示される）
+    static bool s_firstVictoryExplanationShown = false;
+    if (!s_firstVictoryExplanationShown && player->getLevel() >= 2 && !player->hasSeenFieldFirstVictoryExplanation) {
+        // 初回フィールド説明が表示されている場合は、handleInput()で初回フィールド説明が終わった後に表示する
+        // そのため、ここではsetupGameExplanation()を呼ばず、フラグのみ設定
+        // ただし、初回フィールド説明が既に表示されていない場合は、すぐに表示する
+        if (!showGameExplanation || player->hasSeenFieldExplanation) {
+            setupGameExplanation(true);  // 初勝利後の説明
+            showGameExplanation = true;
+            explanationStep = 0;
+            s_firstVictoryExplanationShown = true;
+        }
+        // 初回フィールド説明が表示されている場合は、handleInput()で処理される
+    } else if (player->hasSeenFieldFirstVictoryExplanation) {
+        // 既に見た場合は既に表示済みとみなす
+        s_firstVictoryExplanationShown = true;
+    }
 
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
     
+    // 目標レベルが設定されていない場合は初期化（初回フィールドに入った場合など）
+    if (TownState::s_targetLevel == 0) {
+        TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
+    }
+    
     // デバッグ出力
     std::cout << "FieldState: 静的変数から読み込み - Timer: " << nightTimer 
-              << ", Active: " << (nightTimerActive ? "true" : "false") << std::endl;
-
-    // タイマー情報も含めてautosave
-    player->saveGame("autosave.dat", nightTimer, nightTimerActive);
+              << ", Active: " << (nightTimerActive ? "true" : "false") 
+              << ", TargetLevel: " << TownState::s_targetLevel << std::endl;
     
     if (shouldRelocateMonster) {
         relocateMonsterSpawnPoint(lastBattleX, lastBattleY);
@@ -112,10 +155,12 @@ void FieldState::enter() {
         TownState::s_levelGoalAchieved = true;
     }
     
-    if (TownState::s_levelGoalAchieved && nightTimerActive) {
-        nightTimer = 0.0f;
-        TownState::s_nightTimer = 0.0f;
-    }
+    // 目標レベル達成済みでタイマーがアクティブな場合、タイマーを0に設定
+    // ただし、これはupdate()で処理されるべきなので、enter()では設定しない
+    // if (TownState::s_levelGoalAchieved && nightTimerActive) {
+    //     nightTimer = 0.0f;
+    //     TownState::s_nightTimer = 0.0f;
+    // }
     
     // static bool openingShown = false;
     // if (!openingShown) {
@@ -147,11 +192,15 @@ void FieldState::update(float deltaTime) {
             TownState::s_nightTimerActive = false;
             TownState::s_nightTimer = 0.0f;
             
-            // 目標達成していない場合はゲームオーバー
+            // 目標達成していない場合は目標レベルの敵と戦闘を開始
             if (!TownState::s_levelGoalAchieved) {
                 if (stateManager) {
-                    auto newPlayer = std::make_shared<Player>("勇者");
-                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                    int targetLevel = TownState::s_targetLevel;
+                    auto targetLevelEnemy = std::make_unique<Enemy>(Enemy::createTargetLevelEnemy(targetLevel));
+                    auto battleState = std::make_unique<BattleState>(player, std::move(targetLevelEnemy));
+                    // 目標レベル達成用の敵フラグを明示的に設定
+                    battleState->setIsTargetLevelEnemy(true);
+                    stateManager->changeState(std::move(battleState));
                 }
             } else {
                 if (stateManager) {
@@ -222,23 +271,124 @@ void FieldState::update(float deltaTime) {
 }
 
 void FieldState::render(Graphics& graphics) {
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
+    bool uiJustInitialized = false;
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
+        setupUI(graphics);
+        uiJustInitialized = true;
+    }
+    lastReloadState = currentReloadState;
+    
+    // 説明UIが設定されている場合は表示
+    // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
+    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    // uiJustInitializedがfalseの場合でも、showGameExplanationがtrueでメッセージが表示されていない場合は表示する
+    else if (showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0 && !isShowingMessage && messageBoard) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    
+    // firstEnterフラグを更新（説明UI表示の判定には使用しない）
+    if (uiJustInitialized && firstEnter) {
+        firstEnter = false;
+    }
+    
     graphics.setDrawColor(34, 139, 34, 255);
     graphics.clear();
     
     drawMap(graphics);
     drawPlayer(graphics);
     
+    if (messageBoard && !messageBoard->getText().empty()) {
+        auto& config = UIConfig::UIConfigManager::getInstance();
+        auto mbConfig = config.getMessageBoardConfig();
+        
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true);
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
+        graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height);
+    }
+    
     ui.render(graphics);
     
-    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, false);
+    CommonUI::drawNightTimer(graphics, nightTimer, nightTimerActive, showGameExplanation);
+    // 目標レベルは説明UIが表示されていても表示する（showGameExplanationパラメータは不要）
     CommonUI::drawTargetLevel(graphics, TownState::s_targetLevel, TownState::s_levelGoalAchieved, player->getLevel());
-    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, false);
+    CommonUI::drawTrustLevels(graphics, player, nightTimerActive, showGameExplanation);
     
     graphics.present();
 }
 
 void FieldState::handleInput(const InputManager& input) {
     ui.handleInput(input);
+    
+    if (showGameExplanation) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            explanationStep++;
+            
+            if (explanationStep >= gameExplanationTexts.size()) {
+                // 説明UIが完全に終わったことを記録
+                bool wasFirstFieldExplanation = false;
+                if (!gameExplanationTexts.empty()) {
+                    if (gameExplanationTexts[0].find("初勝利") != std::string::npos) {
+                        // 初勝利後の説明
+                        player->hasSeenFieldFirstVictoryExplanation = true;
+                    } else {
+                        // 初回フィールド説明
+                        player->hasSeenFieldExplanation = true;
+                        wasFirstFieldExplanation = true;
+                    }
+                }
+                
+                // 初勝利後の説明が終わった場合、タイマーを起動
+                // 初勝利後の説明かどうかは、説明テキストの最初が「初勝利」で始まるかで判定
+                // ただし、タイマーが既にアクティブな場合は設定しない（セーブデータから復元された場合など）
+                if (!gameExplanationTexts.empty() && 
+                    gameExplanationTexts[0].find("初勝利") != std::string::npos &&
+                    !nightTimerActive) {
+                    nightTimerActive = true;
+                    nightTimer = 900.0f;  // 15分 = 900秒（NIGHT_TIMER_DURATIONと同じ値）
+                    TownState::s_nightTimerActive = true;
+                    TownState::s_nightTimer = 900.0f;
+                }
+                
+                showGameExplanation = false;
+                explanationStep = 0;
+                clearMessage();
+                
+                // 初回フィールド説明が終わった後、初勝利後の説明を表示するかチェック
+                if (wasFirstFieldExplanation && player->getLevel() >= 2 && !player->hasSeenFieldFirstVictoryExplanation) {
+                    static bool s_firstVictoryExplanationShown = false;
+                    if (!s_firstVictoryExplanationShown) {
+                        setupGameExplanation(true);  // 初勝利後の説明
+                        showGameExplanation = true;
+                        explanationStep = 0;
+                        s_firstVictoryExplanationShown = true;
+                    }
+                }
+            } else {
+                showMessage(gameExplanationTexts[explanationStep]);
+            }
+        }
+        return; // 説明中は他の操作を無効化
+    }
+    
+    if (isShowingMessage) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+            clearMessage();
+        }
+        return; // メッセージ表示中は他の操作を無効化
+    }
     
     if (input.isKeyJustPressed(InputKey::ESCAPE) || input.isKeyJustPressed(InputKey::GAMEPAD_B)) {
         if (stateManager) {
@@ -247,7 +397,7 @@ void FieldState::handleInput(const InputManager& input) {
         return;
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         checkTownEntrance();
         return;
     }
@@ -255,10 +405,22 @@ void FieldState::handleInput(const InputManager& input) {
     handleMovement(input);
 }
 
-void FieldState::setupUI() {
+void FieldState::setupUI(Graphics& graphics) {
     ui.clear();
     // StoryMessageBoxは無効化
     storyBox = nullptr;
+    
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto mbConfig = config.getMessageBoardConfig();
+    
+    int textX, textY;
+    config.calculatePosition(textX, textY, mbConfig.text.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+    
+    auto messageBoardLabel = std::make_unique<Label>(textX, textY, "", "default");
+    messageBoardLabel->setColor(mbConfig.text.color);
+    messageBoardLabel->setText("");
+    messageBoard = messageBoardLabel.get(); // ポインタを保存
+    ui.addElement(std::move(messageBoardLabel));
 }
 
 void FieldState::handleMovement(const InputManager& input) {
@@ -336,18 +498,26 @@ void FieldState::checkEncounter() {
             const MapTile& currentTile = terrainMap[playerY][playerX];
             if (currentTile.objectType == 2) { // モンスター専用タイル
                 EnemyType enemyType = EnemyType::SLIME; // デフォルト
+                int enemyLevel = 1; // デフォルト
                 for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                     if (activeMonsterPoints[i].first == playerX && activeMonsterPoints[i].second == playerY) {
                         enemyType = activeMonsterTypes[i];
+                        if (i < activeMonsterLevels.size()) {
+                            enemyLevel = activeMonsterLevels[i];
+                        }
                         break;
                     }
                 }
                 
                 Enemy enemy(enemyType);
+                enemy.setLevel(enemyLevel);
                 if (stateManager) {
                     lastBattleX = playerX;
                     lastBattleY = playerY;
                     shouldRelocateMonster = true;
+                    
+                    // 戦闘に入る前にフィールドの状態を保存
+                    saveCurrentState(player);
                     
                     auto battleState = std::make_unique<BattleState>(player, std::make_unique<Enemy>(enemy));
                     stateManager->changeState(std::move(battleState));
@@ -442,41 +612,72 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
         
         if (tile.objectType == 2) { // モンスター専用タイル
             EnemyType enemyType = EnemyType::SLIME; // デフォルト
+            int enemyLevel = 1; // デフォルト
             for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
                 if (activeMonsterPoints[i].first == x && activeMonsterPoints[i].second == y) {
                     enemyType = activeMonsterTypes[i];
+                    if (i < activeMonsterLevels.size()) {
+                        enemyLevel = activeMonsterLevels[i];
+                    }
                     break;
                 }
             }
             
             Enemy tempEnemy(enemyType);
+            tempEnemy.setLevel(enemyLevel);
             std::string enemyTextureName = "enemy_" + tempEnemy.getTypeName();
             SDL_Texture* enemyTexture = graphics.getTexture(enemyTextureName);
             
+            // プレイヤーレベルと比較して色を決定
+            int playerLevel = player->getLevel();
+            SDL_Color levelColor;
+            if (enemyLevel < playerLevel) {
+                levelColor = {0, 255, 0, 255}; // 緑（弱い）
+            } else if (enemyLevel == playerLevel) {
+                levelColor = {255, 255, 255, 255}; // 白（同じ）
+            } else {
+                levelColor = {255, 0, 0, 255}; // 赤（高い）
+            }
+            
+            auto& config = UIConfig::UIConfigManager::getInstance();
+            auto fieldConfig = config.getFieldConfig();
+            
             if (enemyTexture) {
-                int enemySize = TILE_SIZE * 0.8;
-                int enemyX = drawX + (TILE_SIZE - enemySize) / 2;
-                int enemyY = drawY + (TILE_SIZE - enemySize) / 2;
-                graphics.drawTexture(enemyTexture, enemyX, enemyY, enemySize, enemySize);
+                // 元の画像サイズを取得してアスペクト比を保持
+                int textureWidth, textureHeight;
+                SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight);
                 
-                auto& config = UIConfig::UIConfigManager::getInstance();
-                auto fieldConfig = config.getFieldConfig();
-                Enemy tempEnemy(enemyType);
-                std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
+                // タイルサイズの80%を基準に、アスペクト比を保持してサイズを計算
+                int baseSize = static_cast<int>(TILE_SIZE * 0.8);
+                float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+                
+                int displayWidth, displayHeight;
+                if (textureWidth > textureHeight) {
+                    // 横長の画像
+                    displayWidth = baseSize;
+                    displayHeight = static_cast<int>(baseSize / aspectRatio);
+                } else {
+                    // 縦長または正方形の画像
+                    displayHeight = baseSize;
+                    displayWidth = static_cast<int>(baseSize * aspectRatio);
+                }
+                
+                int enemyX = drawX + (TILE_SIZE - displayWidth) / 2;
+                int enemyY = drawY + (TILE_SIZE - displayHeight) / 2;
+                graphics.drawTexture(enemyTexture, enemyX, enemyY, displayWidth, displayHeight);
+                
+                std::string levelText = "Lv" + std::to_string(enemyLevel);
                 int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
                 int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
-                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
+                graphics.drawText(levelText, levelX, levelY, "default", levelColor);
             } else {
                 graphics.setDrawColor(255, 0, 0, 255);
                 graphics.drawRect(objX, objY, objSize, objSize, true);
                 
-                auto& config = UIConfig::UIConfigManager::getInstance();
-                auto fieldConfig = config.getFieldConfig();
-                Enemy tempEnemy(enemyType);
-                std::string levelText = "Lv" + std::to_string(tempEnemy.getLevel());
+                std::string levelText = "Lv" + std::to_string(enemyLevel);
                 int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
                 int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
-                graphics.drawText(levelText, levelX, levelY, "default", fieldConfig.monsterLevel.color);
+                graphics.drawText(levelText, levelX, levelY, "default", levelColor);
             }
 
         } else { // 岩や木の場合は四角形
@@ -490,19 +691,37 @@ void FieldState::drawTerrain(Graphics& graphics, const MapTile& tile, int x, int
 }
 
 void FieldState::drawPlayer(Graphics& graphics) {
-    int drawX = playerX * TILE_SIZE + 4;
-    int drawY = playerY * TILE_SIZE + 4;
-    int size = TILE_SIZE - 8;
+    // プレイヤーの描画位置を計算（レベル表示で使用するため）
+    int drawX = playerX * TILE_SIZE;
+    int drawY = playerY * TILE_SIZE;
     
     SDL_Texture* playerTexture = graphics.getTexture("player_field");
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, drawX, drawY, size, size);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = drawX + TILE_SIZE / 2;
+        int centerY = drawY + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
+        int drawXOffset = drawX + 4;
+        int drawYOffset = drawY + 4;
+        int size = TILE_SIZE - 8;
         graphics.setDrawColor(0, 0, 255, 255);
-        graphics.drawRect(drawX, drawY, size, size, true);
+        graphics.drawRect(drawXOffset, drawYOffset, size, size, true);
         graphics.setDrawColor(255, 255, 255, 255);
-        graphics.drawRect(drawX, drawY, size, size, false);
+        graphics.drawRect(drawXOffset, drawYOffset, size, size, false);
     }
+    
+    // プレイヤーの上にレベルを表示
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    auto fieldConfig = config.getFieldConfig();
+    int playerLevel = player->getLevel();
+    std::string levelText = "Lv" + std::to_string(playerLevel);
+    SDL_Color levelColor = {255, 255, 255, 255}; // 白（プレイヤー自身なので固定）
+    
+    // 敵のレベル表示と同じ位置計算（タイルの左上から相対位置）
+    int levelX = drawX + 6 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteX);
+    int levelY = drawY - 10 + static_cast<int>(fieldConfig.monsterLevel.position.absoluteY);
+    graphics.drawText(levelText, levelX, levelY, "default", levelColor);
 }
 
 void FieldState::checkTownEntrance() {
@@ -559,6 +778,10 @@ void FieldState::generateMonsterSpawnPoints() {
     monsterSpawnPoints.clear();
     activeMonsterPoints.clear();
     activeMonsterTypes.clear();
+    activeMonsterLevels.clear();
+    
+    int playerLevel = player->getLevel();
+    std::uniform_int_distribution<> disLevel(std::max(1, playerLevel - 2), playerLevel + 2); // プレイヤーレベル±2の範囲
     
     for (int i = 0; i < 5; i++) {
         int x, y;
@@ -572,11 +795,18 @@ void FieldState::generateMonsterSpawnPoints() {
                           !terrainMap[y][x].hasObject;
         } while (!validPosition);
         
-        EnemyType enemyType = Enemy::createRandomEnemy(player->getLevel()).getType();
+        EnemyType enemyType = Enemy::createRandomEnemy(playerLevel).getType();
+        int enemyLevel = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
+        
+        // 敵タイプの基本レベルを取得して上限を適用
+        Enemy tempEnemy(enemyType);
+        tempEnemy.setLevel(enemyLevel);
+        int actualLevel = tempEnemy.getLevel(); // 上限チェック後の実際のレベル
         
         monsterSpawnPoints.push_back({x, y});
         activeMonsterPoints.push_back({x, y});
         activeMonsterTypes.push_back(enemyType);
+        activeMonsterLevels.push_back(actualLevel);
         
         terrainMap[y][x].hasObject = true;
         terrainMap[y][x].objectType = 2; // モンスター専用タイル
@@ -606,11 +836,23 @@ void FieldState::relocateMonsterSpawnPoint(int oldX, int oldY) {
     terrainMap[newY][newX].hasObject = true;
     terrainMap[newY][newX].objectType = 2;
     
+    int playerLevel = player->getLevel();
+    std::uniform_int_distribution<> disLevel(std::max(1, playerLevel - 2), playerLevel + 2); // プレイヤーレベル±2の範囲
+    
     for (size_t i = 0; i < activeMonsterPoints.size(); i++) {
         if (activeMonsterPoints[i].first == oldX && activeMonsterPoints[i].second == oldY) {
             activeMonsterPoints[i].first = newX;
             activeMonsterPoints[i].second = newY;
-            activeMonsterTypes[i] = Enemy::createRandomEnemy(player->getLevel()).getType();
+            EnemyType newEnemyType = Enemy::createRandomEnemy(playerLevel).getType();
+            int newEnemyLevel = disLevel(gen); // プレイヤーレベル±2の範囲でランダム
+            
+            // 敵タイプの基本レベルを取得して上限を適用
+            Enemy tempEnemy(newEnemyType);
+            tempEnemy.setLevel(newEnemyLevel);
+            int actualLevel = tempEnemy.getLevel(); // 上限チェック後の実際のレベル
+            
+            activeMonsterTypes[i] = newEnemyType;
+            activeMonsterLevels[i] = actualLevel;
             break;
         }
     }
@@ -656,5 +898,58 @@ void FieldState::drawFieldGate(Graphics& graphics) {
         graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
         graphics.setDrawColor(0, 0, 0, 255);
         graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
+    }
+}
+
+void FieldState::setupGameExplanation(bool isFirstVictory) {
+    gameExplanationTexts.clear();
+    
+    if (isFirstVictory) {
+        // 初勝利後の説明
+        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
+        gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
+        gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。\nタイマーが0になるまでに目標レベルに達してください！");
+        gameExplanationTexts.push_back("ではまた夜の街でお会いしましょう！頑張って！");
+    } else {
+        // 初回フィールド説明
+        gameExplanationTexts.push_back("ここがフィールドです。たくさんモンスターがいますね。\nモンスターの上に表示されているのがモンスターのレベルです。");
+        gameExplanationTexts.push_back("そのモンスターが自分のレベルより弱いと緑色、同じだと白色、強いと赤色でが表示されます。\n自分のレベルに合わせて戦うモンスターを選びましょう。");
+        gameExplanationTexts.push_back("そして、モンスターと同じマスに移動することでモンスターとの戦闘が始まります。\nまずはモンスターがいる場所に移動してみてください。");
+    }   
+}
+
+void FieldState::showMessage(const std::string& message) {
+    GameState::showMessage(message, messageBoard, isShowingMessage);
+}
+
+void FieldState::clearMessage() {
+    GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json FieldState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::FIELD);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["showGameExplanation"] = showGameExplanation;
+    j["explanationStep"] = explanationStep;
+    // gameExplanationTextsも保存（説明UIが途中で中断された場合に備えて）
+    if (!gameExplanationTexts.empty()) {
+        j["gameExplanationTexts"] = gameExplanationTexts;
+    }
+    return j;
+}
+
+void FieldState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
+    if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
+    // gameExplanationTextsも復元
+    if (j.contains("gameExplanationTexts") && j["gameExplanationTexts"].is_array()) {
+        gameExplanationTexts.clear();
+        for (const auto& text : j["gameExplanationTexts"]) {
+            gameExplanationTexts.push_back(text.get<std::string>());
+        }
     }
 } 

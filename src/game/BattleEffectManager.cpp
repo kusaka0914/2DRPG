@@ -80,30 +80,37 @@ void BattleEffectManager::renderHitEffects(Graphics& graphics) {
     int screenHeight = graphics.getScreenHeight();
     
     for (const auto& effect : hitEffects) {
-        // 画面フラッシュ
+        // 画面フラッシュ（ダメージを受けた時に一瞬真っ赤になる）
+        // 複数のレイヤーで派手なエフェクトを実現
         if (effect.timer > 1.4f) {
             float flashProgress = (1.5f - effect.timer) / 0.1f;
-            Uint8 flashAlpha = (Uint8)((1.0f - flashProgress) * 100);
-            if (effect.isPlayerHit) {
-                graphics.setDrawColor(255, 0, 0, flashAlpha);
-            } else {
-                graphics.setDrawColor(255, 255, 255, flashAlpha);
-            }
+            
+            // 第1レイヤー：強い赤色フラッシュ
+            Uint8 flashAlpha1 = (Uint8)((1.0f - flashProgress) * 200);
+            graphics.setDrawColor(255, 0, 0, flashAlpha1);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+            
+            // 第2レイヤー：白色のパルス（一瞬の閃光）
+            float pulse = std::sin(flashProgress * 3.14159f * 4.0f) * 0.5f + 0.5f;
+            Uint8 flashAlpha2 = (Uint8)((1.0f - flashProgress) * 100 * pulse);
+            graphics.setDrawColor(255, 255, 255, flashAlpha2);
             graphics.drawRect(0, 0, screenWidth, screenHeight, true);
         }
         
+        // パーティクルエフェクト（赤色と黄色を混ぜる）
         for (size_t i = 0; i < effect.particlesX.size(); i++) {
             if (effect.particlesLife[i] > 0.0f) {
                 float lifeProgress = effect.particlesLife[i] / 1.0f;
                 Uint8 particleAlpha = (Uint8)(lifeProgress * 255.0f);
                 
-                if (effect.isPlayerHit) {
-                    graphics.setDrawColor(255, 100, 100, particleAlpha);
+                // パーティクルを赤色と黄色で交互に
+                if (i % 2 == 0) {
+                    graphics.setDrawColor(255, 0, 0, particleAlpha);
                 } else {
                     graphics.setDrawColor(255, 215, 0, particleAlpha);
                 }
                 
-                int particleSize = (int)(lifeProgress * 8.0f);
+                int particleSize = (int)(lifeProgress * 10.0f); // サイズを大きく
                 graphics.drawRect((int)effect.particlesX[i] - particleSize / 2, 
                                  (int)effect.particlesY[i] - particleSize / 2, 
                                  particleSize, particleSize, true);
@@ -111,48 +118,28 @@ void BattleEffectManager::renderHitEffects(Graphics& graphics) {
         }
         
         std::string damageText = std::to_string(effect.damage);
-        SDL_Color damageColor;
-        if (effect.isPlayerHit) {
-            damageColor = {255, 0, 0, (Uint8)effect.alpha};
-        } else {
-            damageColor = {255, 215, 0, (Uint8)effect.alpha};
-        }
         
         int textX = (int)effect.x;
         int textY = (int)(effect.y - 50.0f * effect.scale);
         
-        if (!effect.isPlayerHit) {
-            float glowIntensity = std::sin(effect.rotation * 3.14159f / 180.0f) * 0.3f + 0.7f;
-            graphics.setDrawColor(255, 215, 0, (Uint8)(glowIntensity * effect.alpha * 0.5f));
-            int glowSize = (int)(100.0f * effect.scale);
-            graphics.drawRect(textX - glowSize / 2, textY - glowSize / 2, glowSize, glowSize, true);
-        }
+        // ダメージテキスト（大きく、回転、スケールアニメーション）
+        float textScale = 1.0f + std::sin(effect.rotation * 3.14159f / 180.0f * 2.0f) * 0.3f; // パルス効果
+        SDL_Color damageColor = {255, 255, 255, (Uint8)effect.alpha}; // 白色で目立つ
         
+        // テキストの影（赤色）
+        SDL_Color shadowColor = {255, 0, 0, (Uint8)(effect.alpha * 0.8f)};
+        graphics.drawText(damageText, textX - 50 + 2, textY + 2, "default", shadowColor);
+        
+        // メインテキスト
         graphics.drawText(damageText, textX - 50, textY, "default", damageColor);
         
-        if (!effect.isPlayerHit) {
-            float outerGlow = std::sin(effect.rotation * 3.14159f / 180.0f * 2.0f) * 0.5f + 0.5f;
-            graphics.setDrawColor(255, 255, 0, (Uint8)(outerGlow * effect.alpha * 0.8f));
-            int frameSize = (int)(120.0f * effect.scale);
-            graphics.drawRect(textX - frameSize / 2, textY - frameSize / 2, frameSize, frameSize, false);
-            graphics.drawRect(textX - frameSize / 2 + 2, textY - frameSize / 2 + 2, frameSize - 4, frameSize - 4, false);
-        }
-        
-        // スプラッシュエフェクト
-        if (effect.timer > 1.3f) {
-            float splashProgress = (1.5f - effect.timer) / 0.2f;
-            int splashRadius = (int)(splashProgress * 200.0f);
-            Uint8 splashAlpha = (Uint8)((1.0f - splashProgress) * 150.0f);
-            
-            if (effect.isPlayerHit) {
-                graphics.setDrawColor(255, 0, 0, splashAlpha);
-            } else {
-                graphics.setDrawColor(255, 255, 0, splashAlpha);
-            }
-            
-            for (int r = 0; r < splashRadius; r += 5) {
-                graphics.drawRect((int)effect.x - r / 2, (int)effect.y - r / 2, r, r, false);
-            }
+        // 画面全体のパルスエフェクト（ダメージの瞬間）
+        if (effect.timer > 1.45f) {
+            float pulseProgress = (1.5f - effect.timer) / 0.05f;
+            float pulse = std::sin(pulseProgress * 3.14159f * 8.0f) * 0.5f + 0.5f;
+            Uint8 pulseAlpha = (Uint8)((1.0f - pulseProgress) * 80.0f * pulse);
+            graphics.setDrawColor(255, 100, 100, pulseAlpha);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
         }
     }
 }

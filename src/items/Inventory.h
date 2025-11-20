@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief インベントリスロットの構造体
@@ -125,16 +126,16 @@ public:
     void compactInventory();
     
     /**
-     * @brief ファイルへの保存
-     * @param file 出力ファイルストリーム
+     * @brief JSON形式への変換
+     * @return JSONオブジェクト
      */
-    void saveToFile(std::ofstream& file);
+    nlohmann::json toJson() const;
     
     /**
-     * @brief ファイルからの読み込み
-     * @param file 入力ファイルストリーム
+     * @brief JSON形式からの読み込み
+     * @param j JSONオブジェクト
      */
-    void loadFromFile(std::ifstream& file);
+    void fromJson(const nlohmann::json& j);
     
 private:
     int findEmptySlot() const;

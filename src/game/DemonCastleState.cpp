@@ -5,6 +5,7 @@
 #include "BattleState.h"
 #include "../entities/Enemy.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 
 static bool s_demonCastleFirstTime = true;
@@ -15,8 +16,14 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
       isTalkingToDemon(false), dialogueStep(0), hasReceivedEvilQuest(false),
       playerTexture(nullptr), demonTexture(nullptr), fromCastleState(fromCastleState),
       pendingDialogue(false) {
+    isFadingOut = false;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = 0.5f;
     
-    if (fromCastleState) {
+    // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+    // 「ここは？」のメッセージを表示する
+    if (fromCastleState && !s_demonCastleFirstTime) {
         demonDialogues = {
             "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
             "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
@@ -24,17 +31,12 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
         };
     } else if (s_demonCastleFirstTime) {
         demonDialogues = {
-            "天の声: ん？なにやら勇者と魔王が話しているみたいですよ。",
-            "魔王: 王様に魔王討伐を頼まれただと？",
-            "魔王: ハハハ、実に愉快だ。よくやったぞ、" + player->getName() + "。",
-            "魔王: お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。", 
-            "魔王: だが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。",
-            "魔王: そこでお前は我が手下たちを倒すことで王様からの信頼を増やすのだ。",
-            "魔王: その合間に街の住人を倒していくことで、勘付かれずに街を滅ぼすことができる。",
-            "魔王: 頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。",
-            "魔王: もしも街を滅ぼせなかった時は、、分かっているだろうな？",
-            "天の声: 勇者は魔王より弱いため逆らえないみたいですね、、",
-            "天の声: それでは、街を滅ぼすために頑張っていきましょう。",
+            "天の声: ここは、、？魔王の城？なぜ勇者と魔王が話しているのでしょうか？\nちょっと聞いてみましょう！",
+            "魔王: 王様に魔王討伐を頼まれただと？\nハハハ、実に愉快だ。よくやったぞ、" + player->getName() + "。",
+            "魔王: お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。\nだが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。", 
+            "魔王: そこでお前は我が手下たちを倒すことで王様からの信頼を得るのだ。\nその合間に街の住民を倒していくことで、勘付かれずに街を滅ぼすことができる。", 
+            "魔王: 頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。\nもしも街を滅ぼせなかった時は、、分かっているだろうな？",
+            "天の声: 勇者は魔王より弱いため逆らえないみたいですね、、\nそれでは、街を滅ぼすために頑張っていきましょう。",
         };
     } else {
         demonDialogues = {
@@ -46,10 +48,36 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
 }
 
 void DemonCastleState::enter() {
+    startFadeIn(0.5f);
+    
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
-    if (s_demonCastleFirstTime || fromCastleState) {
+    // 王様の城から来た場合はdemon.oggを再生、それ以外はroom.oggを停止
+    if (fromCastleState) {
+        AudioManager::getInstance().playMusic("demon", -1);
+    } else {
+        AudioManager::getInstance().stopMusic();
+    }
+    
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenDemonCastleStory && isTalkingToDemon) {
+        dialogueStep = 0;
+    }
+    
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
+    
+    // ストーリーメッセージUIを表示
+    // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+    // 最初の方のイベントのダイアログを表示
+    if (fromCastleState && !s_demonCastleFirstTime) {
+        // 全員を倒した後の専用ストーリーは常に表示
+        pendingDialogue = true;
+        dialogueStep = 0;
+        isTalkingToDemon = false; // リセット
+    } else if (s_demonCastleFirstTime && !player->hasSeenDemonCastleStory) {
+        // 最初の方のイベントのダイアログを表示
         pendingDialogue = true;
     }
 }
@@ -61,6 +89,18 @@ void DemonCastleState::exit() {
 void DemonCastleState::update(float deltaTime) {
     moveTimer -= deltaTime;
     ui.update(deltaTime);
+    
+    // フェード更新処理
+    updateFade(deltaTime);
+    
+    // フェードアウト完了後、状態遷移
+    if (isFadingOut && fadeTimer >= fadeDuration) {
+        if (stateManager) {
+            TownState::s_fromDemonCastle = true;
+            auto townState = std::make_unique<TownState>(player);
+            stateManager->changeState(std::move(townState));
+        }
+    }
 }
 
 void DemonCastleState::render(Graphics& graphics) {
@@ -68,13 +108,20 @@ void DemonCastleState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!messageBoard) {
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
-    if (uiJustInitialized && pendingDialogue) {
+    // 会話を開始（pendingDialogueがtrueの場合、または初回の城からの入場で会話がまだ開始されていない場合）
+    if (pendingDialogue || (fromCastleState && !isTalkingToDemon && !isShowingMessage)) {
         startDialogue();
         pendingDialogue = false;
     }
@@ -92,14 +139,18 @@ void DemonCastleState::render(Graphics& graphics) {
         
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, demonCastleConfig.messageBoard.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
+        auto mbConfig = config.getMessageBoardConfig();
         
-        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
         graphics.drawRect(bgX, bgY, demonCastleConfig.messageBoard.background.width, demonCastleConfig.messageBoard.background.height, true);
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
         graphics.drawRect(bgX, bgY, demonCastleConfig.messageBoard.background.width, demonCastleConfig.messageBoard.background.height);
     }
     
     ui.render(graphics);
+    
+    // フェードオーバーレイを描画
+    renderFade(graphics);
     
     graphics.present();
 }
@@ -108,14 +159,14 @@ void DemonCastleState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue(); // メッセージクリアではなく次の会話に進む
         }
         return; // メッセージ表示中は他の操作を無効化
     }
     
     if (isTalkingToDemon) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             nextDialogue();
         }
         return;
@@ -178,10 +229,9 @@ void DemonCastleState::interactWithDemon() {
 }
 
 void DemonCastleState::exitToTown() {
-    if (stateManager) {
-        TownState::s_fromDemonCastle = true;
-        auto townState = std::make_unique<TownState>(player);
-        stateManager->changeState(std::move(townState));
+    // フェードアウト開始（完了時に状態遷移）
+    if (!isFading()) {
+        startFadeOut(0.5f);
     }
 }
 
@@ -198,19 +248,26 @@ void DemonCastleState::nextDialogue() {
         isTalkingToDemon = false;
         hasReceivedEvilQuest = true;
         
+        // ストーリーメッセージUIが完全に終わったことを記録
+        if ((s_demonCastleFirstTime || fromCastleState) && !player->hasSeenDemonCastleStory) {
+            player->hasSeenDemonCastleStory = true;
+        }
+        
         clearMessage();
         
-        if (fromCastleState) {
+        // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+        // 戦闘を開始せずに街に戻る
+        if (fromCastleState && !s_demonCastleFirstTime) {
             if (stateManager) {
                 auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
+                demon->setLevelUnrestricted(150); // 魔王のレベルを150に設定
                 
                 stateManager->changeState(std::make_unique<BattleState>(player, std::move(demon)));
             }
         } else {
-            if (stateManager) {
-                TownState::s_fromDemonCastle = true;
-                auto townState = std::make_unique<TownState>(player);
-                stateManager->changeState(std::move(townState));
+            // フェードアウト開始（完了時に状態遷移）
+            if (!isFading()) {
+                startFadeOut(0.5f);
             }
         }
     } else {
@@ -230,6 +287,39 @@ void DemonCastleState::showMessage(const std::string& message) {
 
 void DemonCastleState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json DemonCastleState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::DEMON_CASTLE);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["dialogueStep"] = dialogueStep;
+    j["hasReceivedEvilQuest"] = hasReceivedEvilQuest;
+    j["isTalkingToDemon"] = isTalkingToDemon;
+    j["fromCastleState"] = fromCastleState;
+    j["demonCastleFirstTime"] = s_demonCastleFirstTime;
+    return j;
+}
+
+void DemonCastleState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("dialogueStep")) dialogueStep = j["dialogueStep"];
+    if (j.contains("hasReceivedEvilQuest")) hasReceivedEvilQuest = j["hasReceivedEvilQuest"];
+    if (j.contains("isTalkingToDemon")) isTalkingToDemon = j["isTalkingToDemon"];
+    if (j.contains("fromCastleState")) fromCastleState = j["fromCastleState"];
+    if (j.contains("demonCastleFirstTime")) s_demonCastleFirstTime = j["demonCastleFirstTime"];
+    
+    // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
+    if (!player->hasSeenDemonCastleStory && isTalkingToDemon) {
+        dialogueStep = 0;
+    }
+    
+    // 会話の状態を復元
+    if (isTalkingToDemon && dialogueStep < demonDialogues.size()) {
+        pendingDialogue = true;
+    }
 }
 
 void DemonCastleState::drawDemonCastle(Graphics& graphics) {
@@ -312,7 +402,10 @@ void DemonCastleState::drawPlayer(Graphics& graphics) {
     const int ROOM_OFFSET_Y = (SCREEN_HEIGHT - ROOM_PIXEL_HEIGHT) / 2; // (650 - 418) / 2 = 116
     
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = ROOM_OFFSET_X + playerX * TILE_SIZE + TILE_SIZE / 2;
+        int centerY = ROOM_OFFSET_Y + playerY * TILE_SIZE + TILE_SIZE / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, TILE_SIZE, true, true);
     } else {
         graphics.setDrawColor(0, 0, 255, 255);
         graphics.drawRect(ROOM_OFFSET_X + playerX * TILE_SIZE, ROOM_OFFSET_Y + playerY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -326,5 +419,9 @@ bool DemonCastleState::isValidPosition(int x, int y) const {
 }
 
 bool DemonCastleState::isNearObject(int x, int y) const {
-    return GameState::isNearObject(playerX, playerY, x, y);
+    // 上下左右のみに限定（斜めは除外）
+    int dx = abs(playerX - x);
+    int dy = abs(playerY - y);
+    // 上下左右のみ：dx==0かつdy<=1、またはdx<=1かつdy==0
+    return (dx == 0 && dy <= 1) || (dx <= 1 && dy == 0);
 } 

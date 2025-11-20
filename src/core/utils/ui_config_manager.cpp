@@ -29,6 +29,8 @@ namespace UIConfig {
         messageBoardConfig.text.position.absoluteX = 210.0f;
         messageBoardConfig.text.position.absoluteY = 500.0f;
         messageBoardConfig.text.color = {255, 255, 255, 255};
+        messageBoardConfig.backgroundColor = {0, 0, 0, 255};
+        messageBoardConfig.borderColor = {255, 255, 255, 255};
         
         commonUIConfig.nightTimer.position.useRelative = false;
         commonUIConfig.nightTimer.position.absoluteX = 10.0f;
@@ -71,6 +73,21 @@ namespace UIConfig {
         commonUIConfig.gameControllerStatus.position.absoluteY = 10.0f;
         commonUIConfig.gameControllerStatus.width = 80;
         commonUIConfig.gameControllerStatus.height = 20;
+        commonUIConfig.gameControllerStatusColor = {0, 255, 0, 255};
+        
+        // 目標レベルの色と行間
+        commonUIConfig.targetLevelAchievedColor = {0, 255, 0, 255};
+        commonUIConfig.targetLevelRemainingColor = {255, 255, 0, 255};
+        commonUIConfig.targetLevelLineSpacing = 20;
+        
+        // 信頼度の行間
+        commonUIConfig.trustLevelsLineSpacing1 = 20;
+        commonUIConfig.trustLevelsLineSpacing2 = 40;
+        
+        // 背景色とボーダー色
+        commonUIConfig.backgroundColor = {0, 0, 0, 255};
+        commonUIConfig.borderColor = {255, 255, 255, 255};
+        commonUIConfig.backgroundAlpha = 200;
         
         // MainMenuState
         mainMenuConfig.title.position.useRelative = false;
@@ -92,6 +109,12 @@ namespace UIConfig {
         mainMenuConfig.adventureButton.hoverColor = {0, 150, 0, 255};
         mainMenuConfig.adventureButton.pressedColor = {0, 50, 0, 255};
         mainMenuConfig.adventureButton.textColor = {255, 255, 255, 255};
+        
+        // "START GAME : PRESS ENTER"テキスト
+        mainMenuConfig.startGameText.position.useRelative = true;
+        mainMenuConfig.startGameText.position.offsetX = 0.0f;
+        mainMenuConfig.startGameText.position.offsetY = 100.0f;  // 画面下部から100px上（相対位置）
+        mainMenuConfig.startGameText.color = {255, 255, 255, 255};
         
         // BattleState
         battleConfig.battleLog.position.useRelative = false;
@@ -140,6 +163,143 @@ namespace UIConfig {
         battleConfig.playerPosition.absoluteY = 300.0f;
         battleConfig.playerWidth = 60;
         battleConfig.playerHeight = 60;
+        
+        // 説明用メッセージボード
+        battleConfig.explanationMessageBoard.background.position.useRelative = false;
+        battleConfig.explanationMessageBoard.background.position.absoluteX = 190.0f;
+        battleConfig.explanationMessageBoard.background.position.absoluteY = 480.0f;
+        battleConfig.explanationMessageBoard.background.width = 720;
+        battleConfig.explanationMessageBoard.background.height = 100;
+        battleConfig.explanationMessageBoard.text.position.useRelative = false;
+        battleConfig.explanationMessageBoard.text.position.absoluteX = 30.0f;  // 左下に配置
+        battleConfig.explanationMessageBoard.text.position.absoluteY = 580.0f;  // 画面下部から背景の内側に配置
+        battleConfig.explanationMessageBoard.text.color = {255, 255, 255, 255};
+        
+        // プレイヤー名の設定（相対位置オフセット）
+        battleConfig.playerName.offsetX = -80.0f;
+        battleConfig.playerName.offsetY = -40.0f;
+        battleConfig.playerName.color = {255, 255, 255, 255};
+        
+        // 体力バーの設定（相対位置オフセット）
+        battleConfig.healthBar.offsetX = 10.0f;
+        battleConfig.healthBar.offsetY = -40.0f;
+        battleConfig.healthBar.width = 150;
+        battleConfig.healthBar.height = 20;
+        battleConfig.healthBar.barColor = {150, 255, 150, 255};      // 黄緑色
+        battleConfig.healthBar.bgColor = {50, 50, 50, 255};          // 暗いグレー
+        battleConfig.healthBar.borderColor = {255, 255, 255, 255};   // 白色
+        
+        // コマンド選択UIの設定
+        battleConfig.commandSelection.selectedCommandOffsetY = -150.0f;
+        battleConfig.commandSelection.selectedCommandImageSize = 50;
+        battleConfig.commandSelection.imageSpacing = 60;
+        battleConfig.commandSelection.arrowSpacing = 20;
+        battleConfig.commandSelection.buttonBaseOffsetY = -50.0f;
+        battleConfig.commandSelection.buttonWidth = 200;
+        battleConfig.commandSelection.buttonHeight = 60;
+        battleConfig.commandSelection.buttonSpacing = 80;
+        battleConfig.commandSelection.buttonImageSize = 60;
+        battleConfig.commandSelection.selectedBgColor = {100, 200, 255, 200};
+        battleConfig.commandSelection.unselectedBgColor = {50, 50, 50, 150};
+        battleConfig.commandSelection.selectedBorderColor = {255, 215, 0, 255};
+        battleConfig.commandSelection.unselectedBorderColor = {150, 150, 150, 255};
+        battleConfig.commandSelection.selectedTextColor = {255, 255, 255, 255};
+        battleConfig.commandSelection.unselectedTextColor = {200, 200, 200, 255};
+        battleConfig.commandSelection.arrowColor = {255, 255, 255, 255};
+        
+        // 三すくみ画像の設定
+        battleConfig.rockPaperScissors.position.useRelative = false;
+        battleConfig.rockPaperScissors.position.absoluteX = 0.0f;  // 中央に配置（計算時に調整）
+        battleConfig.rockPaperScissors.position.absoluteY = 20.0f;  // 上部から20px下
+        battleConfig.rockPaperScissors.width = 200;
+        
+        // ジャッジ結果フェーズのUI設定
+        battleConfig.judgeResult.resultText.position.useRelative = true;
+        battleConfig.judgeResult.resultText.position.offsetY = -100.0f;
+        battleConfig.judgeResult.resultText.baseWidth = 400;
+        battleConfig.judgeResult.resultText.baseHeight = 100;
+        battleConfig.judgeResult.resultText.victoryColor = {255, 215, 0, 255};
+        battleConfig.judgeResult.resultText.defeatColor = {255, 0, 0, 255};
+        battleConfig.judgeResult.resultText.drawColor = {200, 200, 200, 255};
+        battleConfig.judgeResult.resultText.desperateVictoryColor = {255, 215, 0, 255};
+        battleConfig.judgeResult.resultText.desperateDefeatColor = {255, 0, 0, 255};
+        
+        battleConfig.judgeResult.threeWinStreak.position.useRelative = true;
+        battleConfig.judgeResult.threeWinStreak.position.offsetY = -150.0f;
+        battleConfig.judgeResult.threeWinStreak.baseWidth = 300;
+        battleConfig.judgeResult.threeWinStreak.baseHeight = 80;
+        battleConfig.judgeResult.threeWinStreak.color = {255, 215, 0, 255};
+        battleConfig.judgeResult.threeWinStreak.format = "3連勝！ダメージ{multiplier}倍ボーナス！";
+        
+        battleConfig.judgeResult.damageBonus.position.useRelative = true;
+        battleConfig.judgeResult.damageBonus.position.offsetY = 80.0f;
+        battleConfig.judgeResult.damageBonus.position.offsetX = -150.0f;
+        battleConfig.judgeResult.damageBonus.color = {255, 255, 100, 255};
+        battleConfig.judgeResult.damageBonus.format = "✨ ダメージ{multiplier}倍ボーナス！ ✨";
+        
+        // 勝敗UIの設定
+        battleConfig.winLossUI.winLossText.position.useRelative = false;
+        battleConfig.winLossUI.winLossText.position.offsetY = 20.0f;
+        battleConfig.winLossUI.winLossText.color = {255, 255, 255, 255};
+        battleConfig.winLossUI.winLossText.padding = 8;
+        battleConfig.winLossUI.winLossText.format = "自分 {playerWins}勝  敵 {enemyWins}勝";
+        
+        battleConfig.winLossUI.totalAttackText.position.useRelative = false;
+        battleConfig.winLossUI.totalAttackText.position.offsetY = 20.0f;
+        battleConfig.winLossUI.totalAttackText.color = {255, 255, 255, 255};
+        battleConfig.winLossUI.totalAttackText.padding = 8;
+        battleConfig.winLossUI.totalAttackText.playerWinFormat = "{playerName}が{turns}ターン分の攻撃を実行！";
+        battleConfig.winLossUI.totalAttackText.enemyWinFormat = "敵が{turns}ターン分の攻撃を実行！";
+        battleConfig.winLossUI.totalAttackText.drawFormat = "相打ち！";
+        battleConfig.winLossUI.totalAttackText.hesitateFormat = "{playerName}はメンタルの影響で攻撃をためらいました。";
+        
+        battleConfig.winLossUI.attackText.position.useRelative = false;
+        battleConfig.winLossUI.attackText.position.offsetY = 20.0f;
+        battleConfig.winLossUI.attackText.color = {255, 255, 255, 255};
+        battleConfig.winLossUI.attackText.padding = 8;
+        battleConfig.winLossUI.attackText.attackFormat = "{playerName}のアタック！";
+        battleConfig.winLossUI.attackText.rushFormat = "{playerName}のラッシュアタック！";
+        battleConfig.winLossUI.attackText.statusUpSpellFormat = "{playerName}が強化呪文発動！";
+        battleConfig.winLossUI.attackText.healSpellFormat = "{playerName}が回復呪文発動！";
+        battleConfig.winLossUI.attackText.attackSpellFormat = "{playerName}が攻撃呪文発動！";
+        battleConfig.winLossUI.attackText.defaultSpellFormat = "{playerName}が呪文発動！";
+        battleConfig.winLossUI.attackText.defaultAttackFormat = "{playerName}の攻撃！";
+        
+        // コマンド選択ヒントテキストの設定
+        battleConfig.commandHint.position.useRelative = true;
+        battleConfig.commandHint.position.offsetY = -100.0f;
+        battleConfig.commandHint.position.offsetX = -120.0f;
+        battleConfig.commandHint.color = {255, 255, 255, 255};
+        battleConfig.commandHint.padding = 8;
+        battleConfig.commandHint.normalText = "選択: W/S 決定: ENTER 戻る: Q";
+        battleConfig.commandHint.residentText = "選択: W/S 決定: ENTER";
+        
+        // ジャッジフェーズの結果表示UI設定
+        battleConfig.judgePhase.position.useRelative = true;  // デフォルトは相対位置（画面中央）
+        battleConfig.judgePhase.position.offsetX = 0.0f;
+        battleConfig.judgePhase.position.offsetY = 0.0f;
+        battleConfig.judgePhase.win.text = "勝ち！";
+        battleConfig.judgePhase.win.color = {255, 215, 0, 255};
+        battleConfig.judgePhase.lose.text = "負け...";
+        battleConfig.judgePhase.lose.color = {255, 0, 0, 255};
+        battleConfig.judgePhase.draw.text = "引き分け";
+        battleConfig.judgePhase.draw.color = {200, 200, 200, 255};
+        battleConfig.judgePhase.baseWidth = 200;
+        battleConfig.judgePhase.baseHeight = 60;
+        battleConfig.judgePhase.backgroundPadding = 20;
+        battleConfig.judgePhase.glowColor = {255, 215, 0, 255};
+        
+        // ステータス上昇呪文の攻撃倍率表示UI設定
+        battleConfig.attackMultiplier.position.useRelative = false;
+        battleConfig.attackMultiplier.position.absoluteX = 0.0f;  // プレイヤーHPバーのXからの相対位置として使用
+        battleConfig.attackMultiplier.position.absoluteY = 0.0f;  // プレイヤーHPバーのYからの相対位置として使用
+        battleConfig.attackMultiplier.offsetX = -100.0f;
+        battleConfig.attackMultiplier.offsetY = 0.0f;
+        battleConfig.attackMultiplier.textColor = {255, 255, 100, 255};
+        battleConfig.attackMultiplier.bgColor = {0, 0, 0, 255};
+        battleConfig.attackMultiplier.borderColor = {255, 255, 100, 255};
+        battleConfig.attackMultiplier.padding = 8;
+        battleConfig.attackMultiplier.format = "攻撃倍率: {multiplier}倍 (残り{turns}ターン)";
         
         // RoomState
         roomConfig.messageBoard.background.position.useRelative = false;
@@ -200,20 +360,20 @@ namespace UIConfig {
         demonCastleConfig.messageBoard.text.color = {255, 255, 255, 255};
         
         // GameOverState
-        gameOverConfig.title.position.useRelative = false;
-        gameOverConfig.title.position.absoluteX = 550.0f;
-        gameOverConfig.title.position.absoluteY = 200.0f;
-        gameOverConfig.title.color = {255, 0, 0, 255};
+        gameOverConfig.title.text.position.useRelative = false;
+        gameOverConfig.title.text.position.absoluteX = 550.0f;
+        gameOverConfig.title.text.position.absoluteY = 200.0f;
+        gameOverConfig.title.text.color = {255, 0, 0, 255};
         
-        gameOverConfig.reason.position.useRelative = false;
-        gameOverConfig.reason.position.absoluteX = 550.0f;
-        gameOverConfig.reason.position.absoluteY = 250.0f;
-        gameOverConfig.reason.color = {255, 255, 255, 255};
+        gameOverConfig.reason.text.position.useRelative = false;
+        gameOverConfig.reason.text.position.absoluteX = 550.0f;
+        gameOverConfig.reason.text.position.absoluteY = 250.0f;
+        gameOverConfig.reason.text.color = {255, 255, 255, 255};
         
-        gameOverConfig.instruction.position.useRelative = false;
-        gameOverConfig.instruction.position.absoluteX = 550.0f;
-        gameOverConfig.instruction.position.absoluteY = 400.0f;
-        gameOverConfig.instruction.color = {200, 200, 200, 255};
+        gameOverConfig.instruction.text.position.useRelative = false;
+        gameOverConfig.instruction.text.position.absoluteX = 550.0f;
+        gameOverConfig.instruction.text.position.absoluteY = 400.0f;
+        gameOverConfig.instruction.text.color = {200, 200, 200, 255};
         
         // EndingState
         endingConfig.message.position.useRelative = false;
@@ -243,11 +403,21 @@ namespace UIConfig {
         nightConfig.nightDisplayBackground.width = 65;
         nightConfig.nightDisplayBackground.height = 40;
         
+        nightConfig.nightDisplayText.position.useRelative = false;
+        nightConfig.nightDisplayText.position.absoluteX = 20.0f;
+        nightConfig.nightDisplayText.position.absoluteY = 15.0f;
+        nightConfig.nightDisplayText.color = {255, 255, 255, 255};
+        
         nightConfig.nightOperationBackground.position.useRelative = false;
         nightConfig.nightOperationBackground.position.absoluteX = 85.0f;
         nightConfig.nightOperationBackground.position.absoluteY = 5.0f;
         nightConfig.nightOperationBackground.width = 205;
         nightConfig.nightOperationBackground.height = 40;
+        
+        nightConfig.nightOperationText.position.useRelative = false;
+        nightConfig.nightOperationText.position.absoluteX = 95.0f;
+        nightConfig.nightOperationText.position.absoluteY = 15.0f;
+        nightConfig.nightOperationText.color = {255, 255, 255, 255};
         
         nightConfig.messageBoard.background.position.useRelative = false;
         nightConfig.messageBoard.background.position.absoluteX = 190.0f;
@@ -281,17 +451,39 @@ namespace UIConfig {
         
         std::ifstream file;
         bool fileFound = false;
+        std::string foundPath;
         for (const auto& path : candidatePaths) {
             file.open(path);
             if (file.is_open()) {
-                configFilePath = path;
-                fileFound = true;
-                break;
+                // ファイルが空でないかチェック
+                file.seekg(0, std::ios::end);
+                size_t fileSize = file.tellg();
+                file.seekg(0, std::ios::beg);
+                
+                if (fileSize > 0) {
+                    configFilePath = path;
+                    foundPath = path;
+                    fileFound = true;
+                    break;
+                } else {
+                    file.close();
+                    printf("UI Config: File is empty: %s\n", path.c_str());
+                }
             }
         }
         
         if (!fileFound) {
-            printf("UI Config: File not found, using default values: %s\n", filepath.c_str());
+            printf("UI Config: File not found or empty, using default values: %s\n", filepath.c_str());
+            configLoaded = false;
+            return false;
+        }
+        
+        // ファイルを再度開く（seekgで位置が変わっているため）
+        file.close();
+        file.open(foundPath);
+        
+        if (!file.is_open()) {
+            printf("UI Config: Failed to reopen file: %s\n", foundPath.c_str());
             configLoaded = false;
             return false;
         }
@@ -348,6 +540,43 @@ namespace UIConfig {
                                 255
                             };
                         }
+                    }
+                }
+                // メッセージボードの背景色とボーダー色
+                if (mb.contains("backgroundColor")) {
+                    auto& col = mb["backgroundColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        messageBoardConfig.backgroundColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        messageBoardConfig.backgroundColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                if (mb.contains("borderColor")) {
+                    auto& col = mb["borderColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        messageBoardConfig.borderColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        messageBoardConfig.borderColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
                     }
                 }
             }
@@ -503,6 +732,116 @@ namespace UIConfig {
                     if (gcs.contains("width")) commonUIConfig.gameControllerStatus.width = gcs["width"];
                     if (gcs.contains("height")) commonUIConfig.gameControllerStatus.height = gcs["height"];
                 }
+                
+                // 目標レベルの色と行間
+                if (cui.contains("targetLevelAchievedColor")) {
+                    auto& col = cui["targetLevelAchievedColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        commonUIConfig.targetLevelAchievedColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        commonUIConfig.targetLevelAchievedColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                if (cui.contains("targetLevelRemainingColor")) {
+                    auto& col = cui["targetLevelRemainingColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        commonUIConfig.targetLevelRemainingColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        commonUIConfig.targetLevelRemainingColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                if (cui.contains("targetLevelLineSpacing")) {
+                    commonUIConfig.targetLevelLineSpacing = cui["targetLevelLineSpacing"];
+                }
+                
+                // 信頼度の行間
+                if (cui.contains("trustLevelsLineSpacing1")) {
+                    commonUIConfig.trustLevelsLineSpacing1 = cui["trustLevelsLineSpacing1"];
+                }
+                if (cui.contains("trustLevelsLineSpacing2")) {
+                    commonUIConfig.trustLevelsLineSpacing2 = cui["trustLevelsLineSpacing2"];
+                }
+                
+                // ゲームコントローラー状態の色
+                if (cui.contains("gameControllerStatusColor")) {
+                    auto& col = cui["gameControllerStatusColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        commonUIConfig.gameControllerStatusColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        commonUIConfig.gameControllerStatusColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                
+                // 背景色とボーダー色
+                if (cui.contains("backgroundColor")) {
+                    auto& col = cui["backgroundColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        commonUIConfig.backgroundColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        commonUIConfig.backgroundColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                if (cui.contains("borderColor")) {
+                    auto& col = cui["borderColor"];
+                    if (col.is_array() && col.size() >= 4) {
+                        commonUIConfig.borderColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            static_cast<Uint8>(col[3])
+                        };
+                    } else if (col.is_array() && col.size() >= 3) {
+                        commonUIConfig.borderColor = {
+                            static_cast<Uint8>(col[0]),
+                            static_cast<Uint8>(col[1]),
+                            static_cast<Uint8>(col[2]),
+                            255
+                        };
+                    }
+                }
+                if (cui.contains("backgroundAlpha")) {
+                    commonUIConfig.backgroundAlpha = static_cast<Uint8>(cui["backgroundAlpha"]);
+                }
             }
             
             auto loadPosition = [](nlohmann::json& pos, UIPosition& uiPos) {
@@ -554,6 +893,11 @@ namespace UIConfig {
                     if (cfg.contains("pressedColor")) loadColor(cfg["pressedColor"], mainMenuConfig.adventureButton.pressedColor);
                     if (cfg.contains("textColor")) loadColor(cfg["textColor"], mainMenuConfig.adventureButton.textColor);
                 }
+                if (mm.contains("startGameText")) {
+                    auto& cfg = mm["startGameText"];
+                    if (cfg.contains("position")) loadPosition(cfg["position"], mainMenuConfig.startGameText.position);
+                    if (cfg.contains("color")) loadColor(cfg["color"], mainMenuConfig.startGameText.color);
+                }
             }
             
             // BattleState設定
@@ -602,9 +946,260 @@ namespace UIConfig {
                 }
                 if (bt.contains("playerPosition")) {
                     auto& cfg = bt["playerPosition"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], battleConfig.playerPosition);
+                    if (cfg.contains("position")) {
+                        loadPosition(cfg["position"], battleConfig.playerPosition);
+                        printf("UI Config: Loaded playerPosition: absoluteX=%.0f, absoluteY=%.0f, useRelative=%s\n",
+                               battleConfig.playerPosition.absoluteX,
+                               battleConfig.playerPosition.absoluteY,
+                               battleConfig.playerPosition.useRelative ? "true" : "false");
+                    }
                     if (cfg.contains("width")) battleConfig.playerWidth = cfg["width"];
                     if (cfg.contains("height")) battleConfig.playerHeight = cfg["height"];
+                }
+                if (bt.contains("explanationMessageBoard")) {
+                    auto& mb = bt["explanationMessageBoard"];
+                    if (mb.contains("background")) {
+                        auto& bg = mb["background"];
+                        if (bg.contains("position")) loadPosition(bg["position"], battleConfig.explanationMessageBoard.background.position);
+                        if (bg.contains("width")) battleConfig.explanationMessageBoard.background.width = bg["width"];
+                        if (bg.contains("height")) battleConfig.explanationMessageBoard.background.height = bg["height"];
+                    }
+                    if (mb.contains("text")) {
+                        auto& txt = mb["text"];
+                        if (txt.contains("position")) loadPosition(txt["position"], battleConfig.explanationMessageBoard.text.position);
+                        if (txt.contains("color")) loadColor(txt["color"], battleConfig.explanationMessageBoard.text.color);
+                    }
+                    // メッセージボードの背景色とボーダー色
+                    if (mb.contains("backgroundColor")) {
+                        auto& col = mb["backgroundColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            battleConfig.explanationMessageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            battleConfig.explanationMessageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                    if (mb.contains("borderColor")) {
+                        auto& col = mb["borderColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            battleConfig.explanationMessageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            battleConfig.explanationMessageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                }
+                
+                // プレイヤー名の設定
+                if (bt.contains("playerName")) {
+                    auto& cfg = bt["playerName"];
+                    if (cfg.contains("offsetX")) battleConfig.playerName.offsetX = cfg["offsetX"];
+                    if (cfg.contains("offsetY")) battleConfig.playerName.offsetY = cfg["offsetY"];
+                    if (cfg.contains("color")) loadColor(cfg["color"], battleConfig.playerName.color);
+                }
+                
+                // 体力バーの設定
+                if (bt.contains("healthBar")) {
+                    auto& cfg = bt["healthBar"];
+                    if (cfg.contains("offsetX")) battleConfig.healthBar.offsetX = cfg["offsetX"];
+                    if (cfg.contains("offsetY")) battleConfig.healthBar.offsetY = cfg["offsetY"];
+                    if (cfg.contains("width")) battleConfig.healthBar.width = cfg["width"];
+                    if (cfg.contains("height")) battleConfig.healthBar.height = cfg["height"];
+                    if (cfg.contains("barColor")) loadColor(cfg["barColor"], battleConfig.healthBar.barColor);
+                    if (cfg.contains("bgColor")) loadColor(cfg["bgColor"], battleConfig.healthBar.bgColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], battleConfig.healthBar.borderColor);
+                }
+                
+                // コマンド選択UIの設定
+                if (bt.contains("commandSelection")) {
+                    auto& cfg = bt["commandSelection"];
+                    if (cfg.contains("selectedCommandOffsetY")) battleConfig.commandSelection.selectedCommandOffsetY = cfg["selectedCommandOffsetY"];
+                    if (cfg.contains("selectedCommandImageSize")) battleConfig.commandSelection.selectedCommandImageSize = cfg["selectedCommandImageSize"];
+                    if (cfg.contains("imageSpacing")) battleConfig.commandSelection.imageSpacing = cfg["imageSpacing"];
+                    if (cfg.contains("arrowSpacing")) battleConfig.commandSelection.arrowSpacing = cfg["arrowSpacing"];
+                    if (cfg.contains("buttonBaseOffsetY")) battleConfig.commandSelection.buttonBaseOffsetY = cfg["buttonBaseOffsetY"];
+                    if (cfg.contains("buttonWidth")) battleConfig.commandSelection.buttonWidth = cfg["buttonWidth"];
+                    if (cfg.contains("buttonHeight")) battleConfig.commandSelection.buttonHeight = cfg["buttonHeight"];
+                    if (cfg.contains("buttonSpacing")) battleConfig.commandSelection.buttonSpacing = cfg["buttonSpacing"];
+                    if (cfg.contains("buttonImageSize")) battleConfig.commandSelection.buttonImageSize = cfg["buttonImageSize"];
+                    if (cfg.contains("selectedBgColor")) loadColor(cfg["selectedBgColor"], battleConfig.commandSelection.selectedBgColor);
+                    if (cfg.contains("unselectedBgColor")) loadColor(cfg["unselectedBgColor"], battleConfig.commandSelection.unselectedBgColor);
+                    if (cfg.contains("selectedBorderColor")) loadColor(cfg["selectedBorderColor"], battleConfig.commandSelection.selectedBorderColor);
+                    if (cfg.contains("unselectedBorderColor")) loadColor(cfg["unselectedBorderColor"], battleConfig.commandSelection.unselectedBorderColor);
+                    if (cfg.contains("selectedTextColor")) loadColor(cfg["selectedTextColor"], battleConfig.commandSelection.selectedTextColor);
+                    if (cfg.contains("unselectedTextColor")) loadColor(cfg["unselectedTextColor"], battleConfig.commandSelection.unselectedTextColor);
+                    if (cfg.contains("arrowColor")) loadColor(cfg["arrowColor"], battleConfig.commandSelection.arrowColor);
+                }
+                
+                // 三すくみ画像の設定
+                if (bt.contains("rockPaperScissors")) {
+                    auto& cfg = bt["rockPaperScissors"];
+                    if (cfg.contains("position")) loadPosition(cfg["position"], battleConfig.rockPaperScissors.position);
+                    if (cfg.contains("width")) battleConfig.rockPaperScissors.width = cfg["width"];
+                }
+                
+                // ジャッジ結果フェーズのUI設定
+                if (bt.contains("judgeResult")) {
+                    auto& jr = bt["judgeResult"];
+                    
+                    // メイン結果テキスト
+                    if (jr.contains("resultText")) {
+                        auto& rt = jr["resultText"];
+                        if (rt.contains("position")) loadPosition(rt["position"], battleConfig.judgeResult.resultText.position);
+                        if (rt.contains("offsetY")) battleConfig.judgeResult.resultText.offsetY = rt["offsetY"];
+                        if (rt.contains("baseWidth")) battleConfig.judgeResult.resultText.baseWidth = rt["baseWidth"];
+                        if (rt.contains("baseHeight")) battleConfig.judgeResult.resultText.baseHeight = rt["baseHeight"];
+                        if (rt.contains("victoryColor")) loadColor(rt["victoryColor"], battleConfig.judgeResult.resultText.victoryColor);
+                        if (rt.contains("defeatColor")) loadColor(rt["defeatColor"], battleConfig.judgeResult.resultText.defeatColor);
+                        if (rt.contains("drawColor")) loadColor(rt["drawColor"], battleConfig.judgeResult.resultText.drawColor);
+                        if (rt.contains("desperateVictoryColor")) loadColor(rt["desperateVictoryColor"], battleConfig.judgeResult.resultText.desperateVictoryColor);
+                        if (rt.contains("desperateDefeatColor")) loadColor(rt["desperateDefeatColor"], battleConfig.judgeResult.resultText.desperateDefeatColor);
+                    }
+                    
+                    // 3連勝テキスト
+                    if (jr.contains("threeWinStreak")) {
+                        auto& tws = jr["threeWinStreak"];
+                        if (tws.contains("position")) loadPosition(tws["position"], battleConfig.judgeResult.threeWinStreak.position);
+                        if (tws.contains("offsetY")) battleConfig.judgeResult.threeWinStreak.offsetY = tws["offsetY"];
+                        if (tws.contains("baseWidth")) battleConfig.judgeResult.threeWinStreak.baseWidth = tws["baseWidth"];
+                        if (tws.contains("baseHeight")) battleConfig.judgeResult.threeWinStreak.baseHeight = tws["baseHeight"];
+                        if (tws.contains("color")) loadColor(tws["color"], battleConfig.judgeResult.threeWinStreak.color);
+                        if (tws.contains("format")) battleConfig.judgeResult.threeWinStreak.format = tws["format"];
+                    }
+                    
+                    // ダメージボーナステキスト
+                    if (jr.contains("damageBonus")) {
+                        auto& db = jr["damageBonus"];
+                        if (db.contains("position")) loadPosition(db["position"], battleConfig.judgeResult.damageBonus.position);
+                        if (db.contains("offsetY")) battleConfig.judgeResult.damageBonus.offsetY = db["offsetY"];
+                        if (db.contains("offsetX")) battleConfig.judgeResult.damageBonus.offsetX = db["offsetX"];
+                        if (db.contains("color")) loadColor(db["color"], battleConfig.judgeResult.damageBonus.color);
+                        if (db.contains("format")) battleConfig.judgeResult.damageBonus.format = db["format"];
+                    }
+                }
+                
+                // 勝敗UIの設定
+                if (bt.contains("winLossUI")) {
+                    auto& wl = bt["winLossUI"];
+                    
+                    // 「自分 X勝 敵 Y勝」テキスト
+                    if (wl.contains("winLossText")) {
+                        auto& wlt = wl["winLossText"];
+                        if (wlt.contains("position")) loadPosition(wlt["position"], battleConfig.winLossUI.winLossText.position);
+                        // offsetYはposition.offsetYとして読み込まれるため、直接読み込みは不要
+                        if (wlt.contains("color")) loadColor(wlt["color"], battleConfig.winLossUI.winLossText.color);
+                        if (wlt.contains("padding")) battleConfig.winLossUI.winLossText.padding = wlt["padding"];
+                        if (wlt.contains("format")) battleConfig.winLossUI.winLossText.format = wlt["format"];
+                    }
+                    
+                    // 「〜ターン分の攻撃を実行」テキスト
+                    if (wl.contains("totalAttackText")) {
+                        auto& tat = wl["totalAttackText"];
+                        if (tat.contains("position")) loadPosition(tat["position"], battleConfig.winLossUI.totalAttackText.position);
+                        // offsetYはposition.offsetYとして読み込まれるため、直接読み込みは不要
+                        if (tat.contains("color")) loadColor(tat["color"], battleConfig.winLossUI.totalAttackText.color);
+                        if (tat.contains("padding")) battleConfig.winLossUI.totalAttackText.padding = tat["padding"];
+                        if (tat.contains("playerWinFormat")) battleConfig.winLossUI.totalAttackText.playerWinFormat = tat["playerWinFormat"];
+                        if (tat.contains("enemyWinFormat")) battleConfig.winLossUI.totalAttackText.enemyWinFormat = tat["enemyWinFormat"];
+                        if (tat.contains("drawFormat")) battleConfig.winLossUI.totalAttackText.drawFormat = tat["drawFormat"];
+                        if (tat.contains("hesitateFormat")) battleConfig.winLossUI.totalAttackText.hesitateFormat = tat["hesitateFormat"];
+                    }
+                    
+                    // 「〜のアタック！」などのテキスト
+                    if (wl.contains("attackText")) {
+                        auto& at = wl["attackText"];
+                        if (at.contains("position")) loadPosition(at["position"], battleConfig.winLossUI.attackText.position);
+                        // offsetYはposition.offsetYとして読み込まれるため、直接読み込みは不要
+                        if (at.contains("color")) loadColor(at["color"], battleConfig.winLossUI.attackText.color);
+                        if (at.contains("padding")) battleConfig.winLossUI.attackText.padding = at["padding"];
+                        if (at.contains("attackFormat")) battleConfig.winLossUI.attackText.attackFormat = at["attackFormat"];
+                        if (at.contains("rushFormat")) battleConfig.winLossUI.attackText.rushFormat = at["rushFormat"];
+                        if (at.contains("statusUpSpellFormat")) battleConfig.winLossUI.attackText.statusUpSpellFormat = at["statusUpSpellFormat"];
+                        if (at.contains("healSpellFormat")) battleConfig.winLossUI.attackText.healSpellFormat = at["healSpellFormat"];
+                        if (at.contains("attackSpellFormat")) battleConfig.winLossUI.attackText.attackSpellFormat = at["attackSpellFormat"];
+                        if (at.contains("defaultSpellFormat")) battleConfig.winLossUI.attackText.defaultSpellFormat = at["defaultSpellFormat"];
+                        if (at.contains("defaultAttackFormat")) battleConfig.winLossUI.attackText.defaultAttackFormat = at["defaultAttackFormat"];
+                    }
+                }
+                
+                // コマンド選択ヒントテキストの設定
+                if (bt.contains("commandHint")) {
+                    auto& ch = bt["commandHint"];
+                    if (ch.contains("position")) loadPosition(ch["position"], battleConfig.commandHint.position);
+                    if (ch.contains("offsetY")) battleConfig.commandHint.offsetY = ch["offsetY"];
+                    if (ch.contains("offsetX")) battleConfig.commandHint.offsetX = ch["offsetX"];
+                    if (ch.contains("color")) loadColor(ch["color"], battleConfig.commandHint.color);
+                    if (ch.contains("padding")) battleConfig.commandHint.padding = ch["padding"];
+                    if (ch.contains("normalText")) battleConfig.commandHint.normalText = ch["normalText"];
+                    if (ch.contains("residentText")) battleConfig.commandHint.residentText = ch["residentText"];
+                }
+                
+                // ジャッジフェーズの結果表示UI設定
+                if (bt.contains("judgePhase")) {
+                    auto& jp = bt["judgePhase"];
+                    
+                    // 位置設定
+                    if (jp.contains("position")) {
+                        loadPosition(jp["position"], battleConfig.judgePhase.position);
+                    }
+                    
+                    // 勝利時の設定
+                    if (jp.contains("win")) {
+                        auto& win = jp["win"];
+                        if (win.contains("text")) battleConfig.judgePhase.win.text = win["text"];
+                        if (win.contains("color")) loadColor(win["color"], battleConfig.judgePhase.win.color);
+                    }
+                    
+                    // 敗北時の設定
+                    if (jp.contains("lose")) {
+                        auto& lose = jp["lose"];
+                        if (lose.contains("text")) battleConfig.judgePhase.lose.text = lose["text"];
+                        if (lose.contains("color")) loadColor(lose["color"], battleConfig.judgePhase.lose.color);
+                    }
+                    
+                    // 引き分け時の設定
+                    if (jp.contains("draw")) {
+                        auto& draw = jp["draw"];
+                        if (draw.contains("text")) battleConfig.judgePhase.draw.text = draw["text"];
+                        if (draw.contains("color")) loadColor(draw["color"], battleConfig.judgePhase.draw.color);
+                    }
+                    
+                    // その他の設定
+                    if (jp.contains("baseWidth")) battleConfig.judgePhase.baseWidth = jp["baseWidth"];
+                    if (jp.contains("baseHeight")) battleConfig.judgePhase.baseHeight = jp["baseHeight"];
+                    if (jp.contains("backgroundPadding")) battleConfig.judgePhase.backgroundPadding = jp["backgroundPadding"];
+                    if (jp.contains("glowColor")) loadColor(jp["glowColor"], battleConfig.judgePhase.glowColor);
+                }
+                
+                // ステータス上昇呪文の攻撃倍率表示UI設定
+                if (bt.contains("attackMultiplier")) {
+                    auto& am = bt["attackMultiplier"];
+                    if (am.contains("position")) loadPosition(am["position"], battleConfig.attackMultiplier.position);
+                    if (am.contains("offsetX")) battleConfig.attackMultiplier.offsetX = am["offsetX"];
+                    if (am.contains("offsetY")) battleConfig.attackMultiplier.offsetY = am["offsetY"];
+                    if (am.contains("textColor")) loadColor(am["textColor"], battleConfig.attackMultiplier.textColor);
+                    if (am.contains("bgColor")) loadColor(am["bgColor"], battleConfig.attackMultiplier.bgColor);
+                    if (am.contains("borderColor")) loadColor(am["borderColor"], battleConfig.attackMultiplier.borderColor);
+                    if (am.contains("padding")) battleConfig.attackMultiplier.padding = am["padding"];
+                    if (am.contains("format")) battleConfig.attackMultiplier.format = am["format"];
                 }
             }
             
@@ -623,6 +1218,43 @@ namespace UIConfig {
                         auto& txt = mb["text"];
                         if (txt.contains("position")) loadPosition(txt["position"], roomConfig.messageBoard.text.position);
                         if (txt.contains("color")) loadColor(txt["color"], roomConfig.messageBoard.text.color);
+                    }
+                    // メッセージボードの背景色とボーダー色
+                    if (mb.contains("backgroundColor")) {
+                        auto& col = mb["backgroundColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            roomConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            roomConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                    if (mb.contains("borderColor")) {
+                        auto& col = mb["borderColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            roomConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            roomConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
                     }
                 }
                 if (rm.contains("howToOperateBackground")) {
@@ -669,6 +1301,43 @@ namespace UIConfig {
                         if (txt.contains("position")) loadPosition(txt["position"], castleConfig.messageBoard.text.position);
                         if (txt.contains("color")) loadColor(txt["color"], castleConfig.messageBoard.text.color);
                     }
+                    // メッセージボードの背景色とボーダー色
+                    if (mb.contains("backgroundColor")) {
+                        auto& col = mb["backgroundColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            castleConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            castleConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                    if (mb.contains("borderColor")) {
+                        auto& col = mb["borderColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            castleConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            castleConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
                 }
             }
             
@@ -688,6 +1357,43 @@ namespace UIConfig {
                         if (txt.contains("position")) loadPosition(txt["position"], demonCastleConfig.messageBoard.text.position);
                         if (txt.contains("color")) loadColor(txt["color"], demonCastleConfig.messageBoard.text.color);
                     }
+                    // メッセージボードの背景色とボーダー色
+                    if (mb.contains("backgroundColor")) {
+                        auto& col = mb["backgroundColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            demonCastleConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            demonCastleConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                    if (mb.contains("borderColor")) {
+                        auto& col = mb["borderColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            demonCastleConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            demonCastleConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
                 }
             }
             
@@ -696,18 +1402,55 @@ namespace UIConfig {
                 auto& go = jsonData["gameOver"];
                 if (go.contains("title")) {
                     auto& cfg = go["title"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.title.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.title.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.title.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.title.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.title.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.title.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.title.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.title.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.title.borderColor);
                 }
                 if (go.contains("reason")) {
                     auto& cfg = go["reason"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.reason.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.reason.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.reason.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.reason.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.reason.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.reason.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.reason.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.reason.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.reason.borderColor);
                 }
                 if (go.contains("instruction")) {
                     auto& cfg = go["instruction"];
-                    if (cfg.contains("position")) loadPosition(cfg["position"], gameOverConfig.instruction.position);
-                    if (cfg.contains("color")) loadColor(cfg["color"], gameOverConfig.instruction.color);
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.instruction.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.instruction.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.instruction.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.instruction.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.instruction.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.instruction.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.instruction.borderColor);
+                }
+                if (go.contains("image")) {
+                    auto& cfg = go["image"];
+                    if (cfg.contains("baseSize")) gameOverConfig.image.baseSize = cfg["baseSize"].get<int>();
                 }
             }
             
@@ -745,11 +1488,21 @@ namespace UIConfig {
                     if (cfg.contains("width")) nightConfig.nightDisplayBackground.width = cfg["width"];
                     if (cfg.contains("height")) nightConfig.nightDisplayBackground.height = cfg["height"];
                 }
+                if (nt.contains("nightDisplayText")) {
+                    auto& cfg = nt["nightDisplayText"];
+                    if (cfg.contains("position")) loadPosition(cfg["position"], nightConfig.nightDisplayText.position);
+                    if (cfg.contains("color")) loadColor(cfg["color"], nightConfig.nightDisplayText.color);
+                }
                 if (nt.contains("nightOperationBackground")) {
                     auto& cfg = nt["nightOperationBackground"];
                     if (cfg.contains("position")) loadPosition(cfg["position"], nightConfig.nightOperationBackground.position);
                     if (cfg.contains("width")) nightConfig.nightOperationBackground.width = cfg["width"];
                     if (cfg.contains("height")) nightConfig.nightOperationBackground.height = cfg["height"];
+                }
+                if (nt.contains("nightOperationText")) {
+                    auto& cfg = nt["nightOperationText"];
+                    if (cfg.contains("position")) loadPosition(cfg["position"], nightConfig.nightOperationText.position);
+                    if (cfg.contains("color")) loadColor(cfg["color"], nightConfig.nightOperationText.color);
                 }
                 if (nt.contains("messageBoard")) {
                     auto& mb = nt["messageBoard"];
@@ -763,6 +1516,43 @@ namespace UIConfig {
                         auto& txt = mb["text"];
                         if (txt.contains("position")) loadPosition(txt["position"], nightConfig.messageBoard.text.position);
                         if (txt.contains("color")) loadColor(txt["color"], nightConfig.messageBoard.text.color);
+                    }
+                    // メッセージボードの背景色とボーダー色
+                    if (mb.contains("backgroundColor")) {
+                        auto& col = mb["backgroundColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            nightConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            nightConfig.messageBoard.backgroundColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
+                    }
+                    if (mb.contains("borderColor")) {
+                        auto& col = mb["borderColor"];
+                        if (col.is_array() && col.size() >= 4) {
+                            nightConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                static_cast<Uint8>(col[3])
+                            };
+                        } else if (col.is_array() && col.size() >= 3) {
+                            nightConfig.messageBoard.borderColor = {
+                                static_cast<Uint8>(col[0]),
+                                static_cast<Uint8>(col[1]),
+                                static_cast<Uint8>(col[2]),
+                                255
+                            };
+                        }
                     }
                 }
             }
@@ -792,6 +1582,7 @@ namespace UIConfig {
     }
     
     void UIConfigManager::reloadConfig() {
+        // 常に元のファイル（../assets/config/ui_config.json）を優先的に読み込む
         std::string originalPath = "../assets/config/ui_config.json";
         std::string buildPath = "assets/config/ui_config.json";
         
@@ -800,13 +1591,13 @@ namespace UIConfig {
         
         std::string pathToLoad;
         if (originalModTime > 0) {
+            // 元のファイルを優先
             pathToLoad = originalPath;
-            if (buildModTime > 0 && buildModTime > originalModTime) {
-                pathToLoad = buildPath;
-            }
         } else if (buildModTime > 0) {
+            // 元のファイルが存在しない場合のみ、build内のファイルを使用
             pathToLoad = buildPath;
         } else {
+            // どちらも見つからない場合は、既存のconfigFilePathを使用
             if (!configFilePath.empty()) {
                 loadConfig(configFilePath);
             }
@@ -853,6 +1644,8 @@ namespace UIConfig {
     }
     
     bool UIConfigManager::checkAndReloadConfig() {
+        // 常に元のファイル（../assets/config/ui_config.json）を優先的に監視
+        // これにより、編集したファイルが確実にホットリロードされる
         std::string originalPath = "../assets/config/ui_config.json";
         std::string buildPath = "assets/config/ui_config.json";
         
@@ -862,14 +1655,12 @@ namespace UIConfig {
         time_t currentModTime = 0;
         std::string currentPath;
         
+        // 元のファイルを優先（存在する場合）
         if (originalModTime > 0) {
             currentModTime = originalModTime;
             currentPath = originalPath;
-            if (buildModTime > 0 && buildModTime > originalModTime) {
-                currentModTime = buildModTime;
-                currentPath = buildPath;
-            }
         } else if (buildModTime > 0) {
+            // 元のファイルが存在しない場合のみ、build内のファイルを使用
             currentModTime = buildModTime;
             currentPath = buildPath;
         } else {
@@ -884,9 +1675,12 @@ namespace UIConfig {
         }
         
         if (currentModTime > 0 && currentModTime != lastFileModificationTime && lastFileModificationTime > 0) {
-            printf("UI Config: File changed! Reloading from %s...\n", configFilePath.c_str());
+            printf("UI Config: File changed! Reloading from %s...\n", currentPath.c_str());
             lastFileModificationTime = currentModTime;
             reloadConfig();
+            printf("UI Config: Reload complete. Player position: absoluteX=%.0f, absoluteY=%.0f\n",
+                   getBattleConfig().playerPosition.absoluteX,
+                   getBattleConfig().playerPosition.absoluteY);
             return true;
         }
         

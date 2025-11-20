@@ -10,6 +10,7 @@
 #include "../entities/Player.h"
 #include "../core/GameUtils.h"
 #include <memory>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief 魔王の城の状態を担当するクラス
@@ -97,6 +98,18 @@ public:
      */
     StateType getType() const override { return StateType::DEMON_CASTLE; }
     
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
+    
 private:
     /**
      * @brief UIのセットアップ
@@ -179,10 +192,10 @@ private:
     bool isValidPosition(int x, int y) const;
     
     /**
-     * @brief オブジェクトの近くにいるかどうかの判定
+     * @brief オブジェクトの近くにいるかどうかの判定（上下左右のみ）
      * @param x X座標
      * @param y Y座標
-     * @return オブジェクトの近くにいるか
+     * @return オブジェクトの近くにいるか（上下左右のみ）
      */
     bool isNearObject(int x, int y) const;
     
@@ -192,7 +205,4 @@ private:
     void interactWithDemon();
     
     /**
-     * @brief 街への退出
-     */
-    void exitToTown();
-}; 
+     * @brief �

@@ -15,20 +15,16 @@
 #include "../items/Inventory.h"
 #include "../items/Equipment.h"
 #include <map>
+#include <nlohmann/json.hpp>
 
 /**
- * @brief 呪文の種類
- * @details プレイヤーが使用可能な呪文の種類を定義する。
+ * @brief 魔法の種類
+ * @details プレイヤーが使用可能な魔法の種類を定義する。
  */
 enum class SpellType {
-    KIZUGAIAERU,  // キズガイエール（体力20%回復）
-    ATSUIATSUI,   // アツイアツーイ（低MP攻撃呪文）
-    BIRIBIRIDOKKAN, // ビリビリドッカーン（中MP攻撃呪文）
-    DARKNESSIMPACT, // ダークネスインパクト（高MP攻撃呪文）
-    ICHIKABACHIKA,   // イチカバチーカ（カウンター技）
-    TSUGICHOTTOTSUYOI,     // ツギチョットツヨーイ（次のターン2.5倍）
-    TSUGIMECHATSUYOI,   // ツギメッチャツヨーイ（次のターン4倍）
-    WANCHANTAOSERU  /**< @brief ワンチャンタオセール（即死技） */
+    STATUS_UP,    /**< @brief ステータスアップ魔法（次の攻撃が2.5倍になる） */
+    HEAL,         /**< @brief 回復魔法（HPが4割回復） */
+    ATTACK        /**< @brief 攻撃魔法（通常の攻撃と同じ攻撃力） */
 };
 
 /**
@@ -53,6 +49,12 @@ private:
     // 信頼度管理（単一責任の原則）
     std::unique_ptr<PlayerTrust> playerTrust;
     
+    // セーブされたゲーム状態（オプショナル）
+    std::unique_ptr<nlohmann::json> savedGameState;
+    
+    // ゲームオーバーからの終了フラグ（オプショナル）
+    bool savedGameOverExit;
+    
     // 夜間システム
     bool isNightTime; // 夜間かどうか
     
@@ -61,6 +63,20 @@ private:
     std::vector<std::pair<int, int>> killedResidents; // 倒した住民の位置
 
 public:
+    // 説明UIの完了状態
+    bool hasSeenTownExplanation;      /**< @brief 街の説明UIを見たか */
+    bool hasSeenFieldExplanation;     /**< @brief フィールドの説明UIを見たか */
+    bool hasSeenFieldFirstVictoryExplanation;  /**< @brief フィールドの初勝利後の説明UIを見たか */
+    bool hasSeenBattleExplanation;   /**< @brief 戦闘の説明UIを見たか */
+    bool hasSeenResidentBattleExplanation;   /**< @brief 住民戦の説明UIを見たか */
+    bool hasSeenLastChanceExplanation;   /**< @brief 終焉解放の説明UIを見たか */
+    bool hasSeenNightExplanation;     /**< @brief 夜の街の説明UIを見たか */
+    
+    // ストーリーメッセージUIの完了状態
+    bool hasSeenRoomStory;           /**< @brief 部屋のストーリーメッセージUIを見たか */
+    bool hasSeenCastleStory;         /**< @brief 王様の城のストーリーメッセージUIを見たか */
+    bool hasSeenDemonCastleStory;    /**< @brief 魔王の城のストーリーメッセージUIを見たか */
+    
     /**
      * @brief コンストラクタ
      * @param name プレイヤー名
@@ -468,7 +484,15 @@ public:
      * @param x X座標
      * @param y Y座標
      */
-    void addKilledResident(int x, int y) { killedResidents.push_back({x, y}); }
+    void addKilledResident(int x, int y) {
+        // 重複チェック
+        for (const auto& pos : killedResidents) {
+            if (pos.first == x && pos.second == y) {
+                return; // 既に存在する場合は追加しない
+            }
+        }
+        killedResidents.push_back({x, y});
+    }
     
     /**
      * @brief 倒した住民の位置をクリア
@@ -506,6 +530,24 @@ public:
     bool autoLoad(float& nightTimer, bool& nightTimerActive);
     
     /**
+     * @brief セーブされたゲーム状態の設定
+     * @param stateJson ゲーム状態のJSONオブジェクト
+     */
+    void setSavedGameState(const nlohmann::json& stateJson);
+    
+    /**
+     * @brief セーブされたゲーム状態の取得
+     * @return ゲーム状態のJSONオブジェクト（存在しない場合はnullptr）
+     */
+    const nlohmann::json* getSavedGameState() const;
+    
+    /**
+     * @brief ゲームオーバーからの終了フラグの設定
+     * @param gameOverExit ゲームオーバーからの終了かどうか
+     */
+    void setGameOverExit(bool gameOverExit);
+    
+    /**
      * @brief レベルの設定
      * @param newLevel 新しいレベル
      */
@@ -534,6 +576,12 @@ public:
      * @return 次のターンの倍率
      */
     float getNextTurnMultiplier() const { return playerStats->getSpellEffects().nextTurnMultiplier; }
+    
+    /**
+     * @brief 次のターンボーナスの残りターン数の取得
+     * @return 残りターン数
+     */
+    int getNextTurnBonusTurns() const { return playerStats->getSpellEffects().nextTurnBonusTurns; }
     
     /**
      * @brief 次のターンボーナスの設定

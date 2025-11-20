@@ -10,6 +10,7 @@
 #include "../entities/Player.h"
 #include "../core/GameUtils.h"
 #include <memory>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief 城の状態を担当するクラス
@@ -114,6 +115,41 @@ public:
      */
     StateType getType() const override { return StateType::CASTLE; }
     
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
+    
+    /**
+     * @brief 衛兵を倒した時の処理
+     * @param isLeft 左衛兵かどうか
+     */
+    void onGuardDefeated(bool isLeft);
+    
+    /**
+     * @brief 王様を倒した時の処理
+     */
+    void onKingDefeated();
+    
+    /**
+     * @brief 左衛兵が倒されたかどうかを取得
+     * @return 左衛兵が倒されたかどうか
+     */
+    bool isGuardLeftDefeated() const { return guardLeftDefeated; }
+    
+    /**
+     * @brief 右衛兵が倒されたかどうかを取得
+     * @return 右衛兵が倒されたかどうか
+     */
+    bool isGuardRightDefeated() const { return guardRightDefeated; }
+    
 private:
     /**
      * @brief UIのセットアップ
@@ -196,10 +232,10 @@ private:
     bool isValidPosition(int x, int y) const;
     
     /**
-     * @brief オブジェクトの近くにいるかどうかの判定
+     * @brief オブジェクトの近くにいるかどうかの判定（上下左右のみ）
      * @param x X座標
      * @param y Y座標
-     * @return オブジェクトの近くにいるか
+     * @return オブジェクトの近くにいるか（上下左右のみ）
      */
     bool isNearObject(int x, int y) const;
     

@@ -1,7 +1,9 @@
 #include "Equipment.h"
 #include "../entities/Player.h"
+#include "ItemFactory.h"
 #include <iostream>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 Equipment::Equipment(const std::string& name, const std::string& description, int price, 
                      EquipmentSlot slot, int attackBonus, int defenseBonus, 
@@ -280,54 +282,69 @@ void EquipmentManager::displayEquipment() const {
     int totalMp = getTotalMpBonus();
 }
 
-void EquipmentManager::saveToFile(std::ofstream& file) {
+nlohmann::json EquipmentManager::toJson() const {
+    nlohmann::json j;
+    j["equipment"] = nlohmann::json::object();
+    
     for (int slot = 0; slot < 4; ++slot) {
         EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
         const Equipment* equipped = getEquippedItem(equipmentSlot);
         
-        bool hasEquipment = (equipped != nullptr);
-        file.write(reinterpret_cast<const char*>(&hasEquipment), sizeof(hasEquipment));
+        std::string slotName;
+        switch (equipmentSlot) {
+            case EquipmentSlot::WEAPON: slotName = "weapon"; break;
+            case EquipmentSlot::ARMOR: slotName = "armor"; break;
+            case EquipmentSlot::SHIELD: slotName = "shield"; break;
+            case EquipmentSlot::ACCESSORY: slotName = "accessory"; break;
+        }
         
-        if (hasEquipment) {
-            ItemType itemType = equipped->getType();
-            file.write(reinterpret_cast<const char*>(&itemType), sizeof(itemType));
-            
-            std::string equipmentName = equipped->getName();
-            int nameLength = equipmentName.length();
-            file.write(reinterpret_cast<const char*>(&nameLength), sizeof(nameLength));
-            file.write(equipmentName.c_str(), nameLength);
+        if (equipped) {
+            j["equipment"][slotName]["hasEquipment"] = true;
+            j["equipment"][slotName]["itemName"] = equipped->getName();
+            j["equipment"][slotName]["itemType"] = static_cast<int>(equipped->getType());
+        } else {
+            j["equipment"][slotName]["hasEquipment"] = false;
         }
     }
+    
+    return j;
 }
 
-void EquipmentManager::loadFromFile(std::ifstream& file) {
+void EquipmentManager::fromJson(const nlohmann::json& j) {
+    if (!j.contains("equipment")) {
+        return;
+    }
+    
+    const auto& equipmentJson = j["equipment"];
+    
+    // 既存の装備を解除
     for (int slot = 0; slot < 4; ++slot) {
-        EquipmentSlot equipmentSlot = static_cast<EquipmentSlot>(slot);
-        
-        bool hasEquipment;
-        file.read(reinterpret_cast<char*>(&hasEquipment), sizeof(hasEquipment));
-        
-        if (hasEquipment) {
-            ItemType itemType;
-            file.read(reinterpret_cast<char*>(&itemType), sizeof(itemType));
+        unequipItem(static_cast<EquipmentSlot>(slot));
+    }
+    
+    std::vector<std::pair<std::string, EquipmentSlot>> slots = {
+        {"weapon", EquipmentSlot::WEAPON},
+        {"armor", EquipmentSlot::ARMOR},
+        {"shield", EquipmentSlot::SHIELD},
+        {"accessory", EquipmentSlot::ACCESSORY}
+    };
+    
+    for (const auto& [slotName, equipmentSlot] : slots) {
+        if (equipmentJson.contains(slotName) && 
+            equipmentJson[slotName].contains("hasEquipment") &&
+            equipmentJson[slotName]["hasEquipment"].get<bool>()) {
             
-            int nameLength;
-            file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength));
-            char* nameBuffer = new char[nameLength + 1];
-            file.read(nameBuffer, nameLength);
-            nameBuffer[nameLength] = '\0';
-            std::string equipmentName(nameBuffer);
-            delete[] nameBuffer;
+            std::string itemName = equipmentJson[slotName]["itemName"];
+            ItemType itemType = static_cast<ItemType>(equipmentJson[slotName]["itemType"]);
             
-            std::unique_ptr<Equipment> equipment = nullptr;
-            if (itemType == ItemType::WEAPON) {
-                equipment = std::make_unique<Weapon>(WeaponType::COPPER_SWORD);
-            } else if (itemType == ItemType::ARMOR) {
-                equipment = std::make_unique<Armor>(ArmorType::LEATHER_ARMOR);
-            }
-            
-            if (equipment) {
-                equipItem(std::move(equipment));
+            auto item = ItemFactory::createItemByName(itemName, itemType);
+            if (item) {
+                auto equipment = dynamic_cast<Equipment*>(item.get());
+                if (equipment) {
+                    std::unique_ptr<Equipment> equipmentPtr(equipment);
+                    item.release();
+                    equipItem(std::move(equipmentPtr));
+                }
             }
         }
     }

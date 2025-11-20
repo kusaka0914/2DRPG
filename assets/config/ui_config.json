@@ -16,7 +16,9 @@
         "absoluteY": 500
       },
       "color": [255, 255, 255, 255]
-    }
+    },
+    "backgroundColor": [0, 0, 0, 255],
+    "borderColor": [255, 255, 255, 255]
   },
   "commonUI": {
     "nightTimer": {
@@ -53,6 +55,9 @@
       },
       "color": [255, 255, 255, 255]
     },
+    "targetLevelAchievedColor": [0, 255, 0, 255],
+    "targetLevelRemainingColor": [255, 255, 0, 255],
+    "targetLevelLineSpacing": 20,
     "trustLevels": {
       "position": {
         "useRelative": false,
@@ -70,6 +75,8 @@
       },
       "color": [255, 255, 255, 255]
     },
+    "trustLevelsLineSpacing1": 20,
+    "trustLevelsLineSpacing2": 40,
     "gameControllerStatus": {
       "position": {
         "useRelative": false,
@@ -78,7 +85,11 @@
       },
       "width": 80,
       "height": 20
-    }
+    },
+    "gameControllerStatusColor": [0, 255, 0, 255],
+    "backgroundColor": [0, 0, 0, 255],
+    "borderColor": [255, 255, 255, 255],
+    "backgroundAlpha": 200
   },
   "mainMenu": {
     "title": {
@@ -109,6 +120,14 @@
       "hoverColor": [0, 150, 0, 255],
       "pressedColor": [0, 50, 0, 255],
       "textColor": [255, 255, 255, 255]
+    },
+    "startGameText": {
+      "position": {
+        "useRelative": true,
+        "offsetX": 0,
+        "offsetY": 100
+      },
+      "color": [255, 255, 255, 255]
     }
   },
   "battle": {
@@ -163,7 +182,7 @@
     "enemyHp": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
+        "absoluteX": 900,
         "absoluteY": 120
       },
       "color": [255, 255, 255, 255]
@@ -171,8 +190,8 @@
     "enemyPosition": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
-        "absoluteY": 150
+        "absoluteX": 900,
+        "absoluteY": 350
       },
       "width": 100,
       "height": 100
@@ -180,11 +199,192 @@
     "playerPosition": {
       "position": {
         "useRelative": false,
-        "absoluteX": 500,
-        "absoluteY": 300
+        "absoluteX": 150,
+        "absoluteY": 350
       },
       "width": 60,
       "height": 60
+    },
+    "explanationMessageBoard": {
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 190,
+          "absoluteY": 480
+        },
+        "width": 720,
+        "height": 100
+      },
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 30,
+          "absoluteY": 580
+        },
+        "color": [255, 255, 255, 255]
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "playerName": {
+      "offsetX": -58,
+      "offsetY": -50,
+      "color": [255, 255, 255, 255]
+    },
+    "healthBar": {
+      "offsetX": -65,
+      "offsetY": -20,
+      "width": 150,
+      "height": 20,
+      "barColor": [150, 255, 150, 255],
+      "bgColor": [50, 50, 50, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "commandSelection": {
+      "selectedCommandOffsetY": -120,
+      "selectedCommandImageSize": 50,
+      "imageSpacing": 60,
+      "arrowSpacing": 20,
+      "buttonBaseOffsetY": -50,
+      "buttonWidth": 200,
+      "buttonHeight": 60,
+      "buttonSpacing": 80,
+      "buttonImageSize": 60,
+      "selectedBgColor": [100, 200, 255, 200],
+      "unselectedBgColor": [50, 50, 50, 150],
+      "selectedBorderColor": [255, 215, 0, 255],
+      "unselectedBorderColor": [150, 150, 150, 255],
+      "selectedTextColor": [255, 255, 255, 255],
+      "unselectedTextColor": [200, 200, 200, 255],
+      "arrowColor": [255, 255, 255, 255]
+    },
+    "rockPaperScissors": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 930,
+        "absoluteY": 0
+      },
+      "width": 150
+    },
+    "judgeResult": {
+      "resultText": {
+        "position": {
+          "useRelative": true,
+          "offsetY": -240
+        },
+        "baseWidth": 400,
+        "baseHeight": 40,
+        "victoryColor": [255, 215, 0, 255],
+        "defeatColor": [255, 0, 0, 255],
+        "drawColor": [200, 200, 200, 255],
+        "desperateVictoryColor": [255, 215, 0, 255],
+        "desperateDefeatColor": [255, 0, 0, 255]
+      },
+      "threeWinStreak": {
+        "position": {
+          "useRelative": true,
+          "offsetY": -80
+        },
+        "baseWidth": 400,
+        "baseHeight": 40,
+        "color": [255, 255, 0, 255],
+        "format": "3連勝！ダメージ{multiplier}倍ボーナス！"
+      },
+      "damageBonus": {
+        "position": {
+          "useRelative": true,
+          "offsetY": 80,
+          "offsetX": -150
+        },
+        "color": [255, 255, 100, 255],
+        "format": "✨ ダメージ{multiplier}倍ボーナス！ ✨"
+      }
+    },
+    "attackMultiplier": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 0,
+        "absoluteY": 0
+      },
+      "offsetX": -130,
+      "offsetY": 320,
+      "textColor": [255, 255, 100, 255],
+      "bgColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 100, 255],
+      "padding": 8,
+      "format": "攻撃倍率: {multiplier}倍 (残り{turns}ターン)"
+    },
+    "winLossUI": {
+      "winLossText": {
+        "position": {
+          "useRelative": false,
+          "offsetY": -100
+        },
+        "color": [255, 255, 255, 255],
+        "padding": 8,
+        "format": "自分 {playerWins}勝  敵 {enemyWins}勝"
+      },
+      "totalAttackText": {
+        "position": {
+          "useRelative": false,
+          "offsetY": -70
+        },
+        "color": [255, 255, 255, 255],
+        "padding": 8,
+        "playerWinFormat": "{playerName}が{turns}ターン分の攻撃を実行！",
+        "enemyWinFormat": "敵が{turns}ターン分の攻撃を実行！",
+        "drawFormat": "相打ち！",
+        "hesitateFormat": "{playerName}はメンタルの影響で攻撃をためらいました。"
+      },
+      "attackText": {
+        "position": {
+          "useRelative": false,
+          "offsetY": -70
+        },
+        "color": [255, 255, 255, 255],
+        "padding": 8,
+        "attackFormat": "{playerName}のアタック！",
+        "rushFormat": "{playerName}のラッシュアタック！",
+        "statusUpSpellFormat": "{playerName}が強化呪文発動！",
+        "healSpellFormat": "{playerName}が回復呪文発動！",
+        "attackSpellFormat": "{playerName}が攻撃呪文発動！",
+        "defaultSpellFormat": "{playerName}が呪文発動！",
+        "defaultAttackFormat": "{playerName}の攻撃！"
+      }
+    },
+    "commandHint": {
+      "position": {
+        "useRelative": true,
+        "offsetY": -130,
+        "offsetX": -110
+      },
+      "color": [255, 255, 255, 255],
+      "padding": 8,
+      "normalText": "選択: W/S 決定: ENTER 戻る: Q",
+      "residentText": "選択: W/S 決定: ENTER"
+    },
+    "judgePhase": {
+      "position": {
+        "useRelative": true,
+        "offsetX": 0,
+        "offsetY": -100
+      },
+      "win": {
+        "text": "勝ち！",
+        "color": [255, 215, 0, 255]
+      },
+      "lose": {
+        "text": "負け...",
+        "color": [255, 0, 0, 255]
+      },
+      "draw": {
+        "text": "引き分け",
+        "color": [200, 200, 200, 255]
+      },
+      "baseWidth": 350,
+      "baseHeight": 60,
+      "backgroundPadding": 20,
+      "glowColor": [255, 215, 0, 255]
     }
   },
   "room": {
@@ -205,13 +405,15 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "howToOperateBackground": {
       "position": {
         "useRelative": false,
-        "absoluteX": 190,
-        "absoluteY": 10
+        "absoluteX": 30,
+        "absoluteY": 30
       },
       "width": 395,
       "height": 70
@@ -219,8 +421,8 @@
     "howToOperateText": {
       "position": {
         "useRelative": false,
-        "absoluteX": 205,
-        "absoluteY": 25
+        "absoluteX": 45,
+        "absoluteY": 45
       },
       "color": [255, 255, 255, 255]
     }
@@ -261,7 +463,9 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "demonCastle": {
@@ -282,33 +486,77 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "gameOver": {
     "title": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 200
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 490,
+          "absoluteY": 153
+        },
+        "color": [255, 0, 0, 255]
       },
-      "color": [255, 0, 0, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 140
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "reason": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 250
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 460,
+          "absoluteY": 200
+        },
+        "color": [255, 255, 255, 255]
       },
-      "color": [255, 255, 255, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 190
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     },
     "instruction": {
-      "position": {
-        "useRelative": false,
-        "absoluteX": 550,
-        "absoluteY": 400
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 550,
+          "absoluteY": 400
+        },
+        "color": [200, 200, 200, 255]
       },
-      "color": [200, 200, 200, 255]
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 390
+        },
+        "width": 400,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "image": {
+      "baseSize": 300
     }
   },
   "ending": {
@@ -355,6 +603,14 @@
       "width": 65,
       "height": 40
     },
+    "nightDisplayText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 20,
+        "absoluteY": 15
+      },
+      "color": [255, 255, 255, 255]
+    },
     "nightOperationBackground": {
       "position": {
         "useRelative": false,
@@ -363,6 +619,14 @@
       },
       "width": 205,
       "height": 40
+    },
+    "nightOperationText": {
+      "position": {
+        "useRelative": false,
+        "absoluteX": 95,
+        "absoluteY": 15
+      },
+      "color": [255, 255, 255, 255]
     },
     "messageBoard": {
       "background": {
@@ -381,7 +645,9 @@
           "absoluteY": 500
         },
         "color": [255, 255, 255, 255]
-      }
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
     }
   },
   "field": {

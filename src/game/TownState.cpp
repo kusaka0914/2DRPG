@@ -5,9 +5,12 @@
 #include "NightState.h"
 #include "CastleState.h"
 #include "GameOverState.h"
+#include "BattleState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 bool TownState::s_nightTimerActive = false;
 float TownState::s_nightTimer = 0.0f;
@@ -16,9 +19,6 @@ bool TownState::s_levelGoalAchieved = false;
 bool TownState::s_fromDemonCastle = false;
 int TownState::s_nightCount = 0; // 夜の回数を追跡
 bool TownState::saved = false; // セーブ状態の管理
-std::vector<std::pair<int, int>> residentHomes = {
-    {1, 6}, {5, 5}, {9, 7}, {3, 9}, {17, 7}, {21, 5}, {25, 6},{4, 12},{22,12}
-};
 
 TownState::TownState(std::shared_ptr<Player> player)
     : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
@@ -31,7 +31,8 @@ TownState::TownState(std::shared_ptr<Player> player)
     buildingTypes = TownLayout::BUILDING_TYPES;
     residentHomes = TownLayout::RESIDENT_HOMES;
     
-    s_targetLevel = 25 * (s_nightCount+1);
+    // 目標レベルをs_nightCountに基づいて再計算（夜の街から戻った時など、常に最新の値を反映）
+    s_targetLevel = 25 * (s_nightCount + 1);
     // s_targetLevel = 1;
 }
 
@@ -42,15 +43,35 @@ void TownState::enter() {
     nightTimerActive = s_nightTimerActive;
     nightTimer = s_nightTimer;
     
+    // field.oggを再生（街とフィールドで流す、既に再生中なら続けて再生）
+    // playMusic()内で既に同じ音楽が再生中の場合は何もしないため、stopMusic()は呼ばない
+    AudioManager::getInstance().playMusic("field", -1);
+    
+    // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
+    if (!player->hasSeenTownExplanation && showGameExplanation) {
+        explanationStep = 0;
+    }
+    
+    // 現在のStateの状態を保存
+    saveCurrentState(player);
+    
     if (s_fromDemonCastle) {
+        // 説明UIを既に見た場合は表示しない
+        // 説明UIが完了していない場合は最初から始める
+        if (!player->hasSeenTownExplanation) {
+            if (!showGameExplanation || gameExplanationTexts.empty()) {
         startNightTimer();
+            } else {
+                // 既に説明UIが設定されている場合でも、最初から始める
+                explanationStep = 0;
+                showGameExplanation = true;
+            }
+        }
         s_fromDemonCastle = false; // フラグをリセット
     }
     
-    if (!hasVisitedTown) {
-        pendingWelcomeMessage = true;
+    // 街に入った時のメッセージは削除
         hasVisitedTown = true;
-    }
 }
 
 void TownState::exit() {
@@ -108,10 +129,16 @@ void TownState::update(float deltaTime) {
             s_nightTimerActive = false;
             s_nightTimer = 0.0f;
             
-            // 目標達成していない場合はゲームオーバー
+            // 目標達成していない場合は目標レベルの敵と戦闘を開始
             if (!s_levelGoalAchieved) {
                 if (stateManager) {
-                    stateManager->changeState(std::make_unique<GameOverState>(player, "目標レベルに達しませんでした。街に戻る途中でモンスターに襲われました。"));
+                    int targetLevel = s_targetLevel;
+                    auto targetLevelEnemy = std::make_unique<Enemy>(Enemy::createTargetLevelEnemy(targetLevel));
+                    auto battleState = std::make_unique<BattleState>(player, std::move(targetLevelEnemy));
+                    // 目標レベル達成用の敵フラグを明示的に設定
+                    battleState->setIsTargetLevelEnemy(true);
+                    exit();
+                    stateManager->changeState(std::move(battleState));
                 }
             } else {
                 if (stateManager) {
@@ -119,6 +146,9 @@ void TownState::update(float deltaTime) {
                     stateManager->changeState(std::make_unique<NightState>(player));
                     player->setCurrentNight(player->getCurrentNight() + 1);
                     s_nightCount++;
+                    // 新しい目標レベルを設定
+                    s_targetLevel = 25 * (s_nightCount + 1);
+                    // 新しい目標レベルが設定されたので、達成フラグをリセット
                     s_levelGoalAchieved = false;
                 }
             }
@@ -140,20 +170,35 @@ void TownState::render(Graphics& graphics) {
         loadTextures(graphics);
     }
     
+    // ホットリロード対応
+    static bool lastReloadState = false;
+    auto& config = UIConfig::UIConfigManager::getInstance();
+    bool currentReloadState = config.checkAndReloadConfig();
+    
     bool uiJustInitialized = false;
-    if (!messageBoard) {
+    if (!messageBoard || (!lastReloadState && currentReloadState)) {
         setupUI(graphics);
         uiJustInitialized = true;
     }
+    lastReloadState = currentReloadState;
     
     if (uiJustInitialized) {
-        if (pendingWelcomeMessage) {
-            showMessage("街に到着しました。\nここでは道具屋、宿屋、教会など様々な施設を利用できます。\n城に向かって冒険を始めましょう。");
-            pendingWelcomeMessage = false;
-        } else if (!pendingMessage.empty()) {
+        if (!pendingMessage.empty()) {
             showMessage(pendingMessage);
             pendingMessage.clear();
         }
+    }
+    
+    // 説明UIが設定されている場合は表示
+    // uiJustInitializedがtrueの場合（UIが初期化された直後）は確実に1番目のメッセージを表示
+    if (uiJustInitialized && showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
+    }
+    // uiJustInitializedがfalseの場合でも、showGameExplanationがtrueでメッセージが表示されていない場合は表示する
+    else if (showGameExplanation && !gameExplanationTexts.empty() && explanationStep == 0 && !isShowingMessage && messageBoard) {
+        showMessage(gameExplanationTexts[0]);
+        isShowingMessage = true;
     }
     
     switch (currentLocation) {
@@ -185,6 +230,77 @@ void TownState::render(Graphics& graphics) {
     
     drawPlayer(graphics);
     
+    // インタラクション可能な時に「ENTER」を表示（広場のみ）
+    if (currentLocation == TownLocation::SQUARE && !isShowingMessage) {
+        bool canInteract = false;
+        
+        // NPCの近くにいるかチェック
+        if (isNearNPC(playerX, playerY)) {
+            canInteract = true;
+        }
+        // 建物の入り口の近くにいるかチェック
+        else {
+            for (size_t i = 0; i < buildings.size(); ++i) {
+                if (playerX == buildings[i].first && playerY == buildings[i].second) {
+                    canInteract = true;
+                    break;
+                }
+            }
+        }
+        // 自室の入り口の近くにいるかチェック
+        if (!canInteract && GameUtils::isNearPositionEuclidean(playerX, playerY, roomEntranceX, roomEntranceY, 1.5f)) {
+            canInteract = true;
+        }
+        // 城の近くにいるかチェック
+        if (!canInteract && GameUtils::isNearPositionEuclidean(playerX, playerY, castleX, castleY, 3.0f)) {
+            canInteract = true;
+        }
+        
+        if (canInteract) {
+            int textX = playerX * TILE_SIZE + TILE_SIZE / 2;
+            int textY = playerY * TILE_SIZE + TILE_SIZE + 5;
+            
+            // テキストを中央揃えにするため、テキストの幅を取得して調整
+            SDL_Color textColor = {255, 255, 255, 255};
+            SDL_Texture* enterTexture = graphics.createTextTexture("ENTER", "default", textColor);
+            if (enterTexture) {
+                int textWidth, textHeight;
+                SDL_QueryTexture(enterTexture, nullptr, nullptr, &textWidth, &textHeight);
+                
+                // テキストサイズを小さくする（80%に縮小）
+                const float SCALE = 0.8f;
+                int scaledWidth = static_cast<int>(textWidth * SCALE);
+                int scaledHeight = static_cast<int>(textHeight * SCALE);
+                
+                // パディングを追加
+                const int PADDING = 4;
+                int bgWidth = scaledWidth + PADDING * 2;
+                int bgHeight = scaledHeight + PADDING * 2;
+                
+                // 背景の位置を計算（中央揃え）
+                int bgX = textX - bgWidth / 2;
+                int bgY = textY;
+                
+                // 黒背景を描画
+                graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
+                
+                // 白い枠線を描画
+                graphics.setDrawColor(255, 255, 255, 255); // 白
+                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
+                
+                // テキストを小さく描画（中央揃え）
+                int drawX = textX - scaledWidth / 2;
+                int drawY = textY + PADDING;
+                graphics.drawTexture(enterTexture, drawX, drawY, scaledWidth, scaledHeight);
+                SDL_DestroyTexture(enterTexture);
+            } else {
+                // フォールバック: drawTextを使用
+                graphics.drawText("ENTER", textX, textY, "default", textColor);
+            }
+        }
+    }
+    
     if (messageBoard && !messageBoard->getText().empty()) {
         auto& config = UIConfig::UIConfigManager::getInstance();
         auto mbConfig = config.getMessageBoardConfig();
@@ -192,9 +308,9 @@ void TownState::render(Graphics& graphics) {
         int bgX, bgY;
         config.calculatePosition(bgX, bgY, mbConfig.background.position, graphics.getScreenWidth(), graphics.getScreenHeight());
         
-        graphics.setDrawColor(0, 0, 0, 255); // 黒色
+        graphics.setDrawColor(mbConfig.backgroundColor.r, mbConfig.backgroundColor.g, mbConfig.backgroundColor.b, mbConfig.backgroundColor.a);
         graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height, true); // メッセージボード背景
-        graphics.setDrawColor(255, 255, 255, 255); // 白色でボーダー
+        graphics.setDrawColor(mbConfig.borderColor.r, mbConfig.borderColor.g, mbConfig.borderColor.b, mbConfig.borderColor.a);
         graphics.drawRect(bgX, bgY, mbConfig.background.width, mbConfig.background.height); // メッセージボード枠
     }
     
@@ -212,7 +328,7 @@ void TownState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
     if (showGameExplanation) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             explanationStep++;
             
             if (explanationStep >= gameExplanationTexts.size()) {
@@ -220,10 +336,11 @@ void TownState::handleInput(const InputManager& input) {
                 explanationStep = 0;
                 clearMessage();
                 
-                nightTimerActive = true;
-                nightTimer = NIGHT_TIMER_DURATION;
-                s_nightTimerActive = true;
-                s_nightTimer = NIGHT_TIMER_DURATION;
+                // 説明UIが完全に終わったことを記録
+                player->hasSeenTownExplanation = true;
+                
+                // 街の説明が終わった時はタイマーを起動しない
+                // タイマーは初勝利後の説明がFieldStateで終わったときに起動される
                 
             } else {
                 showMessage(gameExplanationTexts[explanationStep]);
@@ -233,7 +350,7 @@ void TownState::handleInput(const InputManager& input) {
     }
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -257,7 +374,7 @@ void TownState::handleInput(const InputManager& input) {
         return;
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (currentLocation == TownLocation::INN) {
             player->heal(player->getMaxHp());
             showMessage("宿屋で休みました。HPが全回復しました！");
@@ -316,13 +433,13 @@ void TownState::setupUI(Graphics& graphics) {
     std::string controlsText;
     switch (currentLocation) {
         case TownLocation::SHOP:
-            controlsText = "スペース/Aボタン: 買い物(武器・防具・薬草), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 買い物(武器・防具・薬草), ESC/Bボタン: 外に出る";
             break;
         case TownLocation::INN:
-            controlsText = "スペース/Aボタン: 休む(HP全回復), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 休む(HP全回復), ESC/Bボタン: 外に出る";
             break;
         case TownLocation::CHURCH:
-            controlsText = "スペース/Aボタン: 祈る(心の回復), ESC/Bボタン: 外に出る";
+            controlsText = "エンター/Aボタン: 祈る(心の回復), ESC/Bボタン: 外に出る";
             break;
     }
     
@@ -347,58 +464,35 @@ void TownState::setupUI(Graphics& graphics) {
 void TownState::setupNPCs() {
     npcs.clear();
     
-    std::vector<std::string> residentNames = {
-        "町の住人1", "町の住人2", "町の住人3", "町の住人4", "町の住人5", "町の住人6", "町の住人7", "町の住人8", "町の住人9", "町の住人10", "町の住人11", "町の住人12"
-    };
-    
-    std::vector<std::string> residentDialogues = {
-        "最近魔物が増えて困っているんだ...",
-        "今日は良い天気だね。",
-        "王様の城は立派だね。",
-        "冒険者さん、頑張ってね！",
-        "街は平和でいいね。",
-        "今日も気持ちがいい天気！",
-        "最近魔物が増えて困っているんだ...",
-        "今日は良い天気だね。",
-        "王様の城は立派だね。",
-        "冒険者さん、頑張ってね！",
-        "街は平和でいいね。",
-        "今日も気持ちがいい天気！"
-    };
-    
-    for (size_t i = 0; i < TownLayout::RESIDENTS.size() && i < residentNames.size(); ++i) {
+    for (size_t i = 0; i < TownLayout::RESIDENTS.size(); ++i) {
         const auto& pos = TownLayout::RESIDENTS[i];
         
         bool isKilled = false;
-        const auto& killedPositions = NightState::getKilledResidentPositions();
-        for (const auto& killedPos : killedPositions) {
-            if (killedPos.first == pos.first && killedPos.second == pos.second) {
-                isKilled = true;
-                break;
-            }
+        // Playerに保存されている倒した住民の位置を確認（セーブ/ロードで永続化される）
+        if (player) {
+            const auto& playerKilledResidents = player->getKilledResidents();
+            isKilled = TownLayout::isResidentKilled(pos.first, pos.second, playerKilledResidents);
+        }
+        
+        // 念のため、NightStateの静的変数も確認
+        if (!isKilled) {
+            const auto& killedPositions = NightState::getKilledResidentPositions();
+            isKilled = TownLayout::isResidentKilled(pos.first, pos.second, killedPositions);
         }
         
         if (!isKilled) {
-            npcs.emplace_back(NPCType::TOWNSPERSON, residentNames[i], 
-                              residentDialogues[i], pos.first, pos.second);
+            std::string residentName = TownLayout::getResidentName(pos.first, pos.second);
+            std::string residentDialogue = TownLayout::getResidentDialogue(pos.first, pos.second);
+            npcs.emplace_back(NPCType::TOWNSPERSON, residentName, 
+                              residentDialogue, pos.first, pos.second);
         }
     }
     
-    std::vector<std::string> guardNames = {
-        "衛兵1", "衛兵2", "衛兵3", "衛兵4"
-    };
-    
-    std::vector<std::string> guardDialogues = {
-        "町の平和を守るのが私の仕事だ！",
-        "何か困ったことがあれば声をかけてくれ。",
-        "街の見回りは大切な仕事だ。",
-        "町の平和を守るのが私の仕事だ！"
-    };
-    
-    for (size_t i = 0; i < TownLayout::GUARDS.size() && i < guardNames.size(); ++i) {
+    for (size_t i = 0; i < TownLayout::GUARDS.size(); ++i) {
         const auto& pos = TownLayout::GUARDS[i];
-        npcs.emplace_back(NPCType::GUARD, guardNames[i], 
-                          guardDialogues[i], pos.first, pos.second);
+        std::string guardName = TownLayout::getGuardName(pos.first, pos.second);
+        std::string guardDialogue = TownLayout::getGuardDialogue(pos.first, pos.second);
+        npcs.emplace_back(NPCType::GUARD, guardName, guardDialogue, pos.first, pos.second);
     }
 }
 
@@ -541,83 +635,30 @@ void TownState::drawBuildings(Graphics& graphics) {
         int y = buildings[i].second;
         std::string type = buildingTypes[i];
         
-        if (type == "shop" && shopTexture) {
-            graphics.drawTexture(shopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "weapon_shop" && weaponShopTexture) {
-            graphics.drawTexture(weaponShopTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "house" && houseTexture) {
-            graphics.drawTexture(houseTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else if (type == "castle" && castleTexture) {
-            graphics.drawTexture(castleTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else {
-            Uint8 r, g, b;
-            if (type == "shop") {
-                r = 139; g = 69; b = 19; // 茶色
-            } else if (type == "weapon_shop") {
-                r = 192; g = 192; b = 192; // 銀色
-            } else if (type == "house") {
-                r = 34; g = 139; b = 34; // 緑色
-            } else if (type == "castle") {
-                r = 255; g = 215; b = 0; // 金色
-            } else {
-                r = 128; g = 128; b = 128; // グレー
-            }
-            
-            graphics.setDrawColor(r, g, b, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
+        SDL_Texture* texture = nullptr;
+        if (type == "shop") {
+            texture = shopTexture;
+        } else if (type == "weapon_shop") {
+            texture = weaponShopTexture;
+        } else if (type == "house") {
+            texture = houseTexture;
+        } else if (type == "castle") {
+            texture = castleTexture;
         }
+        
+        auto [r, g, b] = TownLayout::getBuildingColor(type);
+        GameState::drawBuilding(graphics, x, y, TILE_SIZE, BUILDING_SIZE, texture, r, g, b);
     }
     
     for (const auto& home : residentHomes) {
-        int x = home.first;
-        int y = home.second;
-        
-        if (residentHomeTexture) {
-            graphics.drawTexture(residentHomeTexture, x * TILE_SIZE, y * TILE_SIZE, 
-                               BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        } else {
-            graphics.setDrawColor(139, 69, 19, 255); // 茶色
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(x * TILE_SIZE, y * TILE_SIZE, 
-                            BUILDING_SIZE * TILE_SIZE, BUILDING_SIZE * TILE_SIZE);
-        }
+        GameState::drawBuilding(graphics, home.first, home.second, TILE_SIZE, BUILDING_SIZE,
+                               residentHomeTexture, 139, 69, 19);
     }
 }
 
 void TownState::drawGate(Graphics& graphics) {
-    int gateX = TownLayout::GATE_X;
-    int gateY = TownLayout::GATE_Y;
-    
-    if (stoneTileTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        graphics.drawTexture(stoneTileTexture, drawX, drawY, TILE_SIZE, TILE_SIZE);
-    }
-    
-    if (toriiTexture) {
-        int drawX = gateX * TILE_SIZE;
-        int drawY = gateY * TILE_SIZE;
-        // 鳥居は少し大きく描画（2タイルサイズ）
-        graphics.drawTexture(toriiTexture, drawX - TILE_SIZE/2, drawY - TILE_SIZE, 
-                           TILE_SIZE * 2, TILE_SIZE * 2);
-    } else {
-        int drawX = gateX * TILE_SIZE + TILE_SIZE/4;
-        int drawY = gateY * TILE_SIZE - TILE_SIZE/2;
-        graphics.setDrawColor(255, 0, 0, 255); // 赤色
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, true);
-        graphics.setDrawColor(0, 0, 0, 255);
-        graphics.drawRect(drawX, drawY, TILE_SIZE * 1.5, TILE_SIZE * 1.5, false);
-    }
+    GameState::drawGate(graphics, TownLayout::GATE_X, TownLayout::GATE_Y, TILE_SIZE,
+                       stoneTileTexture, toriiTexture);
 }
 
 void TownState::drawBuildingInterior(Graphics& graphics) {
@@ -727,9 +768,12 @@ void TownState::drawNPCs(Graphics& graphics) {
                 break;
             case NPCType::TOWNSPERSON:
                 {
-                    int residentIndex = (i - 2) % 5; // 最初の2つ（店主と女将）を除く
-                    if (residentIndex >= 0 && residentIndex < 5 && residentTextures[residentIndex]) {
-                        graphics.drawTexture(residentTextures[residentIndex], drawX, drawY, size, size);
+                    int residentIndex = TownLayout::getResidentTextureIndex(npc.x, npc.y);
+                    if (residentIndex >= 0 && residentIndex < 6 && residentTextures[residentIndex]) {
+                        // アスペクト比を保持して縦幅に合わせて描画
+                        int centerX = drawX + TILE_SIZE / 2;
+                        int centerY = drawY + TILE_SIZE / 2;
+                        graphics.drawTextureAspectRatio(residentTextures[residentIndex], centerX, centerY, TILE_SIZE, true, true);
                         continue; // 画像を描画したら色の描画はスキップ
                     } else {
                         graphics.setDrawColor(128, 0, 128, 255); // 紫（フォールバック）
@@ -738,7 +782,10 @@ void TownState::drawNPCs(Graphics& graphics) {
                 break;
             case NPCType::GUARD:
                 if (guardTexture) {
-                    graphics.drawTexture(guardTexture, drawX, drawY, size, size);
+                    // アスペクト比を保持して縦幅に合わせて描画
+                    int centerX = drawX + TILE_SIZE / 2;
+                    int centerY = drawY + TILE_SIZE / 2;
+                    graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
                     continue; // 画像を描画したら色の描画はスキップ
                 } else {
                     graphics.setDrawColor(255, 0, 0, 255); // 赤（フォールバック）
@@ -807,17 +854,6 @@ bool TownState::isCollidingWithNPC(int x, int y) const {
     return false;
 }
 
-bool TownState::isNearNPC(int x, int y) const {
-    for (const auto& npc : npcs) {
-        int dx = abs(x - npc.x);
-        int dy = abs(y - npc.y);
-        if (dx <= 1 && dy <= 1) {
-            return true;
-        }
-    }
-    return false;
-}
-
 NPC* TownState::getNearbyNPC(int x, int y) {
     for (auto& npc : npcs) {
         int dx = abs(x - npc.x);
@@ -829,6 +865,21 @@ NPC* TownState::getNearbyNPC(int x, int y) {
     return nullptr;
 }
 
+const NPC* TownState::getNearbyNPC(int x, int y) const {
+    for (const auto& npc : npcs) {
+        int dx = abs(x - npc.x);
+        int dy = abs(y - npc.y);
+        if (dx <= 1 && dy <= 1) {
+            return &npc;
+        }
+    }
+    return nullptr;
+}
+
+bool TownState::isNearNPC(int x, int y) const {
+    return getNearbyNPC(x, y) != nullptr;
+}
+
 // メッセージボード関連
 void TownState::showMessage(const std::string& message) {
     GameState::showMessage(message, messageBoard, isShowingMessage);
@@ -836,6 +887,41 @@ void TownState::showMessage(const std::string& message) {
 
 void TownState::clearMessage() {
     GameState::clearMessage(messageBoard, isShowingMessage);
+}
+
+nlohmann::json TownState::toJson() const {
+    nlohmann::json j;
+    j["stateType"] = static_cast<int>(StateType::TOWN);
+    j["playerX"] = playerX;
+    j["playerY"] = playerY;
+    j["showGameExplanation"] = showGameExplanation;
+    j["explanationStep"] = explanationStep;
+    // gameExplanationTextsも保存（説明UIが途中で中断された場合に備えて）
+    if (!gameExplanationTexts.empty()) {
+        j["gameExplanationTexts"] = gameExplanationTexts;
+    }
+    return j;
+}
+
+void TownState::fromJson(const nlohmann::json& j) {
+    if (j.contains("playerX")) playerX = j["playerX"];
+    if (j.contains("playerY")) playerY = j["playerY"];
+    if (j.contains("showGameExplanation")) showGameExplanation = j["showGameExplanation"];
+    if (j.contains("explanationStep")) explanationStep = j["explanationStep"];
+    // gameExplanationTextsも復元
+    if (j.contains("gameExplanationTexts") && j["gameExplanationTexts"].is_array()) {
+        gameExplanationTexts.clear();
+        for (const auto& text : j["gameExplanationTexts"]) {
+            gameExplanationTexts.push_back(text.get<std::string>());
+        }
+    }
+    
+    // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
+    // これはenter()でも実行されるが、fromJson()の後にも実行されるようにする
+    // ただし、enter()で処理されるので、ここではコメントアウト
+    // if (!player->hasSeenTownExplanation && showGameExplanation) {
+    //     explanationStep = 0;
+    // }
 }
 
 void TownState::checkRoomEntrance() {
@@ -908,17 +994,17 @@ void TownState::checkBuildingEntrance() {
 
 void TownState::enterShop() {
     currentLocation = TownLocation::SHOP;
-    showMessage("道具屋に入りました。武器、防具、薬草などが売っています。スペースで買い物、ESCで外に出ます。");
+    showMessage("道具屋に入りました。武器、防具、薬草などが売っています。エンターで買い物、ESCで外に出ます。");
 }
 
 void TownState::enterInn() {
     currentLocation = TownLocation::INN;
-    showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。スペースで休むとHPが全回復します。ESCで外に出ます。");
+    showMessage("宿屋に入りました。暖炉の火が心地よく、疲れた体を休めることができます。エンターで休むとHPが全回復します。ESCで外に出ます。");
 }
 
 void TownState::enterChurch() {
     currentLocation = TownLocation::CHURCH;
-    showMessage("教会に入りました。ステンドグラスから差し込む光が神聖な雰囲気を作り出しています。スペースで祈りを捧げることができます。ESCで外に出ます。");
+    showMessage("教会に入りました。ステンドグラスから差し込む光が神聖な雰囲気を作り出しています。エンターで祈りを捧げることができます。ESCで外に出ます。");
 }
 
 void TownState::exitBuilding() {
@@ -937,21 +1023,11 @@ void TownState::checkCastleEntrance() {
 void TownState::setupGameExplanation() {
     gameExplanationTexts.clear();    
     gameExplanationTexts.push_back("これからゲーム説明を始めます。よく聞いてくださいね。");
-    gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。");
-    gameExplanationTexts.push_back("夜時間では住人を倒すことができ、1夜につき最大3人まで倒せます。");
-    gameExplanationTexts.push_back("衛兵が住人の家を徘徊しているので、衛兵がいない時に倒しましょう。");
-    gameExplanationTexts.push_back("住人を全員倒すことで街を滅ぼすことができます。どんどん倒しましょう。");
-    gameExplanationTexts.push_back("しかし住人を倒すと勇者のメンタルが下がってしまいます。");
-    gameExplanationTexts.push_back("メンタルが下がると勇者が住人を倒すのをためらって、失敗してしまいます。");
-    gameExplanationTexts.push_back("（倒すのになれてしまうと逆にメンタルが上がるかもしれませんね。）");
-    gameExplanationTexts.push_back("住人を倒せば魔王からの信頼度が上がり王様からの信頼度が下がります。");
-    gameExplanationTexts.push_back("住人を倒さなければ魔王からの信頼度が下がりますがメンタルが回復します。");
-    gameExplanationTexts.push_back("もしどちらかの信頼度が0になってしまったらその時点で処刑されゲームオーバーです。");
-    gameExplanationTexts.push_back("処刑されないように、昼はモンスターを倒して王様からの信頼度を上げ、");
-    gameExplanationTexts.push_back("夜は住人を倒して魔王からの信頼度を上げるようにしましょう。");
-    gameExplanationTexts.push_back("また、夜になる前に目標のレベルに達しないと、");
-    gameExplanationTexts.push_back("街に帰るまでにモンスターにやられてしまうのでゲームオーバーになります。");
-    gameExplanationTexts.push_back("以上で説明は終わりです。早速下にあるゲートからフィールドに行ってみましょう。");
+    gameExplanationTexts.push_back("まず時間経過により、夜時間が訪れます。\n夜時間に住民を倒し、少しずつ街を滅ぼしていきます。");
+    gameExplanationTexts.push_back("詳細は夜時間になったら説明しますね。\nひとまず夜時間までにフィールド上のモンスターを倒して目標レベルまで上げてください。");
+    gameExplanationTexts.push_back("そしてこのゲームにはメンタル、魔王からの信頼、王様からの信頼の概念があります。\n今は王様からの信頼という概念だけ覚えておいてください。");
+    gameExplanationTexts.push_back("王様からの信頼はモンスターを倒すことで上昇します。\n街を安全に滅ぼすためにも信頼を保つのが大事なのでたくさん倒しましょう。");
+    gameExplanationTexts.push_back("以上で説明は終わりです。早速下にあるゲートからフィールドに行ってレベルを上げましょう。");
 }
 
 void TownState::checkTrustLevels() {

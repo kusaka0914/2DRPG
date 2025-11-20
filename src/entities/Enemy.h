@@ -39,7 +39,9 @@ enum class EnemyType {
     ANCIENT_DRAGON, // レベル100以降
     CHAOS_BEAST,    // レベル150以降
     ELDER_GOD,      // レベル200以降
-    DEMON_LORD      /**< @brief 魔王（最終ボス） */
+    DEMON_LORD,     /**< @brief 魔王（最終ボス） */
+    GUARD,          /**< @brief 衛兵（夜の街） */
+    KING            /**< @brief 王様（城） */
 };
 
 /**
@@ -54,6 +56,15 @@ private:
     int expReward;
     bool canCastMagic;
     int magicDamage;
+    int residentTextureIndex;  /**< @brief 住民のテクスチャインデックス（住民の場合のみ有効、-1=住民ではない） */
+    int residentX;  /**< @brief 住民のX座標（住民の場合のみ有効、-1=住民ではない） */
+    int residentY;  /**< @brief 住民のY座標（住民の場合のみ有効、-1=住民ではない） */
+
+    // 基準レベルと基準ステータス（レベル調整用）
+    int baseLevel;  /**< @brief この敵タイプの基準レベル */
+    int baseHp;  /**< @brief 基準レベルでのHP */
+    int baseAttack;  /**< @brief 基準レベルでの攻撃力 */
+    int baseDefense;  /**< @brief 基準レベルでの防御力 */
 
 public:
     /**
@@ -97,9 +108,13 @@ public:
     
     /**
      * @brief 経験値報酬の取得
-     * @return 経験値報酬
+     * @details 基本経験値 + (レベル差 × 基本経験値 × 0.1) を返す
+     * @return 経験値報酬（レベルに応じて動的に計算）
      */
-    int getExpReward() const { return expReward; }
+    int getExpReward() const { 
+        int levelDiff = level - baseLevel;
+        return expReward + static_cast<int>(levelDiff * expReward * 0.1f);
+    }
     
     /**
      * @brief 敵の種類の取得
@@ -136,4 +151,63 @@ public:
      * @return 生成されたボス敵
      */
     static Enemy createBossEnemy(int playerLevel);
+    
+    /**
+     * @brief 住民のテクスチャインデックスの設定
+     * @param index 住民のテクスチャインデックス（0-5）
+     */
+    void setResidentTextureIndex(int index) { residentTextureIndex = index; }
+    
+    /**
+     * @brief 住民のテクスチャインデックスの取得
+     * @return 住民のテクスチャインデックス（-1=住民ではない）
+     */
+    int getResidentTextureIndex() const { return residentTextureIndex; }
+    
+    /**
+     * @brief 住民かどうかの判定
+     * @return 住民かどうか
+     */
+    bool isResident() const { return residentTextureIndex >= 0; }
+    
+    /**
+     * @brief 住民の位置情報の設定
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     */
+    void setResidentPosition(int x, int y) { residentX = x; residentY = y; }
+    
+    /**
+     * @brief 住民のX座標の取得
+     * @return 住民のX座標（-1=住民ではない）
+     */
+    int getResidentX() const { return residentX; }
+    
+    /**
+     * @brief 住民のY座標の取得
+     * @return 住民のY座標（-1=住民ではない）
+     */
+    int getResidentY() const { return residentY; }
+    
+    /**
+     * @brief レベルの設定
+     * @param newLevel 新しいレベル
+     */
+    void setLevel(int newLevel);
+    
+    /**
+     * @brief レベルの設定（制限なし）
+     * @details レベル制限を無視してレベルを設定する。デバッグ用途などで使用。
+     * @param newLevel 新しいレベル
+     */
+    void setLevelUnrestricted(int newLevel);
+    
+    /**
+     * @brief 目標レベルに到達できる敵を生成
+     * @details 目標レベルに到達できる敵を生成する。目標レベルが敵のbaseLevel以上で、maxLevel（baseLevel + 5）以下になる敵を選ぶ。
+     * 
+     * @param targetLevel 目標レベル
+     * @return 生成された敵（目標レベルに設定済み）
+     */
+    static Enemy createTargetLevelEnemy(int targetLevel);
 }; 

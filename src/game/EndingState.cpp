@@ -109,7 +109,7 @@ void EndingState::render(Graphics& graphics) {
                 config.calculatePosition(theEndX, theEndY, endingConfig.theEnd.position, graphics.getScreenWidth(), graphics.getScreenHeight());
                 config.calculatePosition(returnX, returnY, endingConfig.returnToMenu.position, graphics.getScreenWidth(), graphics.getScreenHeight());
                 graphics.drawText("THE END", theEndX, theEndY, "default", endingConfig.theEnd.color);
-                graphics.drawText("スペースキーでメインメニューに戻る", returnX, returnY, "default", endingConfig.returnToMenu.color);
+                graphics.drawText("Enterでメインメニューに戻る", returnX, returnY, "default", endingConfig.returnToMenu.color);
             }
             break;
     }
@@ -120,7 +120,7 @@ void EndingState::render(Graphics& graphics) {
 void EndingState::handleInput(const InputManager& input) {
     ui.handleInput(input);
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (currentPhase == EndingPhase::COMPLETE) {
             if (stateManager) {
                 auto newPlayer = std::make_shared<Player>("勇者");

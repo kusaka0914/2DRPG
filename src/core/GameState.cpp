@@ -1,6 +1,11 @@
 #include "GameState.h"
+#include "../entities/Player.h"
+#include "../game/TownState.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include <nlohmann/json.hpp>
 
 GameStateManager::GameStateManager() : shouldChangeState(false) {
 }
@@ -62,6 +67,9 @@ void GameState::showMessage(const std::string& message, Label* messageBoard, boo
     if (messageBoard) {
         messageBoard->setText(message);
         isShowingMessage = true;
+        
+        // メッセージ表示時に効果音を再生
+        AudioManager::getInstance().playSound("decide", 0);
     }
 }
 
@@ -69,6 +77,19 @@ void GameState::clearMessage(Label* messageBoard, bool& isShowingMessage) {
     if (messageBoard) {
         messageBoard->setText("");
         isShowingMessage = false;
+    }
+}
+
+void GameState::saveCurrentState(std::shared_ptr<Player> player) {
+    if (player && stateManager) {
+        GameState* currentState = stateManager->getCurrentState();
+        if (currentState) {
+            nlohmann::json stateJson = currentState->toJson();
+            player->setSavedGameState(stateJson);
+            float nightTimer = TownState::s_nightTimer;
+            bool nightTimerActive = TownState::s_nightTimerActive;
+            player->saveGame("autosave.json", nightTimer, nightTimerActive);
+        }
     }
 }
 
@@ -161,7 +182,7 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
     ui.handleInput(input);
     
     if (isShowingMessage) {
-        if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+        if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
             clearMessage();
         }
         return; // メッセージ表示中は他の操作を無効化
@@ -171,7 +192,7 @@ void GameState::handleInputTemplate(const InputManager& input, UIManager& ui, bo
         handleMovement();
     }
     
-    if (input.isKeyJustPressed(InputKey::SPACE) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
+    if (input.isKeyJustPressed(InputKey::ENTER) || input.isKeyJustPressed(InputKey::GAMEPAD_A)) {
         if (isNearExit()) {
             onExit();
         } else {
@@ -199,7 +220,10 @@ SDL_Texture* GameState::loadDemonTexture(Graphics& graphics) {
 void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTexture, 
                                     int playerX, int playerY, int tileSize) {
     if (playerTexture) {
-        graphics.drawTexture(playerTexture, playerX * tileSize, playerY * tileSize, tileSize, tileSize);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = playerX * tileSize + tileSize / 2;
+        int centerY = playerY * tileSize + tileSize / 2;
+        graphics.drawTextureAspectRatio(playerTexture, centerX, centerY, tileSize, true, true);
     } else {
         int drawX = playerX * tileSize + 4;
         int drawY = playerY * tileSize + 4;
@@ -215,11 +239,117 @@ void GameState::drawPlayerWithTexture(Graphics& graphics, SDL_Texture* playerTex
 void GameState::drawCharacterWithTexture(Graphics& graphics, SDL_Texture* texture, 
                                        int x, int y, int tileSize) {
     if (texture) {
-        graphics.drawTexture(texture, x * tileSize, y * tileSize, tileSize, tileSize);
+        // アスペクト比を保持して縦幅に合わせて描画
+        int centerX = x * tileSize + tileSize / 2;
+        int centerY = y * tileSize + tileSize / 2;
+        graphics.drawTextureAspectRatio(texture, centerX, centerY, tileSize, true, true);
     } else {
         graphics.setDrawColor(255, 0, 0, 255);
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, true);
         graphics.setDrawColor(0, 0, 0, 255);
         graphics.drawRect(x * tileSize + 4, y * tileSize + 4, tileSize - 8, tileSize - 8, false);
+    }
+}
+
+void GameState::drawGate(Graphics& graphics, int gateX, int gateY, int tileSize,
+                        SDL_Texture* stoneTileTexture, SDL_Texture* toriiTexture) {
+    if (stoneTileTexture) {
+        int drawX = gateX * tileSize;
+        int drawY = gateY * tileSize;
+        graphics.drawTexture(stoneTileTexture, drawX, drawY, tileSize, tileSize);
+    }
+    
+    if (toriiTexture) {
+        int drawX = gateX * tileSize;
+        int drawY = gateY * tileSize;
+        // 鳥居は少し大きく描画（2タイルサイズ）
+        graphics.drawTexture(toriiTexture, drawX - tileSize/2, drawY - tileSize, 
+                           tileSize * 2, tileSize * 2);
+    } else {
+        int drawX = gateX * tileSize + tileSize/4;
+        int drawY = gateY * tileSize - tileSize/2;
+        graphics.setDrawColor(255, 0, 0, 255); // 赤色
+        graphics.drawRect(drawX, drawY, tileSize * 1.5, tileSize * 1.5, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(drawX, drawY, tileSize * 1.5, tileSize * 1.5, false);
+    }
+}
+
+void GameState::drawBuilding(Graphics& graphics, int x, int y, int tileSize, int buildingSize,
+                             SDL_Texture* texture, Uint8 fallbackR, Uint8 fallbackG, Uint8 fallbackB) {
+    if (texture) {
+        graphics.drawTexture(texture, x * tileSize, y * tileSize, 
+                           buildingSize * tileSize, buildingSize * tileSize);
+    } else {
+        graphics.setDrawColor(fallbackR, fallbackG, fallbackB, 255);
+        graphics.drawRect(x * tileSize, y * tileSize, 
+                        buildingSize * tileSize, buildingSize * tileSize, true);
+        graphics.setDrawColor(0, 0, 0, 255);
+        graphics.drawRect(x * tileSize, y * tileSize, 
+                        buildingSize * tileSize, buildingSize * tileSize, false);
+    }
+}
+
+void GameState::startFadeOut(float duration, std::function<void()> onComplete) {
+    isFadingOut = true;
+    isFadingIn = false;
+    fadeTimer = 0.0f;
+    fadeDuration = duration;
+    fadeOutCompleteCallback = onComplete;
+}
+
+void GameState::startFadeIn(float duration) {
+    isFadingIn = true;
+    isFadingOut = false;
+    fadeTimer = 0.0f;
+    fadeDuration = duration;
+    fadeOutCompleteCallback = nullptr;
+}
+
+void GameState::updateFade(float deltaTime) {
+    if (isFadingOut) {
+        fadeTimer += deltaTime;
+        if (fadeTimer >= fadeDuration) {
+            // フェードアウト完了
+            if (fadeOutCompleteCallback) {
+                fadeOutCompleteCallback();
+            }
+            // isFadingOutはexit()が呼ばれるまでtrueのままにしておく（遷移前の描画で完全に黒いオーバーレイを描画するため）
+        }
+    } else if (isFadingIn) {
+        fadeTimer += deltaTime;
+        if (fadeTimer >= fadeDuration) {
+            isFadingIn = false;
+        }
+    }
+}
+
+void GameState::renderFade(Graphics& graphics) {
+    if (isFadingOut) {
+        float fadeProgress = std::min(1.0f, fadeTimer / fadeDuration);
+        Uint8 alpha = static_cast<Uint8>(fadeProgress * 255.0f);
+        
+        // アルファブレンディングを有効化して描画
+        SDL_SetRenderDrawBlendMode(graphics.getRenderer(), SDL_BLENDMODE_BLEND);
+        graphics.setDrawColor(0, 0, 0, alpha);
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        
+        // フェードアウト完了後は完全に黒いオーバーレイを描画（状態遷移まで）
+        if (fadeTimer >= fadeDuration) {
+            graphics.setDrawColor(0, 0, 0, 255);
+            graphics.drawRect(0, 0, screenWidth, screenHeight, true);
+        }
+    } else if (isFadingIn) {
+        float fadeProgress = std::min(1.0f, fadeTimer / fadeDuration);
+        Uint8 alpha = static_cast<Uint8>((1.0f - fadeProgress) * 255.0f); // 255から0へ
+        
+        // アルファブレンディングを有効化して描画
+        SDL_SetRenderDrawBlendMode(graphics.getRenderer(), SDL_BLENDMODE_BLEND);
+        graphics.setDrawColor(0, 0, 0, alpha);
+        int screenWidth = graphics.getScreenWidth();
+        int screenHeight = graphics.getScreenHeight();
+        graphics.drawRect(0, 0, screenWidth, screenHeight, true);
     }
 } 

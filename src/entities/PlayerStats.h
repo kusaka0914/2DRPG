@@ -35,10 +35,38 @@ public:
         float nextTurnMultiplier;
         int nextTurnBonusTurns;
     };
+    
+    /**
+     * @brief 敵の特殊技効果を格納する構造体
+     * @details 敵の特殊技による効果を保持する。
+     */
+    struct EnemySkillEffects {
+        float playerAttackReduction;  /**< @brief プレイヤーの攻撃ダメージ軽減率（0.0-1.0） */
+        int burnTurns;  /**< @brief 火傷の残りターン数 */
+        float burnDamageRatio;  /**< @brief 火傷のダメージ比率（最大HPに対する割合） */
+        bool hasCounterOnNextAttack;  /**< @brief 次の攻撃時にカウンター効果 */
+        float counterDamageRatio;  /**< @brief カウンター時のダメージ比率 */
+        float attackFailureRateIncrease;  /**< @brief 攻撃失敗率の増加（0.0-1.0） */
+        int bleedTurns;  /**< @brief 裂傷の残りターン数 */
+        float bleedDamageRatio;  /**< @brief 裂傷のダメージ比率（最大HPに対する割合） */
+        bool isFrozen;  /**< @brief 氷漬け状態（次のターンコマンド選択不可） */
+        float damageReduction;  /**< @brief 受けるダメージ軽減率（0.0-1.0） */
+        bool hasEvasion;  /**< @brief 攻撃回避効果 */
+        float evasionRate;  /**< @brief 回避率（0.0-1.0） */
+        bool hasDarkKnightCounter;  /**< @brief ダークナイトのカウンター効果 */
+        float attackReduction;  /**< @brief 攻撃力の減少率（0.0-1.0） */
+        int attackReductionTurns;  /**< @brief 攻撃力減少の残りターン数 */
+        bool hasShadowLordBlock;  /**< @brief シャドウロードの攻撃無効化 */
+        bool hasChaosBeastEffect;  /**< @brief カオスビーストの効果 */
+        int chaosBeastDefense;  /**< @brief カオスビーストの防御力（0） */
+        int chaosBeastAttack;  /**< @brief カオスビーストの攻撃力（999） */
+        int chaosBeastTurns;  /**< @brief カオスビースト効果の残りターン数 */
+    };
 
 private:
     ExtendedStats extendedStats;
     SpellEffects spellEffects;
+    EnemySkillEffects enemySkillEffects;
 
 public:
     /**
@@ -53,6 +81,15 @@ public:
     // 呪文効果
     SpellEffects& getSpellEffects() { return spellEffects; }
     const SpellEffects& getSpellEffects() const { return spellEffects; }
+    
+    // 敵の特殊技効果
+    EnemySkillEffects& getEnemySkillEffects() { return enemySkillEffects; }
+    const EnemySkillEffects& getEnemySkillEffects() const { return enemySkillEffects; }
+    
+    /**
+     * @brief 敵の特殊技効果をリセット
+     */
+    void resetEnemySkillEffects();
     
     /**
      * @brief ゴールド変更

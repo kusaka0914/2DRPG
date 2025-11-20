@@ -14,6 +14,7 @@
 #include "NightState.h"
 #include <memory>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 /**
  * @brief NPCの種類
@@ -76,6 +77,9 @@ private:
     std::vector<std::pair<int, int>> buildings;
     std::vector<std::string> buildingTypes;
     
+    // 住人の家の位置
+    std::vector<std::pair<int, int>> residentHomes;
+    
     // 城の位置（画面中央）
     int castleX, castleY;
     bool hasVisitedCastle;
@@ -86,7 +90,7 @@ private:
     // 夜の街へのタイマー機能
     bool nightTimerActive;
     float nightTimer;
-    const float NIGHT_TIMER_DURATION = 360.0f; // 6分 = 360秒
+    const float NIGHT_TIMER_DURATION = 10.0f; // 20分 = 1200秒
     
     // ショップ関連
     std::vector<std::unique_ptr<Item>> shopItems;
@@ -115,6 +119,18 @@ public:
     void handleInput(const InputManager& input) override;
     
     StateType getType() const override { return StateType::TOWN; }
+    
+    /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
     
     // 夜のタイマー関連
     void startNightTimer();
@@ -189,9 +205,10 @@ private:
     void exitBuilding();
     
     bool isValidPosition(int x, int y) const;
-    bool isNearNPC(int x, int y) const;
     bool isCollidingWithBuilding(int x, int y) const;
     bool isCollidingWithNPC(int x, int y) const;
     NPC* getNearbyNPC(int x, int y);
+    const NPC* getNearbyNPC(int x, int y) const;
+    bool isNearNPC(int x, int y) const;
     void checkTrustLevels();
 }; 

@@ -3,7 +3,8 @@
 
 PlayerStats::PlayerStats()
     : extendedStats{0, 100, 50, 50},
-      spellEffects{false, false, 1.0f, 0} {
+      spellEffects{false, false, 1.0f, 0},
+      enemySkillEffects{0.0f, 0, 0.0f, false, 0.0f, 0.0f, 0, 0.0f, false, 0.0f, false, 0.0f, false, 0.0f, 0, false, false, 0, 0, 0} {
 }
 
 void PlayerStats::changeGold(int amount) {
@@ -41,5 +42,9 @@ void PlayerStats::clearNextTurnBonus() {
     spellEffects.hasNextTurnBonus = false;
     spellEffects.nextTurnMultiplier = 1.0f;
     spellEffects.nextTurnBonusTurns = 0;
+}
+
+void PlayerStats::resetEnemySkillEffects() {
+    enemySkillEffects = {0.0f, 0, 0.0f, false, 0.0f, 0.0f, 0, 0.0f, false, 0.0f, false, 0.0f, false, 0.0f, 0, false, false, 0, 0, 0};
 }
 

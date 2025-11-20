@@ -38,6 +38,7 @@ private:
     std::vector<std::pair<int, int>> monsterSpawnPoints; // モンスター出現場所のリスト
     std::vector<std::pair<int, int>> activeMonsterPoints; // 現在アクティブなモンスター出現場所
     std::vector<EnemyType> activeMonsterTypes; // 各出現場所の敵の種類
+    std::vector<int> activeMonsterLevels; // 各出現場所の敵のレベル
     
     // 戦闘終了時の処理
     bool shouldRelocateMonster;
@@ -51,6 +52,15 @@ private:
     bool nightTimerActive;
     float nightTimer;
     const float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
+    
+    // メッセージ表示
+    Label* messageBoard;
+    bool isShowingMessage;
+    
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
 
 public:
     /**
@@ -94,6 +104,18 @@ public:
     StateType getType() const override { return StateType::FIELD; }
     
     /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
+    
+    /**
      * @brief オープニングストーリーの表示
      */
     void showOpeningStory();
@@ -107,8 +129,9 @@ public:
 private:
     /**
      * @brief UIのセットアップ
+     * @param graphics グラフィックスオブジェクトへの参照
      */
-    void setupUI();
+    void setupUI(Graphics& graphics);
     
     /**
      * @brief 移動処理
@@ -183,4 +206,21 @@ private:
      * @param graphics グラフィックスオブジェクトへの参照
      */
     void drawFieldGate(Graphics& graphics);
+    
+    /**
+     * @brief ゲーム説明のセットアップ
+     * @param isFirstVictory 初勝利後の説明かどうか（falseの場合は初回フィールド説明）
+     */
+    void setupGameExplanation(bool isFirstVictory = false);
+    
+    /**
+     * @brief メッセージの表示
+     * @param message 表示するメッセージ
+     */
+    void showMessage(const std::string& message);
+    
+    /**
+     * @brief メッセージのクリア
+     */
+    void clearMessage();
 }; 

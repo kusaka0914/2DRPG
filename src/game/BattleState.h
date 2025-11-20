@@ -19,6 +19,7 @@
 #include "BattleUI.h"
 #include "BattlePhaseManager.h"
 #include <memory>
+#include <map>
 
 /**
  * @brief 戦闘フェーズの種類
@@ -35,6 +36,11 @@ enum class BattlePhase {
     DESPERATE_JUDGE,        // 読み合い判定（6ターン、各ターン結果を順に表示）
     DESPERATE_JUDGE_RESULT, // 結果発表（窮地モード）
     DESPERATE_EXECUTE,      /**< @brief 実行（ダメージ倍率あり） */
+    LAST_CHANCE_INTRO,      /**< @brief 最後のチャンスモード：イントロ（終焉突破UI表示） */
+    LAST_CHANCE_COMMAND_SELECT, /**< @brief 最後のチャンスモード：5ターン分のコマンド選択 */
+    LAST_CHANCE_JUDGE,      /**< @brief 最後のチャンスモード：読み合い判定（5ターン） */
+    LAST_CHANCE_JUDGE_RESULT, /**< @brief 最後のチャンスモード：結果発表 */
+    RESIDENT_TURN_RESULT,    /**< @brief 住民との戦闘用：ターン結果処理（ダメージ適用など） */
     // 既存のフェーズ（後方互換性のため残す）
     PLAYER_TURN,            /**< @brief プレイヤーのターン（古いシステム） */
     PLAYER_ATTACK_DISPLAY,
@@ -90,12 +96,20 @@ private:
     bool nightTimerActive;
     float nightTimer;
     
+    // 目標レベル達成用の敵フラグ
+    bool isTargetLevelEnemy;  /**< @brief 目標レベル達成用の敵かどうか */
+    
     BattleResult lastResult;
     
     // レベルアップ情報
     bool hasLeveledUp;
     int oldLevel;
     int oldMaxHp, oldMaxMp, oldAttack, oldDefense;
+    
+    // VICTORY_DISPLAY用
+    int victoryExpGained;      /**< @brief 獲得経験値 */
+    int victoryGoldGained;      /**< @brief 獲得ゴールド */
+    std::string victoryEnemyName;  /**< @brief 倒した敵の名前 */
     
     // 防御状態
     bool playerDefending;
@@ -104,6 +118,12 @@ private:
     int selectedOption;
     bool isShowingOptions;
     bool isShowingMessage;
+    
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
+    Label* explanationMessageBoard;  // 説明用メッセージボード（左下に表示）
     
     // 戦闘ロジック（単一責任の原則）
     std::unique_ptr<BattleLogic> battleLogic;
@@ -124,12 +144,22 @@ private:
     // isDesperateModeはBattleLogicで管理（単一責任の原則）
     int currentSelectingTurn;          // 現在選択中のターン（0から開始）
     bool isFirstCommandSelection;      // 最初のコマンド選択か（窮地モード判定用）
+    bool hasUsedLastChanceMode;        // 最後のチャンスモードを使用したか
+    bool damageListPrepared;           /**< @brief ダメージリストが準備されたか */
+    bool enemyAttackStarted;           /**< @brief 敵の攻撃アニメーションが開始されたか */
+    float enemyAttackTimer;             /**< @brief 敵の攻撃アニメーションタイマー（秒） */
+    bool battleMusicStarted;           /**< @brief 戦闘BGMが開始されたか */
+    bool lastChanceIntroMusicStopped;  /**< @brief 終焉解放イントロで音楽が停止されたか */
+    bool adversityMusicStarted;        /**< @brief 終焉解放コマンド選択で音楽が開始されたか */
     
     // EXECUTEフェーズ用
     int currentExecutingTurn;          // 現在実行中のターン（0から開始）
     std::vector<BattleLogic::DamageInfo> pendingDamages; // 処理待ちのダメージ
     float executeDelayTimer;           // 各ダメージ処理間の待機タイマー
     bool damageAppliedInAnimation;     // アニメーション中にダメージが適用されたか（ピーク時検出用）
+    std::vector<int> spellWinTurns;    // 呪文で勝利したターンのインデックス（結果フェーズで呪文選択用）
+    bool waitingForSpellSelection;     // 呪文選択待ちフラグ
+    std::map<int, SpellType> executedSpellsByDamageIndex;  /**< @brief pendingDamagesのインデックス → 実行した呪文の種類 */
     
     // 段階的な結果表示用
     int currentJudgingTurn;            // 現在表示中のターン（0から開始）
@@ -139,6 +169,20 @@ private:
     JudgeSubPhase judgeSubPhase;       // 現在のサブフェーズ
     float judgeDisplayTimer;           // 表示タイマー
     int currentJudgingTurnIndex;       // 現在判定中のターン（0から開始）
+    
+    // 住民との戦闘用
+    int currentResidentPlayerCommand;  /**< @brief 現在の住民戦のプレイヤーコマンド */
+    int currentResidentCommand;        /**< @brief 現在の住民戦の住民コマンド */
+    std::string cachedResidentBehaviorHint;  /**< @brief キャッシュされた住民の様子（同じターン中は同じメッセージを表示） */
+    int cachedResidentCommand;  /**< @brief キャッシュされた住民のコマンド（予測表示と実際のコマンドを一致させるため） */
+    int residentTurnCount;  /**< @brief 住民戦の現在のターン数（1から10まで、10ターン経過でゲームオーバー） */
+    bool residentAttackFailed;  /**< @brief 住民戦で攻撃が失敗したか（メンタルが低くてためらった） */
+    int residentHitCount;  /**< @brief 住民戦で攻撃が成功した回数（3回で勝利） */
+    
+    // INTROフェーズ用
+    float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
+    float introTextScale;              /**< @brief テキスト出現演出のスケール（0.0から1.0へ） */
+    float introTimer;                  /**< @brief INTROフェーズのタイマー（秒） */
 
 public:
     BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy);
@@ -151,12 +195,23 @@ public:
     
     StateType getType() const override { return StateType::BATTLE; }
     
+    /**
+     * @brief 目標レベル達成用の敵フラグを設定
+     * @param isTargetLevelEnemy 目標レベル達成用の敵かどうか
+     */
+    void setIsTargetLevelEnemy(bool isTargetLevelEnemy) { this->isTargetLevelEnemy = isTargetLevelEnemy; }
+    
 private:
     void setupUI(Graphics& graphics);
     void updateStatus();
     void addBattleLog(const std::string& message);
     void showMessage(const std::string& message);
     void hideMessage();
+    void setupGameExplanation();
+    void setupResidentBattleExplanation();
+    void setupLastChanceExplanation();
+    void showExplanationMessage(const std::string& message);
+    void clearExplanationMessage();
     void loadBattleImages();
     void showSpellMenu();
     void handleSpellSelection(int spellChoice);
@@ -182,7 +237,6 @@ private:
     void judgeBattle();
     void prepareJudgeResults();
     void showTurnResult(int turnIndex);
-    void showFinalResult();
     void executeWinningTurns(float damageMultiplier);
     bool checkDesperateModeCondition();
     void showDesperateModePrompt();
@@ -190,6 +244,52 @@ private:
     
     // 重複コードの共通化（DRY原則）
     void updateJudgePhase(float deltaTime, bool isDesperateMode);
-    void updateExecutePhase(float deltaTime, bool isDesperateMode);
     void updateJudgeResultPhase(float deltaTime, bool isDesperateMode);
+    void updateLastChanceJudgeResultPhase(float deltaTime);
+    
+    // 勝敗UI表示用
+    void renderWinLossUI(Graphics& graphics, bool isResultPhase = false);
+    
+    /**
+     * @brief Rock-Paper-Scissors画像を中央上部に表示（住民戦以外）
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
+    void renderRockPaperScissorsImage(Graphics& graphics);
+    std::pair<int, int> calculateCurrentWinLoss() const;
+    
+    /**
+     * @brief 戦闘背景画像の取得
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @return 背景画像のテクスチャ（住民の場合は夜の背景、それ以外は通常の戦闘背景）
+     */
+    SDL_Texture* getBattleBackgroundTexture(Graphics& graphics) const;
+    
+    // 住民との戦闘用メソッド
+    void processResidentTurn(int playerCommand, int residentCommand);
+    int generateResidentCommand();  /**< @brief 住民のコマンドを生成（怯える70%、助けを呼ぶ30%） */
+    int judgeResidentTurn(int playerCommand, int residentCommand) const;  /**< @brief 住民との戦闘の判定（特殊ルール） */
+    std::string getResidentCommandName(int command);  /**< @brief 住民のコマンド名を取得 */
+    std::string getPlayerCommandNameForResident(int command);  /**< @brief プレイヤーのコマンド名を取得（住民戦用） */
+    std::string getResidentBehaviorHint() const;  /**< @brief 住民の様子を取得（次の行動を推測できるヒント） */
+    
+    /**
+     * @brief 敵の特殊技を適用
+     * @param enemyType 敵の種類
+     * @param baseDamage 基本ダメージ
+     * @return 最終ダメージ
+     */
+    int applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std::string& effectMessage);
+    std::string getEnemySpecialSkillEffectMessage(EnemyType enemyType);
+    
+    /**
+     * @brief 敵の特殊技効果を処理（ターン終了時）
+     */
+    void processEnemySkillEffects();
+    
+    /**
+     * @brief プレイヤーの攻撃ダメージに特殊技効果を適用
+     * @param baseDamage 基本ダメージ
+     * @return 最終ダメージ
+     */
+    int applyPlayerAttackSkillEffects(int baseDamage);
 };

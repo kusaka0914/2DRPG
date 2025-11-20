@@ -11,6 +11,8 @@
 #include "../ui/UI.h"
 #include "../entities/Player.h"
 #include <memory>
+#include <functional>
+#include <SDL2/SDL.h>
 
 /**
  * @brief ゲーム状態の種類
@@ -48,8 +50,33 @@ public:
     
     virtual StateType getType() const = 0;
     
+    /**
+     * @brief 状態をJSON形式に変換（オプショナル）
+     * @return JSONオブジェクト（実装されていない場合は空のJSON）
+     */
+    virtual nlohmann::json toJson() const { return nlohmann::json(); }
+    
+    /**
+     * @brief JSON形式から状態を復元（オプショナル）
+     * @param j JSONオブジェクト
+     */
+    virtual void fromJson(const nlohmann::json& j) {}
+    
+    /**
+     * @brief 現在のStateの状態を保存（共通ヘルパー関数）
+     * @param player プレイヤーへの共有ポインタ
+     */
+    void saveCurrentState(std::shared_ptr<Player> player);
+    
 protected:
     GameStateManager* stateManager = nullptr;
+    
+    // フェード機能
+    bool isFadingOut;  /**< @brief フェードアウト中か */
+    bool isFadingIn;  /**< @brief フェードイン中か */
+    float fadeTimer;  /**< @brief フェードタイマー（秒） */
+    float fadeDuration;  /**< @brief フェード時間（秒） */
+    std::function<void()> fadeOutCompleteCallback;  /**< @brief フェードアウト完了時のコールバック */
     
 public:
     /**
@@ -124,6 +151,76 @@ public:
      */
     void drawPlayer(Graphics& graphics, int playerX, int playerY, int tileSize, 
                    Uint8 r = 0, Uint8 g = 255, Uint8 b = 0, Uint8 a = 255);
+    
+    /**
+     * @brief ゲートの描画
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @param gateX ゲートのX座標
+     * @param gateY ゲートのY座標
+     * @param tileSize タイルサイズ
+     * @param stoneTileTexture 石タイルテクスチャ（nullptr可）
+     * @param toriiTexture 鳥居テクスチャ（nullptr可）
+     */
+    static void drawGate(Graphics& graphics, int gateX, int gateY, int tileSize,
+                        SDL_Texture* stoneTileTexture, SDL_Texture* toriiTexture);
+    
+    /**
+     * @brief 建物の描画（テクスチャまたはフォールバック色）
+     * @param graphics グラフィックスオブジェクトへの参照
+     * @param x 建物のX座標（タイル単位）
+     * @param y 建物のY座標（タイル単位）
+     * @param tileSize タイルサイズ
+     * @param buildingSize 建物サイズ（タイル単位）
+     * @param texture 建物テクスチャ（nullptr可）
+     * @param fallbackR フォールバック色のR成分
+     * @param fallbackG フォールバック色のG成分
+     * @param fallbackB フォールバック色のB成分
+     */
+    static void drawBuilding(Graphics& graphics, int x, int y, int tileSize, int buildingSize,
+                            SDL_Texture* texture, Uint8 fallbackR, Uint8 fallbackG, Uint8 fallbackB);
+    
+    /**
+     * @brief フェードアウトの開始
+     * @param duration フェード時間（秒）
+     * @param onComplete フェード完了時のコールバック（オプション）
+     */
+    void startFadeOut(float duration = 0.5f, std::function<void()> onComplete = nullptr);
+    
+    /**
+     * @brief フェードインの開始
+     * @param duration フェード時間（秒）
+     */
+    void startFadeIn(float duration = 0.5f);
+    
+    /**
+     * @brief フェードの更新処理（update()内で呼び出す）
+     * @param deltaTime 前フレームからの経過時間（秒）
+     */
+    void updateFade(float deltaTime);
+    
+    /**
+     * @brief フェードの描画処理（render()内で呼び出す）
+     * @param graphics グラフィックスオブジェクトへの参照
+     */
+    void renderFade(Graphics& graphics);
+    
+    /**
+     * @brief フェード中かどうか
+     * @return フェード中かどうか
+     */
+    bool isFading() const { return isFadingOut || isFadingIn; }
+    
+    /**
+     * @brief フェードアウト中かどうか
+     * @return フェードアウト中かどうか
+     */
+    bool getIsFadingOut() const { return isFadingOut; }
+    
+    /**
+     * @brief フェードイン中かどうか
+     * @return フェードイン中かどうか
+     */
+    bool getIsFadingIn() const { return isFadingIn; }
     
     /**
      * @brief 入力処理テンプレート

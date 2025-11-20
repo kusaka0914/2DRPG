@@ -1,4 +1,6 @@
 #include "TownLayout.h"
+#include <SDL2/SDL.h>
+#include <tuple>
 
 const std::vector<std::pair<int, int>> TownLayout::BUILDINGS = {
     {8, 10},   // 道具屋（2x2）
@@ -35,4 +37,169 @@ const std::vector<std::pair<int, int>> TownLayout::GUARDS = {
     {12, 3},  // 衛兵2
     {15, 2},   // 衛兵3
     {15, 3}   // 衛兵4
-}; 
+};
+
+int TownLayout::findResidentIndex(int x, int y) {
+    for (size_t i = 0; i < RESIDENTS.size(); ++i) {
+        if (RESIDENTS[i].first == x && RESIDENTS[i].second == y) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+int TownLayout::findGuardIndex(int x, int y) {
+    for (size_t i = 0; i < GUARDS.size(); ++i) {
+        if (GUARDS[i].first == x && GUARDS[i].second == y) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+int TownLayout::getResidentTextureIndex(int x, int y) {
+    int index = findResidentIndex(x, y);
+    if (index >= 0) {
+        return index % 6; // 6つの画像を循環使用
+    }
+    return 0; // デフォルト
+}
+
+std::string TownLayout::getResidentName(int x, int y) {
+    static const std::vector<std::string> residentNames = {
+        "タカヒロ", "セイカ", "トメコ", "レオ", "タイセイ", "ヒマリ",
+        "シンジ", "アヤメ", "ウメコ", "ヒロユキ", "サトシ", "レイラ"
+    };
+    
+    int index = findResidentIndex(x, y);
+    if (index >= 0 && index < static_cast<int>(residentNames.size())) {
+        return residentNames[index];
+    }
+    
+    return "住民"; // デフォルト
+}
+
+std::string TownLayout::getResidentDialogue(int x, int y) {
+    static const std::vector<std::string> residentDialogues = {
+        "魔物？そんなの俺が追い払ってやるよ",
+        "最近は魔物が増えてきてるんだって・・・",
+        "そこの赤い鳥居をくぐると外へ出れるわよ",
+        "これはこれは勇者様、いつも街を守っていただきありがとうございます！",
+        "魔物がいるからってお外で遊べないんだぁ・・・",
+        "本当に魔王がいるのかな・・・？",
+        "勇者様、決して逃げてはいけませんよ",
+        "魔物って美味しいのかな・・・？",
+        "私ウメコ、今年で成人よ",
+        "この周辺には20種類の魔物が出るらしいですよ",
+        "魔物と仲良くなる方法はないのかな？",
+        "魔王には協力者がいると思うんだけどあなたはどう思う？"
+    };
+    
+    int index = findResidentIndex(x, y);
+    if (index >= 0 && index < static_cast<int>(residentDialogues.size())) {
+        return residentDialogues[index];
+    }
+    
+    return "..."; // デフォルト
+}
+
+std::string TownLayout::getGuardName(int x, int y) {
+    static const std::vector<std::string> guardNames = {
+        "コバヤシ", "タナカ", "マツオ", "サカキバラ"
+    };
+    
+    int index = findGuardIndex(x, y);
+    if (index >= 0 && index < static_cast<int>(guardNames.size())) {
+        return guardNames[index];
+    }
+    
+    return "衛兵"; // デフォルト
+}
+
+std::string TownLayout::getGuardDialogue(int x, int y) {
+    static const std::vector<std::string> guardDialogues = {
+        "この街は俺たちが守る！",
+        "この街なら俺だけで十分だ！",
+        "この街のために命はかけたくない！",
+        "俺は昨日この街に来たばかりだ！しかしなぜ住民は家に入らないんだ！"
+    };
+    
+    int index = findGuardIndex(x, y);
+    if (index >= 0 && index < static_cast<int>(guardDialogues.size())) {
+        return guardDialogues[index];
+    }
+    
+    return "..."; // デフォルト
+}
+
+bool TownLayout::isResidentKilled(int x, int y, const std::vector<std::pair<int, int>>& killedResidents) {
+    for (const auto& killedPos : killedResidents) {
+        if (killedPos.first == x && killedPos.second == y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TownLayout::areAllResidentsKilled(const std::vector<std::pair<int, int>>& killedResidents) {
+    for (const auto& residentPos : RESIDENTS) {
+        if (!isResidentKilled(residentPos.first, residentPos.second, killedResidents)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void TownLayout::removeDuplicatePositions(std::vector<std::pair<int, int>>& positions) {
+    std::vector<std::pair<int, int>> result;
+    for (const auto& pos : positions) {
+        bool found = false;
+        for (const auto& existingPos : result) {
+            if (existingPos.first == pos.first && existingPos.second == pos.second) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            result.push_back(pos);
+        }
+    }
+    positions = result;
+}
+
+std::tuple<Uint8, Uint8, Uint8> TownLayout::getBuildingColor(const std::string& buildingType) {
+    if (buildingType == "shop") {
+        return std::make_tuple(139, 69, 19); // 茶色
+    } else if (buildingType == "weapon_shop") {
+        return std::make_tuple(192, 192, 192); // 銀色
+    } else if (buildingType == "house") {
+        return std::make_tuple(34, 139, 34); // 緑色
+    } else if (buildingType == "castle") {
+        return std::make_tuple(255, 215, 0); // 金色
+    } else {
+        return std::make_tuple(128, 128, 128); // グレー
+    }
+}
+
+nlohmann::json TownLayout::positionsToJson(const std::vector<std::pair<int, int>>& positions) {
+    nlohmann::json jsonArray = nlohmann::json::array();
+    for (const auto& pos : positions) {
+        nlohmann::json posJson;
+        posJson["x"] = pos.first;
+        posJson["y"] = pos.second;
+        jsonArray.push_back(posJson);
+    }
+    return jsonArray;
+}
+
+std::vector<std::pair<int, int>> TownLayout::positionsFromJson(const nlohmann::json& j) {
+    std::vector<std::pair<int, int>> positions;
+    if (j.is_array()) {
+        for (const auto& posJson : j) {
+            int x = posJson["x"];
+            int y = posJson["y"];
+            positions.push_back({x, y});
+        }
+    }
+    return positions;
+} 

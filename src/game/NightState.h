@@ -32,8 +32,8 @@ private:
     std::vector<std::pair<int, int>> guards; // 見張りの位置
     std::vector<std::pair<int, int>> guardDirections; // 衛兵の移動方向
     
-    // 住民を倒した回数
-    int residentsKilled;
+    // 住民を倒した回数（1夜ごとにリセットされるが、再戦時は維持される）
+    static int residentsKilled;
     const int MAX_RESIDENTS_PER_NIGHT = 3;
     
     // 合計倒した人数（メンタル計算用）
@@ -41,6 +41,11 @@ private:
     
     // 倒した住民の位置を記録（次の夜に配置しないため）
     static std::vector<std::pair<int, int>> killedResidentPositions;
+    
+    // プレイヤーの位置を保存（戦闘から戻ってきた時に復元するため）
+    static int s_savedPlayerX;
+    static int s_savedPlayerY;
+    static bool s_playerPositionSaved;
     
     // 移動タイマー
     float moveTimer;
@@ -62,6 +67,12 @@ private:
     Label* messageBoard;
     bool isShowingMessage;
     
+    // ゲーム説明機能
+    bool showGameExplanation;
+    int explanationStep;
+    std::vector<std::string> gameExplanationTexts;
+    Label* explanationMessageBoard;  // 説明用メッセージボード（左下に表示）
+    
     // 住民襲撃時の選択肢表示
     bool isShowingResidentChoice;
     bool isShowingMercyChoice;
@@ -69,6 +80,12 @@ private:
     std::vector<std::string> choiceOptions;
     int currentTargetX, currentTargetY; // 現在の襲撃対象の位置
     bool showResidentKilledMessage; // 住民を倒したメッセージ表示フラグ
+    bool showReturnToTownMessage; // 街に戻るメッセージ表示フラグ（3人目を倒した後用）
+    bool shouldReturnToTown; // 街に戻る処理を実行するフラグ（メッセージ表示後に使用）
+    bool showGuardMessage; // 衛兵との戦闘前のメッセージ表示フラグ
+    bool showGuardKilledMessage; // 衛兵を倒したメッセージ表示フラグ
+    bool showAllGuardsKilledMessage; // 全ての衛兵を倒したメッセージ表示フラグ
+    int currentGuardX, currentGuardY; // 現在の戦闘対象の衛兵の位置
     
     // 夜の表示
     Label* nightDisplayLabel; // 夜の表示用ラベル
@@ -146,10 +163,35 @@ public:
     StateType getType() const override { return StateType::NIGHT; }
     
     /**
+     * @brief 状態をJSON形式に変換
+     * @return JSONオブジェクト
+     */
+    nlohmann::json toJson() const override;
+    
+    /**
+     * @brief JSON形式から状態を復元
+     * @param j JSONオブジェクト
+     */
+    void fromJson(const nlohmann::json& j) override;
+    
+    /**
      * @brief 倒した住民の位置を取得
      * @return 倒した住民の位置のリスト
      */
     static const std::vector<std::pair<int, int>>& getKilledResidentPositions() { return killedResidentPositions; }
+    
+    /**
+     * @brief 住民を倒した処理を実行
+     * @param x 住民のX座標
+     * @param y 住民のY座標
+     */
+    void handleResidentKilled(int x, int y);
+    
+    /**
+     * @brief デバッグ用：衛兵を指定数だけ残す
+     * @param remainingCount 残す衛兵の数
+     */
+    void setRemainingGuards(int remainingCount);
     
 private:
     /**
@@ -260,14 +302,6 @@ private:
     bool isCollidingWithGuard(int x, int y) const;
     
     /**
-     * @brief 住民のテクスチャインデックスの取得
-     * @param x 住民のX座標
-     * @param y 住民のY座標
-     * @return テクスチャインデックス
-     */
-    int getResidentTextureIndex(int x, int y) const;
-    
-    /**
      * @brief UIの更新
      */
     void updateUI();
@@ -300,13 +334,6 @@ private:
      * @brief 衛兵との相互作用チェック
      */
     void checkGuardInteraction();
-    
-    /**
-     * @brief 衛兵への攻撃
-     * @param x 衛兵のX座標
-     * @param y 衛兵のY座標
-     */
-    void attackGuard(int x, int y);
     
     /**
      * @brief 城の入り口チェック
@@ -343,4 +370,20 @@ private:
      * @brief 選択肢表示の更新
      */
     void updateChoiceDisplay();
+    
+    /**
+     * @brief ゲーム説明のセットアップ
+     */
+    void setupGameExplanation();
+    
+    /**
+     * @brief 説明メッセージの表示
+     * @param message 表示するメッセージ
+     */
+    void showExplanationMessage(const std::string& message);
+    
+    /**
+     * @brief 説明メッセージのクリア
+     */
+    void clearExplanationMessage();
 }; 
