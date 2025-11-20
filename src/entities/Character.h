@@ -130,6 +130,12 @@ public:
     bool getIsAlive() const { return isAlive; }
     
     /**
+     * @brief 生存状態の設定
+     * @param alive 生存状態
+     */
+    void setIsAlive(bool alive) { isAlive = alive; }
+    
+    /**
      * @brief 最大HPの設定
      * @param newMaxHp 新しい最大HP
      */

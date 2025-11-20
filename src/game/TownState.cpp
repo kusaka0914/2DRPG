@@ -8,6 +8,7 @@
 #include "BattleState.h"
 #include "../ui/CommonUI.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -41,6 +42,10 @@ void TownState::enter() {
     
     nightTimerActive = s_nightTimerActive;
     nightTimer = s_nightTimer;
+    
+    // clear.oggを停止してfield.oggを再生（街とフィールドで流す）
+    AudioManager::getInstance().stopMusic();
+    AudioManager::getInstance().playMusic("field", -1);
     
     // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
     if (!player->hasSeenTownExplanation && showGameExplanation) {

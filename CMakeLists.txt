@@ -18,6 +18,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)
 pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
+pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
 
 # JSON library (nlohmann/json)
 find_package(nlohmann_json REQUIRED)
@@ -60,6 +61,7 @@ set(SOURCES
     src/utils/MapTerrain.cpp
     src/utils/TownLayout.cpp
     src/core/utils/ui_config_manager.cpp
+    src/core/AudioManager.cpp
 )
 
 # ヘッダーファイル
@@ -99,6 +101,7 @@ set(HEADERS
     src/utils/MapTerrain.h
     src/utils/TownLayout.h
     src/core/utils/ui_config_manager.h
+    src/core/AudioManager.h
 )
 
 # 実行ファイルを作成
@@ -110,6 +113,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${SDL2_IMAGE_INCLUDE_DIRS}
     ${SDL2_TTF_INCLUDE_DIRS}
+    ${SDL2_MIXER_INCLUDE_DIRS}
 )
 
 # リンクディレクトリ
@@ -117,6 +121,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
     ${SDL2_LIBRARY_DIRS}
     ${SDL2_IMAGE_LIBRARY_DIRS}
     ${SDL2_TTF_LIBRARY_DIRS}
+    ${SDL2_MIXER_LIBRARY_DIRS}
 )
 
 # リンクライブラリ
@@ -124,6 +129,7 @@ target_link_libraries(${PROJECT_NAME}
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
     ${SDL2_TTF_LIBRARIES}
+    ${SDL2_MIXER_LIBRARIES}
     nlohmann_json::nlohmann_json
 )
 
@@ -132,6 +138,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     ${SDL2_CFLAGS_OTHER}
     ${SDL2_IMAGE_CFLAGS_OTHER}
     ${SDL2_TTF_CFLAGS_OTHER}
+    ${SDL2_MIXER_CFLAGS_OTHER}
 )
 
 # デバッグビルドの設定
@@ -147,6 +154,6 @@ install(TARGETS ${PROJECT_NAME}
 
 # assetsディレクトリをビルドディレクトリにコピー（開発用）
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}
-    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md" PATTERN "*.json"
+    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md" PATTERN "*.json" PATTERN "*.ogg"
 )
 

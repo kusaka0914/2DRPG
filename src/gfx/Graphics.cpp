@@ -17,7 +17,7 @@ bool Graphics::initialize(const std::string& title, int width, int height) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
     
     // SDL初期化
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0) {
         std::cerr << "SDL初期化エラー: " << SDL_GetError() << std::endl;
         return false;
     }

@@ -4,6 +4,7 @@
 #include "TownState.h"
 #include "BattleState.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <sstream>
 #include <cstdlib>
 
@@ -20,12 +21,18 @@ void MainMenuState::enter() {
     isFadingOut = false;
     isFadingIn = false;
     fadeTimer = 0.0f;
+    
+    // タイトルBGMを再生
+    AudioManager::getInstance().playMusic("title", -1);
 }
 
 void MainMenuState::exit() {
     ui.clear();
     isFadingOut = false; // 状態遷移時にフラグをリセット
     isFadingIn = false;
+    
+    // タイトルBGMを停止
+    AudioManager::getInstance().stopMusic();
 }
 
 void MainMenuState::update(float deltaTime) {

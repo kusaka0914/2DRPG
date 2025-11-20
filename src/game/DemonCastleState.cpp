@@ -5,6 +5,7 @@
 #include "BattleState.h"
 #include "../entities/Enemy.h"
 #include "../core/utils/ui_config_manager.h"
+#include "../core/AudioManager.h"
 #include <iostream>
 
 static bool s_demonCastleFirstTime = true;
@@ -20,7 +21,9 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
     fadeTimer = 0.0f;
     fadeDuration = 0.5f;
     
-    if (fromCastleState) {
+    // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+    // 「ここは？」のメッセージを表示する
+    if (fromCastleState && !s_demonCastleFirstTime) {
         demonDialogues = {
             "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
             "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
@@ -50,6 +53,13 @@ void DemonCastleState::enter() {
     playerX = 4;
     playerY = 4; // 魔王の目の前
     
+    // 王様の城から来た場合はdemon.oggを再生、それ以外はroom.oggを停止
+    if (fromCastleState) {
+        AudioManager::getInstance().playMusic("demon", -1);
+    } else {
+        AudioManager::getInstance().stopMusic();
+    }
+    
     // ストーリーメッセージUIが完了していない場合は最初から始める（dialogueStepをリセット）
     if (!player->hasSeenDemonCastleStory && isTalkingToDemon) {
         dialogueStep = 0;
@@ -59,14 +69,15 @@ void DemonCastleState::enter() {
     saveCurrentState(player);
     
     // ストーリーメッセージUIを表示
-    // fromCastleStateの場合は常に表示（全員を倒した後の専用ストーリー）
-    // 通常の初回訪問の場合も表示
-    if (fromCastleState) {
+    // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+    // 最初の方のイベントのダイアログを表示
+    if (fromCastleState && !s_demonCastleFirstTime) {
         // 全員を倒した後の専用ストーリーは常に表示
         pendingDialogue = true;
         dialogueStep = 0;
         isTalkingToDemon = false; // リセット
     } else if (s_demonCastleFirstTime && !player->hasSeenDemonCastleStory) {
+        // 最初の方のイベントのダイアログを表示
         pendingDialogue = true;
     }
 }
@@ -244,7 +255,9 @@ void DemonCastleState::nextDialogue() {
         
         clearMessage();
         
-        if (fromCastleState) {
+        // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
+        // 戦闘を開始せずに街に戻る
+        if (fromCastleState && !s_demonCastleFirstTime) {
             if (stateManager) {
                 auto demon = std::make_unique<Enemy>(EnemyType::DEMON_LORD);
                 demon->setLevelUnrestricted(150); // 魔王のレベルを150に設定
