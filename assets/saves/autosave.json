@@ -1,7 +1,7 @@
 {
-    "attack": 8,
+    "attack": 14,
     "currentNight": 0,
-    "defense": 3,
+    "defense": 9,
     "demonTrust": 50,
     "equipment": {
         "equipment": {
@@ -24,21 +24,27 @@
         }
     },
     "evilActions": 0,
-    "exp": 0,
-    "gameState": null,
-    "gold": 0,
+    "exp": 21,
+    "gameState": {
+        "explanationStep": 0,
+        "playerX": 10,
+        "playerY": 13,
+        "showGameExplanation": false,
+        "stateType": 1
+    },
+    "gold": 10,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
     "hasSeenCastleStory": true,
     "hasSeenDemonCastleStory": true,
     "hasSeenFieldExplanation": true,
-    "hasSeenFieldFirstVictoryExplanation": false,
+    "hasSeenFieldFirstVictoryExplanation": true,
     "hasSeenLastChanceExplanation": true,
     "hasSeenNightExplanation": false,
     "hasSeenResidentBattleExplanation": false,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 0,
+    "hp": 45,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -111,16 +117,16 @@
         ]
     },
     "killedResidents": [],
-    "kingTrust": 50,
-    "level": 1,
-    "maxHp": 30,
-    "maxMp": 20,
+    "kingTrust": 56,
+    "level": 4,
+    "maxHp": 45,
+    "maxMp": 23,
     "mental": 100,
-    "mp": 20,
+    "mp": 23,
     "name": "勇者",
     "nightCount": 0,
-    "nightTimer": 0.0,
-    "nightTimerActive": false,
+    "nightTimer": 873.48291015625,
+    "nightTimerActive": true,
     "targetLevel": 25,
     "trustLevel": 50
 }
