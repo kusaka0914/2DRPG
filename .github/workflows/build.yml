@@ -45,13 +45,26 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
-        run: cmake --build build --config Release --target ALL_BUILD
+        shell: pwsh
+        run: cmake --build build --config Release --target DragonQuestRPG
 
       - name: Gather files
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist\DragonQuestRPG | Out-Null
-          Copy-Item build\Release\DragonQuestRPG.exe dist\DragonQuestRPG\
+          
+          # 実行ファイルのパスを確認（Visual Studioジェネレーターの出力パス）
+          $exePath = "build\Release\DragonQuestRPG.exe"
+          if (-not (Test-Path $exePath)) {
+            # 代替パスを試す
+            $exePath = "build\x64\Release\DragonQuestRPG.exe"
+            if (-not (Test-Path $exePath)) {
+              Write-Error "実行ファイルが見つかりません: build\Release\DragonQuestRPG.exe または build\x64\Release\DragonQuestRPG.exe"
+              exit 1
+            }
+          }
+          
+          Copy-Item $exePath dist\DragonQuestRPG\DragonQuestRPG.exe
           if (Test-Path assets) { Copy-Item assets dist\DragonQuestRPG\assets -Recurse }
           
           # vcpkgから必要なDLLをコピー
@@ -92,7 +105,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build build --config Release
+          cmake --build build
 
       - name: Gather files
         run: |

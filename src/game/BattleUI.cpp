@@ -501,7 +501,18 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                     continue;
                 }
                 int displayWidth = cmdSelectConfig.selectedCommandImageSize;
+                // ゼロ除算を防ぐ
+                if (imgWidth <= 0 || imgHeight <= 0) {
+                    commandImages.push_back(nullptr);
+                    imageWidths.push_back(0);
+                    continue;
+                }
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
+                if (displayWidth <= 0 || displayHeight <= 0) {
+                    commandImages.push_back(nullptr);
+                    imageWidths.push_back(0);
+                    continue;
+                }
                 commandImages.push_back(cmdImage);
                 imageWidths.push_back(displayWidth);
                 totalWidth += displayWidth;
@@ -526,11 +537,21 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                     continue;
                 }
                 int displayWidth = cmdSelectConfig.selectedCommandImageSize;
+                // ゼロ除算を防ぐ
+                if (imgWidth <= 0 || imgHeight <= 0) {
+                    continue;
+                }
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
+                if (displayWidth <= 0 || displayHeight <= 0) {
+                    continue;
+                }
                 int imageX = currentX;
                 int imageY = selectedCmdY - (displayHeight / 2);
                 
-                graphics->drawTexture(cmdImage, imageX, imageY, displayWidth, displayHeight);
+                // テクスチャが有効な場合のみ描画
+                if (cmdImage && displayWidth > 0 && displayHeight > 0) {
+                    graphics->drawTexture(cmdImage, imageX, imageY, displayWidth, displayHeight);
+                }
                 currentX += displayWidth;
                 
                 // 矢印を表示（最後のコマンド以外）
@@ -618,8 +639,36 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                 continue;
             }
             
+            // ゼロ除算を防ぐ
+            if (imageWidth <= 0 || imageHeight <= 0) {
+                // テキスト表示にフォールバック
+                int textX = startX + (buttonWidth / 2) - 50;
+                int textY = buttonY + (buttonHeight / 2) - 15;
+                if (isSelected) {
+                    graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                } else {
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                }
+                continue;
+            }
+            
             int displayWidth = cmdSelectConfig.buttonImageSize;
             int displayHeight = static_cast<int>(imageHeight * (static_cast<float>(displayWidth) / imageWidth));
+            
+            // 表示サイズが無効な場合はスキップ
+            if (displayWidth <= 0 || displayHeight <= 0) {
+                // テキスト表示にフォールバック
+                int textX = startX + (buttonWidth / 2) - 50;
+                int textY = buttonY + (buttonHeight / 2) - 15;
+                if (isSelected) {
+                    graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                } else {
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                }
+                continue;
+            }
             
             int imageX = startX + (buttonWidth / 2) - (displayWidth / 2);
             int imageY = buttonY + (buttonHeight / 2) - (displayHeight / 2);
@@ -627,7 +676,10 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         if (isSelected) {
                 graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", cmdSelectConfig.selectedBorderColor);
         }
-            graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
+            // テクスチャが有効な場合のみ描画
+            if (commandImage && displayWidth > 0 && displayHeight > 0) {
+                graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
+            }
         } else {
             // フォールバック：テキスト表示
         int textX = startX + (buttonWidth / 2) - 50;

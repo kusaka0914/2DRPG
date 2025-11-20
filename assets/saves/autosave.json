@@ -27,8 +27,8 @@
     "exp": 21,
     "gameState": {
         "explanationStep": 0,
-        "playerX": 10,
-        "playerY": 13,
+        "playerX": 11,
+        "playerY": 8,
         "showGameExplanation": false,
         "stateType": 1
     },
@@ -125,7 +125,7 @@
     "mp": 23,
     "name": "勇者",
     "nightCount": 0,
-    "nightTimer": 873.48291015625,
+    "nightTimer": 843.2824096679688,
     "nightTimerActive": true,
     "targetLevel": 25,
     "trustLevel": 50

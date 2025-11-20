@@ -872,20 +872,31 @@ void BattleState::render(Graphics& graphics) {
         int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
         if (enemyTexture) {
             int textureWidth, textureHeight;
-            SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight);
-            float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
-            if (textureWidth <= textureHeight) {
-                enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
-            } else {
-                enemyHeight = static_cast<int>(BattleConstants::BATTLE_CHARACTER_SIZE / aspectRatio);
+            if (SDL_QueryTexture(enemyTexture, nullptr, nullptr, &textureWidth, &textureHeight) == 0) {
+                if (textureWidth > 0 && textureHeight > 0) {
+                    float aspectRatio = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+                    if (textureWidth <= textureHeight) {
+                        enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
+                    } else {
+                        enemyHeight = static_cast<int>(BattleConstants::BATTLE_CHARACTER_SIZE / aspectRatio);
+                    }
+                }
             }
         }
         
         // HP表示
-        std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
-        std::string residentBehaviorHint = enemy->isResident() ? getResidentBehaviorHint() : "";
-        int hitCount = enemy->isResident() ? residentHitCount : 0;
-        battleUI->renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, residentBehaviorHint, false, hitCount);
+        if (battleUI) {
+            std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
+            std::string residentBehaviorHint = enemy->isResident() ? getResidentBehaviorHint() : "";
+            int hitCount = enemy->isResident() ? residentHitCount : 0;
+            try {
+                battleUI->renderHP(playerX, playerY, enemyX, enemyY, playerHeight, enemyHeight, residentBehaviorHint, false, hitCount);
+            } catch (const std::exception& e) {
+                std::cerr << "renderHPエラー: " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "renderHPエラー: 不明なエラー" << std::endl;
+            }
+        }
         
         // キャラクター描画
         if (playerTex) {
@@ -913,6 +924,12 @@ void BattleState::render(Graphics& graphics) {
             }
         }
         
+        // battleUIとbattleLogicが有効な場合のみ描画
+        if (!battleUI || !battleLogic) {
+            graphics.present();
+            return;
+        }
+        
         BattleUI::CommandSelectRenderParams params;
         params.currentSelectingTurn = currentSelectingTurn;
         params.commandTurnCount = battleLogic->getCommandTurnCount();
@@ -929,7 +946,14 @@ void BattleState::render(Graphics& graphics) {
             params.residentTurnCount = 0;  // 通常戦の場合は0
             params.residentHitCount = 0;  // 通常戦の場合は0
         }
-        battleUI->renderCommandSelectionUI(params);
+        
+        try {
+            battleUI->renderCommandSelectionUI(params);
+        } catch (const std::exception& e) {
+            std::cerr << "renderCommandSelectionUIエラー: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "renderCommandSelectionUIエラー: 不明なエラー" << std::endl;
+        }
         
         // 説明UIを表示（初回の戦闘時のみ）
         if (showGameExplanation && explanationMessageBoard && !explanationMessageBoard->getText().empty()) {
