@@ -1,8 +1,8 @@
 {
-    "attack": 8,
-    "currentNight": 0,
-    "defense": 3,
-    "demonTrust": 50,
+    "attack": 56,
+    "currentNight": 1,
+    "defense": 51,
+    "demonTrust": 80,
     "equipment": {
         "equipment": {
             "accessory": {
@@ -25,20 +25,26 @@
     },
     "evilActions": 0,
     "exp": 0,
-    "gameState": null,
+    "gameState": {
+        "explanationStep": 0,
+        "playerX": 10,
+        "playerY": 14,
+        "showGameExplanation": false,
+        "stateType": 1
+    },
     "gold": 0,
     "goodActions": 0,
     "hasSeenBattleExplanation": true,
-    "hasSeenCastleStory": true,
-    "hasSeenDemonCastleStory": true,
+    "hasSeenCastleStory": false,
+    "hasSeenDemonCastleStory": false,
     "hasSeenFieldExplanation": true,
-    "hasSeenFieldFirstVictoryExplanation": false,
-    "hasSeenLastChanceExplanation": true,
-    "hasSeenNightExplanation": false,
-    "hasSeenResidentBattleExplanation": false,
+    "hasSeenFieldFirstVictoryExplanation": true,
+    "hasSeenLastChanceExplanation": false,
+    "hasSeenNightExplanation": true,
+    "hasSeenResidentBattleExplanation": true,
     "hasSeenRoomStory": true,
     "hasSeenTownExplanation": true,
-    "hp": 0,
+    "hp": 150,
     "inventory": {
         "maxSlots": 20,
         "slots": [
@@ -110,17 +116,30 @@
             }
         ]
     },
-    "killedResidents": [],
-    "kingTrust": 50,
-    "level": 1,
-    "maxHp": 30,
-    "maxMp": 20,
-    "mental": 100,
-    "mp": 20,
+    "killedResidents": [
+        {
+            "x": 19,
+            "y": 14
+        },
+        {
+            "x": 24,
+            "y": 13
+        },
+        {
+            "x": 27,
+            "y": 7
+        }
+    ],
+    "kingTrust": 20,
+    "level": 25,
+    "maxHp": 150,
+    "maxMp": 44,
+    "mental": 10,
+    "mp": 44,
     "name": "勇者",
-    "nightCount": 0,
-    "nightTimer": 0.0,
-    "nightTimerActive": false,
-    "targetLevel": 25,
+    "nightCount": 1,
+    "nightTimer": 863.7481689453125,
+    "nightTimerActive": true,
+    "targetLevel": 50,
     "trustLevel": 50
 }

@@ -15,7 +15,7 @@ static bool s_roomFirstTime = true;
 RoomState::RoomState(std::shared_ptr<Player> player)
     : player(player), playerX(3), playerY(2), 
       messageBoard(nullptr), howtooperateBoard(nullptr), isShowingMessage(false),
-      bedTexture(nullptr), houseTileTexture(nullptr),
+      playerTexture(nullptr), deskTexture(nullptr), bedTexture(nullptr), houseTileTexture(nullptr),
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       pendingWelcomeMessage(false), pendingMessage("") {
     isFadingOut = false;
@@ -47,6 +47,8 @@ void RoomState::enter() {
     } else {
         pendingMessage = "自室に戻りました。";
     }
+    
+    // UIの初期化はrenderで行う（Graphicsオブジェクトが必要なため）
 }
 
 void RoomState::exit() {
@@ -107,9 +109,19 @@ void RoomState::render(Graphics& graphics) {
     bool currentReloadState = config.checkAndReloadConfig();
     
     bool uiJustInitialized = false;
-    if (!messageBoard || (!lastReloadState && currentReloadState)) {
-        setupUI(graphics);
-        uiJustInitialized = true;
+    // フォントが読み込まれている場合のみUIをセットアップ
+    if (graphics.getFont("default")) {
+        if (!messageBoard || (!lastReloadState && currentReloadState)) {
+            setupUI(graphics);
+            uiJustInitialized = true;
+        }
+    } else {
+        // フォントが読み込まれていない場合は警告を出す
+        static bool fontWarningShown = false;
+        if (!fontWarningShown) {
+            std::cerr << "警告: フォントが読み込まれていません。UIの表示をスキップします。" << std::endl;
+            fontWarningShown = true;
+        }
     }
     lastReloadState = currentReloadState;
     
@@ -267,11 +279,26 @@ void RoomState::setupRoom() {
 }
 
 void RoomState::loadTextures(Graphics& graphics) {
+    // テクスチャを読み込み、メンバ変数にも保存
     playerTexture = graphics.loadTexture("assets/textures/characters/player.png", "player");
     deskTexture = graphics.loadTexture("assets/textures/objects/desk.png", "desk");
     bedTexture = graphics.loadTexture("assets/textures/objects/bed.png", "bed");
     houseTileTexture = graphics.loadTexture("assets/textures/tiles/housetile.png", "house_tile");
     graphics.loadTexture("assets/textures/objects/door.png", "door");
+    
+    // デバッグ: テクスチャの読み込み状況を確認
+    if (!playerTexture) {
+        std::cerr << "警告: player.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!deskTexture) {
+        std::cerr << "警告: desk.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!bedTexture) {
+        std::cerr << "警告: bed.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!houseTileTexture) {
+        std::cerr << "警告: housetile.pngの読み込みに失敗しました" << std::endl;
+    }
 }
 
 void RoomState::handleMovement(const InputManager& input) {

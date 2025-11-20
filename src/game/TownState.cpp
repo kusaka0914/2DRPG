@@ -23,9 +23,18 @@ bool TownState::saved = false; // セーブ状態の管理
 TownState::TownState(std::shared_ptr<Player> player)
     : player(player), playerX(TownLayout::PLAYER_START_X), playerY(TownLayout::PLAYER_START_Y), 
       messageBoard(nullptr), isShowingMessage(false), 
+      playerTexture(nullptr), shopTexture(nullptr), weaponShopTexture(nullptr), 
+      houseTexture(nullptr), castleTexture(nullptr), stoneTileTexture(nullptr),
+      guardTexture(nullptr), toriiTexture(nullptr), residentHomeTexture(nullptr),
       moveTimer(0), nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       showGameExplanation(false), explanationStep(0),
-      pendingWelcomeMessage(false), pendingMessage(""), hasVisitedTown(false) {
+      pendingWelcomeMessage(false), pendingMessage(""), hasVisitedTown(false),
+      currentLocation(TownLocation::SQUARE), isShopOpen(false), isInnOpen(false) {
+    
+    // 住人画像テクスチャを初期化
+    for (int i = 0; i < 6; ++i) {
+        residentTextures[i] = nullptr;
+    }
     
     buildings = TownLayout::BUILDINGS;
     buildingTypes = TownLayout::BUILDING_TYPES;
@@ -37,15 +46,30 @@ TownState::TownState(std::shared_ptr<Player> player)
 }
 
 void TownState::enter() {
-    setupNPCs();
-    setupShopItems();
+    // currentLocationを確実にSQUAREに設定
+    currentLocation = TownLocation::SQUARE;
+    isShopOpen = false;
+    isInnOpen = false;
+    
+    try {
+        setupNPCs();
+        setupShopItems();
+    } catch (const std::exception& e) {
+        std::cerr << "TownState初期化エラー: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "TownState初期化エラー: 不明なエラー" << std::endl;
+    }
     
     nightTimerActive = s_nightTimerActive;
     nightTimer = s_nightTimer;
     
     // field.oggを再生（街とフィールドで流す、既に再生中なら続けて再生）
     // playMusic()内で既に同じ音楽が再生中の場合は何もしないため、stopMusic()は呼ばない
-    AudioManager::getInstance().playMusic("field", -1);
+    try {
+        AudioManager::getInstance().playMusic("field", -1);
+    } catch (const std::exception& e) {
+        std::cerr << "音楽再生エラー: " << e.what() << std::endl;
+    }
     
     // 説明UIが完了していない場合は最初から始める（explanationStepをリセット）
     if (!player->hasSeenTownExplanation && showGameExplanation) {
@@ -53,14 +77,22 @@ void TownState::enter() {
     }
     
     // 現在のStateの状態を保存
-    saveCurrentState(player);
+    try {
+        saveCurrentState(player);
+    } catch (const std::exception& e) {
+        std::cerr << "状態保存エラー: " << e.what() << std::endl;
+    }
     
     if (s_fromDemonCastle) {
         // 説明UIを既に見た場合は表示しない
         // 説明UIが完了していない場合は最初から始める
         if (!player->hasSeenTownExplanation) {
             if (!showGameExplanation || gameExplanationTexts.empty()) {
-        startNightTimer();
+                try {
+                    startNightTimer();
+                } catch (const std::exception& e) {
+                    std::cerr << "タイマー開始エラー: " << e.what() << std::endl;
+                }
             } else {
                 // 既に説明UIが設定されている場合でも、最初から始める
                 explanationStep = 0;
@@ -71,7 +103,7 @@ void TownState::enter() {
     }
     
     // 街に入った時のメッセージは削除
-        hasVisitedTown = true;
+    hasVisitedTown = true;
 }
 
 void TownState::exit() {
@@ -166,6 +198,14 @@ void TownState::update(float deltaTime) {
 }
 
 void TownState::render(Graphics& graphics) {
+    // currentLocationが初期化されていない場合はSQUAREに設定
+    if (currentLocation != TownLocation::SQUARE && 
+        currentLocation != TownLocation::SHOP && 
+        currentLocation != TownLocation::INN && 
+        currentLocation != TownLocation::CHURCH) {
+        currentLocation = TownLocation::SQUARE;
+    }
+    
     if (!playerTexture) {
         loadTextures(graphics);
     }
@@ -176,9 +216,19 @@ void TownState::render(Graphics& graphics) {
     bool currentReloadState = config.checkAndReloadConfig();
     
     bool uiJustInitialized = false;
-    if (!messageBoard || (!lastReloadState && currentReloadState)) {
-        setupUI(graphics);
-        uiJustInitialized = true;
+    // フォントが読み込まれている場合のみUIをセットアップ
+    if (graphics.getFont("default")) {
+        if (!messageBoard || (!lastReloadState && currentReloadState)) {
+            setupUI(graphics);
+            uiJustInitialized = true;
+        }
+    } else {
+        // フォントが読み込まれていない場合は警告を出す（初回のみ）
+        static bool fontWarningShown = false;
+        if (!fontWarningShown) {
+            std::cerr << "警告: フォントが読み込まれていません。UIの表示をスキップします。" << std::endl;
+            fontWarningShown = true;
+        }
     }
     lastReloadState = currentReloadState;
     
@@ -215,6 +265,8 @@ void TownState::render(Graphics& graphics) {
             graphics.setDrawColor(255, 255, 255, 255); // 白色（教会）
             break;
         default:
+            // デフォルトはSQUAREとして扱う
+            currentLocation = TownLocation::SQUARE;
             graphics.setDrawColor(128, 128, 128, 255);
             break;
     }

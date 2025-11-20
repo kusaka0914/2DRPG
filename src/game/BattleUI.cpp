@@ -394,6 +394,11 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
 }
 
 void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params) {
+    // フォントが読み込まれていない場合は描画をスキップ
+    if (!graphics->getFont("default")) {
+        return;
+    }
+    
     int screenWidth = graphics->getScreenWidth();
     int screenHeight = graphics->getScreenHeight();
     int centerX = screenWidth / 2;

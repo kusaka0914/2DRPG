@@ -15,9 +15,11 @@ static bool s_castleFirstTime = true;
 CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     : player(player), playerX(6), playerY(4), 
       messageBoard(nullptr), isShowingMessage(false),
+      playerTexture(nullptr), kingTexture(nullptr), guardTexture(nullptr), castleTileTexture(nullptr),
       moveTimer(0), dialogueStep(0), isTalkingToKing(false),
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
-      fromNightState(fromNightState), pendingDialogue(false) {
+      fromNightState(fromNightState), pendingDialogue(false),
+      kingDefeated(false), guardLeftDefeated(false), guardRightDefeated(false), allDefeated(false) {
     isFadingOut = false;
     isFadingIn = false;
     fadeTimer = 0.0f;
@@ -27,10 +29,6 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
         kingDialogues = {
             "住民を襲っていた犯人はやはりお主であったか、、我が街の完敗である。\nさあ、お主の好きにするがいい。"
         };
-        kingDefeated = false;
-        guardLeftDefeated = false;
-        guardRightDefeated = false;
-        allDefeated = false;
         playerX = 4;
         playerY = 4;
     }
@@ -61,6 +59,14 @@ void CastleState::enter() {
         savedState->contains("stateType") && 
         static_cast<StateType>((*savedState)["stateType"]) == StateType::CASTLE) {
         fromJson(*savedState);
+    }
+    
+    // fromNightStateがfalseの場合（通常の初回訪問時）、倒したフラグをリセット
+    if (!fromNightState) {
+        kingDefeated = false;
+        guardLeftDefeated = false;
+        guardRightDefeated = false;
+        allDefeated = false;
     }
     
     // 全員を倒したかどうかを再確認（状態復元後にメッセージが表示されていない場合に備える）
@@ -152,9 +158,19 @@ void CastleState::render(Graphics& graphics) {
     bool currentReloadState = config.checkAndReloadConfig();
     
     bool uiJustInitialized = false;
-    if (!messageBoard || (!lastReloadState && currentReloadState)) {
-        setupUI(graphics);
-        uiJustInitialized = true;
+    // フォントが読み込まれている場合のみUIをセットアップ
+    if (graphics.getFont("default")) {
+        if (!messageBoard || (!lastReloadState && currentReloadState)) {
+            setupUI(graphics);
+            uiJustInitialized = true;
+        }
+    } else {
+        // フォントが読み込まれていない場合は警告を出す（初回のみ）
+        static bool fontWarningShown = false;
+        if (!fontWarningShown) {
+            std::cerr << "警告: フォントが読み込まれていません。UIの表示をスキップします。" << std::endl;
+            fontWarningShown = true;
+        }
     }
     lastReloadState = currentReloadState;
     
@@ -343,6 +359,19 @@ void CastleState::loadTextures(Graphics& graphics) {
     guardTexture = GameState::loadGuardTexture(graphics);
     castleTileTexture = graphics.loadTexture("assets/textures/tiles/castletile.png", "castle_tile");
     
+    // デバッグ: テクスチャの読み込み状況を確認
+    if (!playerTexture) {
+        std::cerr << "警告: player.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!kingTexture) {
+        std::cerr << "警告: king.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!guardTexture) {
+        std::cerr << "警告: guard.pngの読み込みに失敗しました" << std::endl;
+    }
+    if (!castleTileTexture) {
+        std::cerr << "警告: castletile.pngの読み込みに失敗しました" << std::endl;
+    }
 }
 
 void CastleState::handleMovement(const InputManager& input) {

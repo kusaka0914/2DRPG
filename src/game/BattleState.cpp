@@ -87,6 +87,12 @@ void BattleState::enter() {
 
 void BattleState::exit() {
     ui.clear();
+    // BattleUIをクリーンアップ（次の戦闘で再作成される）
+    battleUI.reset();
+    battleLogLabel = nullptr;
+    playerStatusLabel = nullptr;
+    enemyStatusLabel = nullptr;
+    explanationMessageBoard = nullptr;
 }
 
 void BattleState::update(float deltaTime) {
@@ -529,13 +535,24 @@ void BattleState::render(Graphics& graphics) {
     bool currentReloadState = config.checkAndReloadConfig();
     
     bool uiJustInitialized = false;
-    if (!battleLogLabel || (!lastReloadState && currentReloadState)) {
-        setupUI(graphics);
-        uiJustInitialized = true;
+    // フォントが読み込まれている場合のみUIをセットアップ
+    if (graphics.getFont("default")) {
+        if (!battleLogLabel || (!lastReloadState && currentReloadState)) {
+            setupUI(graphics);
+            uiJustInitialized = true;
+        }
+    } else {
+        // フォントが読み込まれていない場合は警告を出す（初回のみ）
+        static bool fontWarningShown = false;
+        if (!fontWarningShown) {
+            std::cerr << "警告: フォントが読み込まれていません。UIの表示をスキップします。" << std::endl;
+            fontWarningShown = true;
+        }
     }
     lastReloadState = currentReloadState;
     
-    if (!battleUI) {
+    // フォントが読み込まれている場合のみBattleUIを作成
+    if (!battleUI && graphics.getFont("default")) {
         battleUI = std::make_unique<BattleUI>(&graphics, player, enemy.get(), battleLogic.get(), animationController.get());
     }
     
