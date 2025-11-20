@@ -1458,14 +1458,17 @@ void BattleState::handleInput(const InputManager& input) {
                 clearExplanationMessage();
                 
                 // 説明UIが完全に終わったことを記録
-                if (currentPhase == BattlePhase::LAST_CHANCE_INTRO) {
+                if (currentPhase == BattlePhase::LAST_CHANCE_COMMAND_SELECT || hasUsedLastChanceMode) {
+                    // 終焉解放モードの場合
                     player->hasSeenLastChanceExplanation = true;
-                    // 説明が終わったら、コマンド選択フェーズに遷移
-                    currentPhase = BattlePhase::LAST_CHANCE_COMMAND_SELECT;
-                    battleLogic->setCommandTurnCount(BattleConstants::LAST_CHANCE_TURN_COUNT);
-                    initializeCommandSelection();
-                    phaseTimer = 0.0f;
-                    addBattleLog("最後のチャンス！5ターンで勝負だ！");
+                    // 説明が終わったら、コマンド選択フェーズに遷移（まだ遷移していない場合）
+                    if (currentPhase != BattlePhase::LAST_CHANCE_COMMAND_SELECT) {
+                        currentPhase = BattlePhase::LAST_CHANCE_COMMAND_SELECT;
+                        battleLogic->setCommandTurnCount(BattleConstants::LAST_CHANCE_TURN_COUNT);
+                        initializeCommandSelection();
+                        phaseTimer = 0.0f;
+                        addBattleLog("最後のチャンス！5ターンで勝負だ！");
+                    }
                 } else if (enemy->isResident()) {
                     player->hasSeenResidentBattleExplanation = true;
                 } else {
@@ -1597,12 +1600,22 @@ void BattleState::loadBattleImages() {
 }
 
 SDL_Texture* BattleState::getBattleBackgroundTexture(Graphics& graphics) const {
-    // 住民の場合は夜の背景、それ以外は通常の戦闘背景を使用
+    // 住民の場合は夜の背景、衛兵・王様の場合は城の背景、魔王の場合は魔王の背景、それ以外は通常の戦闘背景を使用
     SDL_Texture* bgTexture = nullptr;
     if (enemy->isResident()) {
         bgTexture = graphics.getTexture("night_bg");
         if (!bgTexture) {
             bgTexture = graphics.loadTexture("assets/textures/bg/night_bg.png", "night_bg");
+        }
+    } else if (enemy->getType() == EnemyType::GUARD || enemy->getType() == EnemyType::KING) {
+        bgTexture = graphics.getTexture("castle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/castle_bg.png", "castle_bg");
+        }
+    } else if (enemy->getType() == EnemyType::DEMON_LORD) {
+        bgTexture = graphics.getTexture("demon_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/demon_bg.png", "demon_bg");
         }
     } else {
         bgTexture = graphics.getTexture("battle_bg");
@@ -2110,6 +2123,11 @@ void BattleState::showResult() {
 }
 
 void BattleState::endBattle() {
+    // 戦闘終了時にHPを全回復（敗北時を除く）
+    if (lastResult != BattleResult::PLAYER_DEFEAT && player) {
+        player->setHp(player->getMaxHp());
+    }
+    
     if (stateManager) {
         if (lastResult == BattleResult::PLAYER_DEFEAT) {
             // 敵の情報を渡してGameOverStateを作成（再戦用）
@@ -2820,32 +2838,36 @@ void BattleState::initializeCommandSelection() {
     
     // 初回の戦闘時のみ説明を開始（静的変数で管理）
     // また、説明UIを既に見た場合は表示しない
+    // 終焉解放モード（LAST_CHANCE_COMMAND_SELECT）の場合は説明UIを設定しない（終焉解放の説明UIが別途設定されるため）
     static bool s_firstBattle = true;
     static bool s_firstResidentBattle = true;
     
-    if (enemy->isResident()) {
-        // 住民戦の場合
-        if (s_firstResidentBattle && !player->hasSeenResidentBattleExplanation) {
-            setupResidentBattleExplanation();
-            showGameExplanation = true;
-            explanationStep = 0;
-            s_firstResidentBattle = false;
-            // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
-        } else if (player->hasSeenResidentBattleExplanation) {
-            // 既に見た場合は、静的変数も更新
-            s_firstResidentBattle = false;
-        }
-    } else {
-        // 通常の戦闘の場合
-        if (s_firstBattle && !player->hasSeenBattleExplanation) {
-            setupGameExplanation();
-            showGameExplanation = true;
-            explanationStep = 0;
-            s_firstBattle = false;
-            // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
-        } else if (player->hasSeenBattleExplanation) {
-            // 既に見た場合は、静的変数も更新
-            s_firstBattle = false;
+    // 終焉解放モードの場合は説明UIを設定しない（終焉解放の説明UIが別途設定されるため）
+    if (currentPhase != BattlePhase::LAST_CHANCE_COMMAND_SELECT && !hasUsedLastChanceMode) {
+        if (enemy->isResident()) {
+            // 住民戦の場合
+            if (s_firstResidentBattle && !player->hasSeenResidentBattleExplanation) {
+                setupResidentBattleExplanation();
+                showGameExplanation = true;
+                explanationStep = 0;
+                s_firstResidentBattle = false;
+                // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+            } else if (player->hasSeenResidentBattleExplanation) {
+                // 既に見た場合は、静的変数も更新
+                s_firstResidentBattle = false;
+            }
+        } else {
+            // 通常の戦闘の場合
+            if (s_firstBattle && !player->hasSeenBattleExplanation) {
+                setupGameExplanation();
+                showGameExplanation = true;
+                explanationStep = 0;
+                s_firstBattle = false;
+                // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+            } else if (player->hasSeenBattleExplanation) {
+                // 既に見た場合は、静的変数も更新
+                s_firstBattle = false;
+            }
         }
     }
     
@@ -3035,6 +3057,14 @@ void BattleState::setupResidentBattleExplanation() {
     gameExplanationTexts.push_back("住民戦では1ターンずつ進んでいきます。\n10ターン以内に倒さないと、衛兵に見つかりゲームオーバーです！");
     gameExplanationTexts.push_back("そしてまた同じようなコマンドが見えますね！今度は攻撃と隠密です！");
     gameExplanationTexts.push_back("攻撃は住民を攻撃するコマンドです！\n隠密は衛兵に見つからないように身を潜めるコマンドです！");
+    gameExplanationTexts.push_back("住民戦ではメンタルの影響で攻撃を躊躇うことがあるので注意です！");
+    gameExplanationTexts.push_back("また、住民は「恐怖」と「求援」しか行うことができません。");
+    gameExplanationTexts.push_back("自分が攻撃をした際に相手が恐怖だったら攻撃成功、\n求援をしたら衛兵に見つかりゲームオーバーという感じです！");
+    gameExplanationTexts.push_back("求援をしそうだと思ったら隠密を選んで身を潜めてくださいね！");
+    gameExplanationTexts.push_back("そして、住民の下に書いているのは住民の次の行動予測です！");
+    gameExplanationTexts.push_back("予測できない時もあるのですが、震えが止まらない時は恐怖を行い、\n辺りを見渡している時は求援を使います！");
+    gameExplanationTexts.push_back("このヒントを上手く使い、衛兵に見つかる前に住民を倒してください！");
+    gameExplanationTexts.push_back("さあ、早速やってみましょう！");
 }
 
 void BattleState::setupLastChanceExplanation() {
@@ -3046,14 +3076,6 @@ void BattleState::setupLastChanceExplanation() {
     gameExplanationTexts.push_back("しかし勝利数が2回以下だったり、敵を倒せなかったりすると・・・");
     gameExplanationTexts.push_back("見逃してはくれませんからゲームオーバーになってしまいますね・・・");
     gameExplanationTexts.push_back("さあ、最後の力を振り絞ってラッシュをかましちゃいましょう！");
-    gameExplanationTexts.push_back("住民戦ではメンタルの影響で攻撃を躊躇うことがあるので注意です！");
-    gameExplanationTexts.push_back("また、住民は「恐怖」と「求援」しか行うことができません。");
-    gameExplanationTexts.push_back("自分が攻撃をした際に相手が恐怖だったら攻撃成功、\n求援をしたら衛兵に見つかりゲームオーバーという感じです！");
-    gameExplanationTexts.push_back("求援をしそうだと思ったら隠密を選んで身を潜めてくださいね！");
-    gameExplanationTexts.push_back("そして、住民の下に書いているのは住民の次の行動予測です！");
-    gameExplanationTexts.push_back("予測できない時もあるのですが、震えが止まらない時は恐怖を行い、\n辺りを見渡している時は求援を使います！");
-    gameExplanationTexts.push_back("このヒントを上手く使い、衛兵に見つかる前に住民を倒してください！");
-    gameExplanationTexts.push_back("さあ、早速やってみましょう！");
 }
 
 void BattleState::showExplanationMessage(const std::string& message) {

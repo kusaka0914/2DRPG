@@ -1176,12 +1176,22 @@ void BattleUI::drawCommandImage(const std::string& commandName, int x, int y, in
 }
 
 SDL_Texture* BattleUI::getBattleBackgroundTexture() const {
-    // 住民の場合は夜の背景、それ以外は通常の戦闘背景を使用
+    // 住民の場合は夜の背景、衛兵・王様の場合は城の背景、魔王の場合は魔王の背景、それ以外は通常の戦闘背景を使用
     SDL_Texture* bgTexture = nullptr;
     if (enemy->isResident()) {
         bgTexture = graphics->getTexture("night_bg");
         if (!bgTexture) {
             bgTexture = graphics->loadTexture("assets/textures/bg/night_bg.png", "night_bg");
+        }
+    } else if (enemy->getType() == EnemyType::GUARD || enemy->getType() == EnemyType::KING) {
+        bgTexture = graphics->getTexture("castle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics->loadTexture("assets/textures/bg/castle_bg.png", "castle_bg");
+        }
+    } else if (enemy->getType() == EnemyType::DEMON_LORD) {
+        bgTexture = graphics->getTexture("demon_bg");
+        if (!bgTexture) {
+            bgTexture = graphics->loadTexture("assets/textures/bg/demon_bg.png", "demon_bg");
         }
     } else {
         bgTexture = graphics->getTexture("battle_bg");

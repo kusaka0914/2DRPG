@@ -8,7 +8,7 @@ std::vector<std::string> PlayerStory::getOpeningStory() const {
     std::vector<std::string> story;
     story.push_back("王様からの緊急依頼");
     story.push_back("");
-    story.push_back("勇者" + playerName + "よ、我が国に危機が...");
+    story.push_back("勇者よ、我が国に危機が降りかかっている！");
     story.push_back("邪悪な魔王が復活し、モンスターが各地で暴れている！");
     story.push_back("どうか魔王を倒し、平和を取り戻してくれないか！");
     story.push_back("【目標】レベル3で森のボス戦！");
