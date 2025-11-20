@@ -24,6 +24,7 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       isTargetLevelEnemy(false),
       currentSelectingTurn(0), isFirstCommandSelection(true), hasUsedLastChanceMode(false),
+      damageListPrepared(false), enemyAttackStarted(false), enemyAttackTimer(0.0f),
       currentJudgingTurn(0), currentExecutingTurn(0), executeDelayTimer(0.0f),
       damageAppliedInAnimation(false), waitingForSpellSelection(false),
       judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
@@ -386,6 +387,7 @@ void BattleState::update(float deltaTime) {
             break;
             
         case BattlePhase::LAST_CHANCE_INTRO: {
+            // タイマーで遷移
             phaseTimer += deltaTime;
             
             // 2秒後にコマンド選択フェーズに遷移
@@ -395,6 +397,14 @@ void BattleState::update(float deltaTime) {
                 initializeCommandSelection();
                 phaseTimer = 0.0f;
                 addBattleLog("最後のチャンス！5ターンで勝負だ！");
+                
+                // 初回の場合、説明UIを設定
+                if (!player->hasSeenLastChanceExplanation) {
+                    setupLastChanceExplanation();
+                    showGameExplanation = true;
+                    explanationStep = 0;
+                    // explanationMessageBoardはsetupUI()で初期化されるので、render()で設定する
+                }
             }
             break;
         }
@@ -535,32 +545,32 @@ void BattleState::render(Graphics& graphics) {
     if (currentPhase == BattlePhase::LAST_CHANCE_INTRO) {
         int screenWidth = graphics.getScreenWidth();
         int screenHeight = graphics.getScreenHeight();
-        
+
         // 背景画像を描画
         SDL_Texture* bgTexture = getBattleBackgroundTexture(graphics);
         if (bgTexture) {
             graphics.drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
         }
-        
-        // 「終焉突破」テキストを画面中央に表示（3倍サイズ）
-        std::string text = "終焉解放";
-        SDL_Color textColor = {255, 0, 0, 255}; // 金色
-        
+
+        // 「終焉突破」テキストを画面中央に表示
+        std::string text = "終焉突破";
+        SDL_Color textColor = {255, 0, 0, 255}; // 赤色
+
         // テキストをテクスチャとして取得
         SDL_Texture* textTexture = graphics.createTextTexture(text, "default", textColor);
         if (textTexture) {
             int textWidth, textHeight;
             SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
-            
-            // 3倍サイズに拡大
+
+            // 2倍サイズに拡大
             constexpr float scale = 2.0f;
             int scaledWidth = static_cast<int>(textWidth * scale);
             int scaledHeight = static_cast<int>(textHeight * scale);
-            
+
             // 画面中央に配置
             int textX = (screenWidth - scaledWidth) / 2;
             int textY = (screenHeight - scaledHeight) / 2;
-            
+
             // 背景を描画（パディング付き、スケールに応じて調整）
             constexpr int padding = 20;
             int bgX = textX - padding;
@@ -573,7 +583,7 @@ void BattleState::render(Graphics& graphics) {
             graphics.setDrawColor(255, 0, 0, 255);
             graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
             
-            // テキストを3倍サイズで描画
+            // テキストを描画
             graphics.drawTexture(textTexture, textX, textY, scaledWidth, scaledHeight);
             
             SDL_DestroyTexture(textTexture);
@@ -1423,7 +1433,15 @@ void BattleState::handleInput(const InputManager& input) {
                 clearExplanationMessage();
                 
                 // 説明UIが完全に終わったことを記録
-                if (enemy->isResident()) {
+                if (currentPhase == BattlePhase::LAST_CHANCE_INTRO) {
+                    player->hasSeenLastChanceExplanation = true;
+                    // 説明が終わったら、コマンド選択フェーズに遷移
+                    currentPhase = BattlePhase::LAST_CHANCE_COMMAND_SELECT;
+                    battleLogic->setCommandTurnCount(BattleConstants::LAST_CHANCE_TURN_COUNT);
+                    initializeCommandSelection();
+                    phaseTimer = 0.0f;
+                    addBattleLog("最後のチャンス！5ターンで勝負だ！");
+                } else if (enemy->isResident()) {
                     player->hasSeenResidentBattleExplanation = true;
                 } else {
                     player->hasSeenBattleExplanation = true;
@@ -1944,6 +1962,8 @@ void BattleState::checkBattleEnd() {
             // 最後のチャンスモードのイントロフェーズに遷移（終焉突破UI表示）
             currentPhase = BattlePhase::LAST_CHANCE_INTRO;
             phaseTimer = 0.0f; // タイマーをリセット
+            damageListPrepared = false; // ダメージリストを再度準備できるようにリセット
+            enemyAttackStarted = false; // 敵の攻撃アニメーションフラグをリセット
             return;
         }
         
@@ -2985,6 +3005,17 @@ void BattleState::setupResidentBattleExplanation() {
     gameExplanationTexts.push_back("住民戦では1ターンずつ進んでいきます。\n10ターン以内に倒さないと、衛兵に見つかりゲームオーバーです！");
     gameExplanationTexts.push_back("そしてまた同じようなコマンドが見えますね！今度は攻撃と隠密です！");
     gameExplanationTexts.push_back("攻撃は住民を攻撃するコマンドです！\n隠密は衛兵に見つからないように身を潜めるコマンドです！");
+}
+
+void BattleState::setupLastChanceExplanation() {
+    gameExplanationTexts.clear();
+    gameExplanationTexts.push_back("やられたと思いましたかー？");
+    gameExplanationTexts.push_back("実はあなたは窮地に立たされた時、\n「終焉解放」をすることができるんです！");
+    gameExplanationTexts.push_back("これは死と隣り合わせの状況の時、\nあなたに秘められた力を全て解放するというものです！");
+    gameExplanationTexts.push_back("終焉解放時、1度だけ5ターン分の選択ができます！\n5ターンのうちに敵を倒せたら大逆転です！ルールはいつも通りです！");
+    gameExplanationTexts.push_back("しかし勝利数が2回以下だったり、敵を倒せなかったりすると・・・");
+    gameExplanationTexts.push_back("見逃してはくれませんからゲームオーバーになってしまいますね・・・");
+    gameExplanationTexts.push_back("さあ、最後の力を振り絞ってラッシュをかましちゃいましょう！");
     gameExplanationTexts.push_back("住民戦ではメンタルの影響で攻撃を躊躇うことがあるので注意です！");
     gameExplanationTexts.push_back("また、住民は「恐怖」と「求援」しか行うことができません。");
     gameExplanationTexts.push_back("自分が攻撃をした際に相手が恐怖だったら攻撃成功、\n求援をしたら衛兵に見つかりゲームオーバーという感じです！");
@@ -4702,7 +4733,6 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
     // ダメージリストの準備（初回のみ）
     // LAST_CHANCE_JUDGE_RESULTフェーズでは、前のフェーズで設定されたpendingDamagesをクリアして、
     // 改めて5ターン分のダメージを準備する必要がある
-    static bool damageListPrepared = false;
     if (!damageListPrepared) {
         // 勝利数が3以上の場合のみ、ダメージリストを準備
         if (playerWins >= 3) {
@@ -4933,9 +4963,6 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                 return;
             } else {
                 // 敵が倒れなかった場合、敵の攻撃アニメーションを表示してからダメージを適用
-                static bool enemyAttackStarted = false;
-                static float enemyAttackTimer = 0.0f;
-                
                 if (!enemyAttackStarted) {
                     std::cout << "[DEBUG] LAST_CHANCE: 敵が倒れませんでした。敵の攻撃アニメーションを開始します。" << std::endl;
                     enemyAttackStarted = true;
@@ -4955,21 +4982,23 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                     animStartTime, animDuration);
                 
                 // アニメーションのピーク時（攻撃が当たる瞬間）にダメージを適用
-                float animTime = enemyAttackTimer - animStartTime;
-                if (animTime >= 0.0f && animTime <= animDuration) {
-                    float progress = animTime / animDuration;
-                    if (progress >= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT - BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
-                        progress <= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT + BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
-                        !damageAppliedInAnimation) {
-                        
-                        int enemyDamage = battleLogic->calculateEnemyAttackDamage();
-                        player->takeDamage(enemyDamage);
-                        effectManager->triggerHitEffect(enemyDamage, playerX, playerY, true);
-                        AudioManager::getInstance().playSound("attack", 0);
-                        float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
-                        float shakeDuration = 0.3f;
-                        effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
-                        damageAppliedInAnimation = true;
+                if (enemyAttackTimer >= animStartTime) {
+                    float animTime = enemyAttackTimer - animStartTime;
+                    if (animTime >= 0.0f && animTime <= animDuration) {
+                        float progress = animTime / animDuration;
+                        if (progress >= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT - BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                            progress <= BattleConstants::ATTACK_ANIMATION_HIT_MOMENT + BattleConstants::ATTACK_ANIMATION_HIT_WINDOW &&
+                            !damageAppliedInAnimation) {
+                            
+                            int enemyDamage = battleLogic->calculateEnemyAttackDamage();
+                            player->takeDamage(enemyDamage);
+                            effectManager->triggerHitEffect(enemyDamage, playerX, playerY, true);
+                            AudioManager::getInstance().playSound("attack", 0);
+                            float intensity = BattleConstants::DRAW_SHAKE_INTENSITY;
+                            float shakeDuration = 0.3f;
+                            effectManager->triggerScreenShake(intensity, shakeDuration, true, false);
+                            damageAppliedInAnimation = true;
+                        }
                     }
                 }
                 
@@ -4979,9 +5008,12 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                     checkBattleEnd();
                     return;
                 }
+                
+                // 敵の攻撃アニメーション中は、ここで処理を終了
+                return;
             }
             
-            // リセット
+            // リセット（敵の攻撃アニメーションが完了した場合のみ）
             animationController->resetResultAnimation();
             currentExecutingTurn = 0;
             executeDelayTimer = 0.0f;

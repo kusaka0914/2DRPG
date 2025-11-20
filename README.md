@@ -6,9 +6,9 @@
 
 YouTube上からご覧いただけます。
 
-https://youtu.be/WSxkKcqc_a4?si=aF-RuE3cZlfm-BBR
+https://youtu.be/WSxkKcqc_a4?si=aF-RuE3cZlfm-BBR -->
 
-━━━━━━━━━━━━━━━━━━━━ -->
+━━━━━━━━━━━━━━━━━━━━
 
 ■使用技術
 

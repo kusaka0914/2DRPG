@@ -69,6 +69,7 @@ public:
     bool hasSeenFieldFirstVictoryExplanation;  /**< @brief フィールドの初勝利後の説明UIを見たか */
     bool hasSeenBattleExplanation;   /**< @brief 戦闘の説明UIを見たか */
     bool hasSeenResidentBattleExplanation;   /**< @brief 住民戦の説明UIを見たか */
+    bool hasSeenLastChanceExplanation;   /**< @brief 終焉解放の説明UIを見たか */
     bool hasSeenNightExplanation;     /**< @brief 夜の街の説明UIを見たか */
     
     // ストーリーメッセージUIの完了状態

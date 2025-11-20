@@ -145,6 +145,9 @@ private:
     int currentSelectingTurn;          // 現在選択中のターン（0から開始）
     bool isFirstCommandSelection;      // 最初のコマンド選択か（窮地モード判定用）
     bool hasUsedLastChanceMode;        // 最後のチャンスモードを使用したか
+    bool damageListPrepared;           /**< @brief ダメージリストが準備されたか */
+    bool enemyAttackStarted;           /**< @brief 敵の攻撃アニメーションが開始されたか */
+    float enemyAttackTimer;             /**< @brief 敵の攻撃アニメーションタイマー（秒） */
     
     // EXECUTEフェーズ用
     int currentExecutingTurn;          // 現在実行中のターン（0から開始）
@@ -203,6 +206,7 @@ private:
     void hideMessage();
     void setupGameExplanation();
     void setupResidentBattleExplanation();
+    void setupLastChanceExplanation();
     void showExplanationMessage(const std::string& message);
     void clearExplanationMessage();
     void loadBattleImages();

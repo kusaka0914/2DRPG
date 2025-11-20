@@ -32,6 +32,7 @@
     "hasSeenDemonCastleStory": false,
     "hasSeenFieldExplanation": true,
     "hasSeenFieldFirstVictoryExplanation": true,
+    "hasSeenLastChanceExplanation": false,
     "hasSeenNightExplanation": true,
     "hasSeenResidentBattleExplanation": true,
     "hasSeenRoomStory": true,
