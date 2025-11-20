@@ -29,7 +29,7 @@ BattleState::BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> 
       currentJudgingTurn(0), currentExecutingTurn(0), executeDelayTimer(0.0f),
       damageAppliedInAnimation(false), waitingForSpellSelection(false),
       judgeSubPhase(JudgeSubPhase::SHOW_PLAYER_COMMAND), judgeDisplayTimer(0.0f), currentJudgingTurnIndex(0),
-      introScale(0.0f), introTimer(0.0f),
+      introScale(0.0f), introTimer(0.0f), lastIntroTimer(-1.0f),
       currentResidentPlayerCommand(-1), currentResidentCommand(-1),
       cachedResidentBehaviorHint(""), cachedResidentCommand(-1),
       residentTurnCount(0),
@@ -81,6 +81,7 @@ void BattleState::enter() {
     introScale = 0.0f;
     introTextScale = 0.0f;
     introTimer = 0.0f;
+    lastIntroTimer = -1.0f;  // intro.ogg再生判定用にリセット
     updateStatus();
 }
 
@@ -238,7 +239,6 @@ void BattleState::update(float deltaTime) {
     switch (currentPhase) {
         case BattlePhase::INTRO: {
             // INTROフェーズに入った瞬間（introTimerが0の時）にintro.oggを再生
-            static float lastIntroTimer = -1.0f;
             if (introTimer == 0.0f && lastIntroTimer < 0.0f) {
                 AudioManager::getInstance().playSound("intro", 0);
                 lastIntroTimer = 0.0f;

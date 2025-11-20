@@ -205,4 +205,7 @@ private:
     void interactWithDemon();
     
     /**
-     * @brief �
+     * @brief 街への退出
+     */
+    void exitToTown();
+}; 
