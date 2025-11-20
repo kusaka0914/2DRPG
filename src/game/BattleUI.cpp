@@ -739,14 +739,8 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
         auto& threeWinStreakConfig = battleConfig.judgeResult.threeWinStreak;
         // テキストは動かないように固定スケール（1.0f）を使用
         float streakScale = 1.0f;
-        // JSONからフォーマットを取得
-        std::string streakText = threeWinStreakConfig.format;
-        // プレースホルダーを置換（安全な方法：文字列を前後で結合）
-        size_t pos = streakText.find("{multiplier}");
-        if (pos != std::string::npos) {
-            std::string multiplierStr = "2.5";  // THREE_WIN_STREAK_MULTIPLIER = 2.5f
-            streakText = streakText.substr(0, pos) + multiplierStr + streakText.substr(pos + 13);
-        }
+        // 3連勝ボーナスのテキストを直接生成（プレースホルダーを使わずに固定文字列）
+        std::string streakText = "3連勝！ダメージ2.5倍ボーナス！";
         SDL_Color streakColor = threeWinStreakConfig.color;
         
         int streakTextWidth = threeWinStreakConfig.baseWidth;
@@ -953,17 +947,8 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
         // 倍率を文字列に変換（小数点以下1桁まで表示）
         int multiplierInt = static_cast<int>(multiplier * 10);
         std::string multiplierStr = std::to_string(multiplierInt / 10) + "." + std::to_string(multiplierInt % 10);
-            // JSONからフォーマットを取得
-            std::string statusText = attackMultiplierConfig.format;
-            // プレースホルダーを置換（安全な方法：文字列を前後で結合）
-            size_t pos = statusText.find("{multiplier}");
-            if (pos != std::string::npos) {
-                statusText = statusText.substr(0, pos) + multiplierStr + statusText.substr(pos + 13);
-            }
-            pos = statusText.find("{turns}");
-            if (pos != std::string::npos) {
-                statusText = statusText.substr(0, pos) + std::to_string(turns) + statusText.substr(pos + 8);
-            }
+        // プレースホルダーを使わずに直接文字列を組み立て（文字化けを防ぐため）
+        std::string statusText = "攻撃倍率: " + multiplierStr + "倍 (残り" + std::to_string(turns) + "ターン)";
             SDL_Color statusColor = attackMultiplierConfig.textColor;
         SDL_Texture* statusTexture = graphics->createTextTexture(statusText, "default", statusColor);
         if (statusTexture) {

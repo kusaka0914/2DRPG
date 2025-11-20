@@ -834,7 +834,7 @@ void NightState::attackResident(int x, int y) {
         player->setKingTrust(0); // 王様からの信頼度を0に設定
         
         if (stateManager) {
-            stateManager->changeState(std::make_unique<GameOverState>(player, "衛兵に見つかりました。王様からの信頼度が0になりました。"));
+            stateManager->changeState(std::make_unique<GameOverState>(player, "衛兵に見つかりました。"));
         }
         return;
     }
@@ -1510,3 +1510,4 @@ void NightState::setRemainingGuards(int remainingCount) {
     allResidentsKilled = true;
     canAttackGuards = true;
 }
+                                                 

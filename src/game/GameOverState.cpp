@@ -331,11 +331,11 @@ void GameOverState::setupUI() {
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.text.position, 1100, 650);
     std::string instructionText;
     if (isTargetLevelEnemy) {
-        instructionText = "再戦 : Rキー / 3分延長してフィールドに戻る : ENTER";
+        instructionText = "再挑戦 : Rキー / 3分延長してフィールドに戻る : ENTER";
     } else if (hasBattleEnemyInfo) {
-        instructionText = "再戦 : ENTER";
+        instructionText = "再挑戦 : ENTER";
     } else {
-        instructionText = "再スタート : ENTER";
+        instructionText = "再挑戦 : ENTER";
     }
     auto instructionLabelPtr = std::make_unique<Label>(instructionX, instructionY, instructionText, "default");
     instructionLabelPtr->setColor(gameOverConfig.instruction.text.color);

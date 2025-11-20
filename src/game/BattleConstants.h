@@ -115,6 +115,4 @@ namespace BattleConstants {
     constexpr int CRITICAL_HIT_MULTIPLIER = 2;
     
     // 夜タイマー
-    constexpr float NIGHT_TIMER_DURATION = 10.0f; // テスト用に10秒
-}
-
+    constexpr float NIGHT_TIMER

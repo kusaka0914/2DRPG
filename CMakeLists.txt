@@ -152,4 +152,8 @@ install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
 
-# assets�
+# assetsディレクトリをビルドディレクトリにコピー（開発用）
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}
+    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md" PATTERN "*.json" PATTERN "*.ogg"
+)
+
