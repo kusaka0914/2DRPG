@@ -466,8 +466,17 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     }
     
     // 選択済みコマンドを表示（ボタンの上）
+    if (!battleLogic) {
+        return; // battleLogicがnullの場合は描画をスキップ
+    }
+    
     auto playerCmds = battleLogic->getPlayerCommands();
     auto& cmdSelectConfig = battleConfig.commandSelection;
+    
+    // currentOptionsがnullptrの場合は描画をスキップ
+    if (!params.currentOptions) {
+        return;
+    }
     
     if (params.currentSelectingTurn > 0) {
         // 選択済みコマンドを画像で表示
@@ -480,12 +489,17 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         std::vector<int> imageWidths;
         
         // まず全ての画像を取得してサイズを計算
-        for (int i = 0; i < params.currentSelectingTurn; i++) {
+        for (int i = 0; i < params.currentSelectingTurn && i < static_cast<int>(playerCmds.size()); i++) {
             std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
             SDL_Texture* cmdImage = getCommandTexture(cmdName);
             if (cmdImage) {
                 int imgWidth, imgHeight;
-                SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
+                if (SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight) != 0) {
+                    // テクスチャのクエリに失敗した場合はスキップ
+                    commandImages.push_back(nullptr);
+                    imageWidths.push_back(0);
+                    continue;
+                }
                 int displayWidth = cmdSelectConfig.selectedCommandImageSize;
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
                 commandImages.push_back(cmdImage);
@@ -502,12 +516,15 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         
         // 画像を描画（背景なし）
         int currentX = centerX - (totalWidth / 2);
-        for (int i = 0; i < params.currentSelectingTurn; i++) {
+        for (int i = 0; i < params.currentSelectingTurn && i < static_cast<int>(playerCmds.size()) && i < static_cast<int>(commandImages.size()); i++) {
             if (commandImages[i]) {
                 std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
                 SDL_Texture* cmdImage = commandImages[i];
                 int imgWidth, imgHeight;
-                SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight);
+                if (SDL_QueryTexture(cmdImage, nullptr, nullptr, &imgWidth, &imgHeight) != 0) {
+                    // テクスチャのクエリに失敗した場合はスキップ
+                    continue;
+                }
                 int displayWidth = cmdSelectConfig.selectedCommandImageSize;
                 int displayHeight = static_cast<int>(imgHeight * (static_cast<float>(displayWidth) / imgWidth));
                 int imageX = currentX;
@@ -579,13 +596,27 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         SDL_Color textColor = isSelected ? cmdSelectConfig.selectedTextColor : cmdSelectConfig.unselectedTextColor;
         
         // コマンド名を画像で表示
+        if (i >= params.currentOptions->size()) {
+            continue; // 範囲外チェック
+        }
         std::string commandName = (*params.currentOptions)[i];
         SDL_Texture* commandImage = getCommandTexture(commandName);
         
         if (commandImage) {
             // 画像を適切なサイズで表示
             int imageWidth, imageHeight;
-            SDL_QueryTexture(commandImage, nullptr, nullptr, &imageWidth, &imageHeight);
+            if (SDL_QueryTexture(commandImage, nullptr, nullptr, &imageWidth, &imageHeight) != 0) {
+                // テクスチャのクエリに失敗した場合はテキスト表示にフォールバック
+                int textX = startX + (buttonWidth / 2) - 50;
+                int textY = buttonY + (buttonHeight / 2) - 15;
+                if (isSelected) {
+                    graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                } else {
+                    graphics->drawText(commandName, textX, textY, "default", textColor);
+                }
+                continue;
+            }
             
             int displayWidth = cmdSelectConfig.buttonImageSize;
             int displayHeight = static_cast<int>(imageHeight * (static_cast<float>(displayWidth) / imageWidth));
