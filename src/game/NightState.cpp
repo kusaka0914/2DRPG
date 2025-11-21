@@ -1510,4 +1510,3 @@ void NightState::setRemainingGuards(int remainingCount) {
     allResidentsKilled = true;
     canAttackGuards = true;
 }
-                                                 

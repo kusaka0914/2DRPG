@@ -56,4 +56,6 @@ std::vector<std::string> PlayerStory::getLevelUpStory(int newLevel) const {
             break;
     }
     
-    return stor
+    return story;
+}
+
