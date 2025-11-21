@@ -136,6 +136,15 @@ void FieldState::enter() {
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
     
+    // ゲーム起動時にnightTimerが0またはnightTimerActiveがfalseの場合、確実に起動時にnightTimerを1に、nightTimerActiveをtrueにする
+    if (nightTimer <= 0.0f || !nightTimerActive) {
+        nightTimer = 1.0f;
+        nightTimerActive = true;
+        TownState::s_nightTimer = 1.0f;
+        TownState::s_nightTimerActive = true;
+        std::cout << "FieldState: 起動時にnightTimerを1、nightTimerActiveをtrueに設定しました" << std::endl;
+    }
+    
     // 目標レベルが設定されていない場合は初期化（初回フィールドに入った場合など）
     if (TownState::s_targetLevel == 0) {
         TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);

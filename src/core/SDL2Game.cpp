@@ -154,6 +154,11 @@ void SDL2Game::initializeGame() {
         loaded = player->autoLoad(nightTimer, nightTimerActive);
     }
     
+    // ゲーム起動時にHPが最大値でない場合、最大値まで回復
+    if (player->getHp() < player->getMaxHp()) {
+        player->setHp(player->getMaxHp());
+    }
+    
     if (loaded) {
         // セーブファイルからロード成功
         TownState::s_nightTimer = nightTimer;
@@ -438,7 +443,7 @@ void SDL2Game::initializeGame() {
             player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
             player->hasSeenResidentBattleExplanation = true; // 住民戦の説明も見たことにする
             player->hasSeenCastleStory = true; // 城の会話は見たことにする
-            player->hasSeenDemonCastleStory = false; // 魔王の城の会話はまだ見ていない（fromCastleStateなので表示される）
+            player->hasSeenDemonCastleStory = true; // 魔王の城の会話は見たことにする（2回目以降として扱う）
             
             // 信頼度を適切に設定（レベル100なので高い信頼度）
             player->setKingTrust(30); // 住民を倒したので王様からの信頼度は低い

@@ -1414,17 +1414,15 @@ void BattleState::render(Graphics& graphics) {
         }
     }
     
-    std::string playerHpText = "HP: " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp());
-    SDL_Color playerHpColor = {100, 255, 100, 255};
+    // ステータス上昇呪文の表示位置を計算（体力バーがあるため、HPテキストは表示しない）
     int playerHpX = playerX - 100;
     int playerHpY = playerY - playerHeight / 2 - 40;
     if (shakeState.shakeTargetPlayer && shakeState.shakeTimer > 0.0f) {
         playerHpX += static_cast<int>(shakeState.shakeOffsetX);
         playerHpY += static_cast<int>(shakeState.shakeOffsetY);
     }
-    graphics.drawText(playerHpText, playerHpX, playerHpY, "default", playerHpColor);
     
-    // ステータス上昇呪文の状態を表示（HPの下）
+    // ステータス上昇呪文の状態を表示
     if (player->hasNextTurnBonusActive()) {
         auto& attackMultiplierConfig = battleConfig.attackMultiplier;
         float multiplier = player->getNextTurnMultiplier();
@@ -1752,12 +1750,14 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
             int successRate = 80; // 基本成功率80%
             
             // メンタルが低いほど成功率が下がる
-            if (mental < 30) {
-                successRate = 40;
-            } else if (mental < 50) {
-                successRate = 60;
-            } else if (mental > 80) {
-                successRate = 90; // メンタルが高いと成功率が上がる
+            if (mental <= 20) {
+                successRate = 50;
+            } else if (mental <= 60) {
+                successRate = 70;
+            } else if (mental <= 80) {
+                successRate = 90;
+            } else if (mental <= 100) {
+                successRate = 100; // メンタルが高いと成功率が上がる
             }
             
             // ランダム判定
@@ -2119,10 +2119,10 @@ void BattleState::checkBattleEnd() {
         if (enemy->getType() == EnemyType::DEMON_LORD) {
             addBattleLog("魔王を倒した！");
             
-            player->gainExp(2000); // 通常の2倍
+            player->gainExp(0); // 通常の2倍
             player->gainGold(10000); // 通常の2倍
             
-            victoryExpGained = 2000;
+            victoryExpGained = 0;
             victoryGoldGained = 10000;
             victoryEnemyName = enemy->getTypeName();
             
@@ -2149,16 +2149,17 @@ void BattleState::checkBattleEnd() {
                 int currentLevel = player->getLevel();
                 
                 if (currentLevel < targetLevel) {
-                    // 目標レベルまでレベルアップ
-                    while (player->getLevel() < targetLevel) {
-                        player->levelUp();
-                    }
-                    // レベルアップ時のステータス増加を考慮して、oldLevelを更新
+                    // レベルアップ前のステータスを保存
                     oldLevel = currentLevel;
                     oldMaxHp = player->getMaxHp();
                     oldMaxMp = player->getMaxMp();
                     oldAttack = player->getAttack();
                     oldDefense = player->getDefense();
+                    
+                    // 目標レベルまでレベルアップ
+                    while (player->getLevel() < targetLevel) {
+                        player->levelUp();
+                    }
                     
                     // 経験値とゴールドも通常通り付与
                     player->gainGold(goldGained);

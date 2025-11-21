@@ -21,13 +21,20 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
     fadeTimer = 0.0f;
     fadeDuration = 0.5f;
     
+    // fromCastleStateがtrueで、hasSeenDemonCastleStoryがtrueの場合（2回目以降の訪問）、
+    // s_demonCastleFirstTimeをfalseにして、2回目以降の状態にする
+    if (fromCastleState && player->hasSeenDemonCastleStory) {
+        s_demonCastleFirstTime = false;
+    }
+    
     // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
     // 「ここは？」のメッセージを表示する
     if (fromCastleState && !s_demonCastleFirstTime) {
         demonDialogues = {
-            "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
-            "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
-            "誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！"
+            "魔王: ついに街を滅ぼしたのか。よくやった、勇者。これで我ら2人が世界を支配できる。",
+            "魔王: どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
+            "勇者: フッ、我ら2人？笑わせるナ。もうお前を生かしてオク必要もないダロ？",
+            "勇者: もう前までの私ではないからナァ・・・もう分かるナ・・・？サア、逃ゲルナヨッ！！"
         };
     } else if (s_demonCastleFirstTime) {
         demonDialogues = {
