@@ -22,6 +22,7 @@ https://youtu.be/WSxkKcqc_a4?si=aF-RuE3cZlfm-BBR -->
 - SDL2 (ウィンドウ管理・入力処理)
 - SDL2_image (画像処理)
 - SDL2_ttf (フォント描画)
+- SDL2_mixer (音声再生)
 
 【データフォーマット】
 - JSON (nlohmann/json)

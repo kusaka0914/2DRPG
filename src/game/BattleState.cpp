@@ -4105,6 +4105,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                                 std::string damageMsg = player->getName() + "は" + std::to_string(damage) + "のダメージを受けた！";
                                 addBattleLog(damageMsg);
                             } else {
+                                // プレイヤーが攻撃する場合、専用技効果を適用
+                                std::cout << "[DEBUG] プレイヤー攻撃適用前: damage=" << damage << std::endl;
+                                damage = applyPlayerAttackSkillEffects(damage);
+                                std::cout << "[DEBUG] プレイヤー攻撃適用後: damage=" << damage << std::endl;
                                 enemy->takeDamage(damage);
                                 effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                                 
@@ -4310,6 +4314,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                             float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
                             effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
                         } else {
+                            // プレイヤーが攻撃する場合、専用技効果を適用
+                            std::cout << "[DEBUG] プレイヤー攻撃適用前(引き分け): damage=" << damage << std::endl;
+                            damage = applyPlayerAttackSkillEffects(damage);
+                            std::cout << "[DEBUG] プレイヤー攻撃適用後(引き分け): damage=" << damage << std::endl;
                             enemy->takeDamage(damage);
                             effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                                 
@@ -4503,6 +4511,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std
             skillEffects.playerAttackReduction = 0.5f;
             effectMessage = "次の攻撃50%軽減";
             addBattleLog("粘液が体を覆った！次の攻撃が弱くなる！");
+            std::cout << "[DEBUG] SLIME専用技発動: playerAttackReduction=" << skillEffects.playerAttackReduction << std::endl;
             break;
             
         case EnemyType::GOBLIN:
@@ -4840,7 +4849,10 @@ int BattleState::applyPlayerAttackSkillEffects(int baseDamage) {
     
     // スライムの攻撃ダメージ軽減
     if (skillEffects.playerAttackReduction > 0.0f) {
+        std::cout << "[DEBUG] applyPlayerAttackSkillEffects: playerAttackReduction=" << skillEffects.playerAttackReduction 
+                  << ", baseDamage=" << baseDamage << std::endl;
         finalDamage = static_cast<int>(finalDamage * (1.0f - skillEffects.playerAttackReduction));
+        std::cout << "[DEBUG] applyPlayerAttackSkillEffects: finalDamage=" << finalDamage << std::endl;
         skillEffects.playerAttackReduction = 0.0f; // 1回のみ
     }
     
@@ -5042,6 +5054,10 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                             AudioManager::getInstance().playSound("attack", 0);
                         }
                         
+                        // プレイヤーが攻撃する場合、専用技効果を適用
+                        std::cout << "[DEBUG] プレイヤー攻撃適用前(終焉): damage=" << damage << std::endl;
+                        damage = applyPlayerAttackSkillEffects(damage);
+                        std::cout << "[DEBUG] プレイヤー攻撃適用後(終焉): damage=" << damage << std::endl;
                         enemy->takeDamage(damage);
                         effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                         
