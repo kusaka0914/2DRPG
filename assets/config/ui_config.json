@@ -386,18 +386,18 @@
       },
       "win": {
         "text": "勝利！",
-        "textColor": [0, 0, 0, 255],
-        "backgroundColor": [255, 215, 0, 255]
+        "textColor": [255, 255, 255, 255],
+        "backgroundColor": [199, 188, 30, 255]
       },
       "lose": {
         "text": "敗北...",
         "textColor": [255, 255, 255, 255],
-        "backgroundColor": [255, 0, 0, 255]
+        "backgroundColor": [153, 26, 26, 255]
       },
       "draw": {
         "text": "引き分け",
         "textColor": [255, 255, 255, 255],
-        "backgroundColor": [200, 200, 200, 255]
+        "backgroundColor": [81, 87, 83, 255]
       },
       "baseWidth": 350,
       "baseHeight": 60,
@@ -515,9 +515,30 @@
         "position": {
           "useRelative": false,
           "absoluteX": 490,
-          "absoluteY": 153
+          "absoluteY": 103
         },
         "color": [255, 0, 0, 255]
+      },
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 90
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "reason": {
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 460,
+          "absoluteY": 150
+        },
+        "color": [255, 255, 255, 255]
       },
       "background": {
         "position": {
@@ -531,12 +552,12 @@
       "backgroundColor": [0, 0, 0, 255],
       "borderColor": [255, 255, 255, 255]
     },
-    "reason": {
+    "instruction": {
       "text": {
         "position": {
           "useRelative": false,
-          "absoluteX": 460,
-          "absoluteY": 200
+          "absoluteX": 480,
+          "absoluteY": 482
         },
         "color": [255, 255, 255, 255]
       },
@@ -544,30 +565,9 @@
         "position": {
           "useRelative": false,
           "absoluteX": 440,
-          "absoluteY": 190
+          "absoluteY": 470
         },
         "width": 200,
-        "height": 40
-      },
-      "backgroundColor": [0, 0, 0, 255],
-      "borderColor": [255, 255, 255, 255]
-    },
-    "instruction": {
-      "text": {
-        "position": {
-          "useRelative": false,
-          "absoluteX": 550,
-          "absoluteY": 400
-        },
-        "color": [200, 200, 200, 255]
-      },
-      "background": {
-        "position": {
-          "useRelative": false,
-          "absoluteX": 440,
-          "absoluteY": 390
-        },
-        "width": 400,
         "height": 40
       },
       "backgroundColor": [0, 0, 0, 255],

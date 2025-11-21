@@ -906,7 +906,7 @@ void FieldState::setupGameExplanation(bool isFirstVictory) {
     
     if (isFirstVictory) {
         // 初勝利後の説明
-        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
+        gameExplanationTexts.push_back("初勝利おめでとうございます！これでが上がりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
         gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
         gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。\nタイマーが0になるまでに目標レベルに達してください！");
         gameExplanationTexts.push_back("ではまた夜の街でお会いしましょう！頑張って！");
