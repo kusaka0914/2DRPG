@@ -1,12 +1,10 @@
-<!-- ━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━
 
 ■作品のプレイ/紹介映像
 
-<img width="256" height="159" alt="スクリーンショット 2025-11-15 15 01 16" src="https://github.com/user-attachments/assets/34b594cf-f2df-4cde-a27e-30f7b12b9c18" />
-
 YouTube上からご覧いただけます。
 
-https://youtu.be/WSxkKcqc_a4?si=aF-RuE3cZlfm-BBR -->
+https://youtu.be/vVOepP3KciU?si=004RbPp5GTM25jfe
 
 ━━━━━━━━━━━━━━━━━━━━
 
