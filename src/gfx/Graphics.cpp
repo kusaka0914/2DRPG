@@ -101,15 +101,23 @@ void Graphics::cleanup() {
 }
 
 void Graphics::clear() {
-    SDL_RenderClear(renderer);
+    if (renderer) {
+        SDL_RenderClear(renderer);
+    }
 }
 
 void Graphics::present() {
-    SDL_RenderPresent(renderer);
+    if (renderer) {
+        SDL_RenderPresent(renderer);
+    } else {
+        std::cerr << "警告: Graphics::present: rendererがnullptrです" << std::endl;
+    }
 }
 
 void Graphics::setDrawColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
-    SDL_SetRenderDrawColor(renderer, r, g, b, a);
+    if (renderer) {
+        SDL_SetRenderDrawColor(renderer, r, g, b, a);
+    }
 }
 
 SDL_Texture* Graphics::loadTexture(const std::string& filepath, const std::string& name) {
@@ -147,12 +155,19 @@ void Graphics::drawTexture(const std::string& name, int x, int y, int width, int
 }
 
 void Graphics::drawTexture(SDL_Texture* texture, int x, int y, int width, int height) {
-    if (!texture) return;
+    if (!texture || !renderer) return;
     
     SDL_Rect dstRect = {x, y, width, height};
     
     if (width == -1 || height == -1) {
-        SDL_QueryTexture(texture, nullptr, nullptr, &dstRect.w, &dstRect.h);
+        if (SDL_QueryTexture(texture, nullptr, nullptr, &dstRect.w, &dstRect.h) != 0) {
+            std::cerr << "警告: Graphics::drawTexture: SDL_QueryTexture失敗: " << SDL_GetError() << std::endl;
+            return;
+        }
+        // 無効なサイズの場合はスキップ
+        if (dstRect.w <= 0 || dstRect.h <= 0) {
+            return;
+        }
     }
     
     SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
@@ -214,20 +229,46 @@ void Graphics::drawText(const std::string& text, int x, int y, const std::string
     }
     
     int textWidth, textHeight;
-    SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
+    if (SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight) != 0) {
+        std::cerr << "警告: Graphics::drawText: SDL_QueryTexture失敗: " << SDL_GetError() << std::endl;
+        SDL_DestroyTexture(textTexture);
+        return;
+    }
+    
+    // 無効なサイズの場合はスキップ
+    if (textWidth <= 0 || textHeight <= 0) {
+        std::cerr << "警告: Graphics::drawText: 無効なテクスチャサイズ" << std::endl;
+        SDL_DestroyTexture(textTexture);
+        return;
+    }
     
     SDL_Rect dstRect = {x, y, textWidth, textHeight};
-    SDL_RenderCopy(renderer, textTexture, nullptr, &dstRect);
+    if (renderer) {
+        SDL_RenderCopy(renderer, textTexture, nullptr, &dstRect);
+    } else {
+        std::cerr << "警告: Graphics::drawText: rendererがnullptrです" << std::endl;
+    }
     
     SDL_DestroyTexture(textTexture);
 }
 
 SDL_Texture* Graphics::createTextTexture(const std::string& text, const std::string& fontName, SDL_Color color) {
+    if (!renderer) {
+        std::cerr << "警告: Graphics::createTextTexture: rendererがnullptrです" << std::endl;
+        return nullptr;
+    }
+    
     TTF_Font* font = getFont(fontName);
-    if (!font) return nullptr;
+    if (!font) {
+        std::cerr << "警告: Graphics::createTextTexture: フォントが見つかりません: " << fontName << std::endl;
+        return nullptr;
+    }
     
     SDL_Surface* textSurface = TTF_RenderUTF8_Blended(font, text.c_str(), color);
-    if (!textSurface) return nullptr;
+    if (!textSurface) {
+        std::cerr << "警告: Graphics::createTextTexture: テキストサーフェス作成エラー: " << TTF_GetError() << std::endl;
+        return nullptr;
+    }
     
     SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
     SDL_FreeSurface(textSurface);
@@ -267,6 +308,8 @@ void Graphics::drawTextureAspectRatio(SDL_Texture* texture, int x, int y, int ba
 }
 
 void Graphics::drawRect(int x, int y, int width, int height, bool filled) {
+    if (!renderer) return;
+    
     SDL_Rect rect = {x, y, width, height};
     
     if (filled) {

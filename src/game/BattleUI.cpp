@@ -405,6 +405,10 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         return;
     }
     
+    // enemyがnullの場合は描画をスキップ（Windows特有の問題：render()がselectCommandForTurn()より先に呼ばれる場合がある）
+    if (!enemy) {
+        return;
+    }
     int screenWidth = graphics->getScreenWidth();
     int screenHeight = graphics->getScreenHeight();
     int centerX = screenWidth / 2;
@@ -420,17 +424,12 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         graphics->drawTexture(bgTexture, 0, 0, screenWidth, screenHeight);
     }
     
-    // オーバーレイを削除して背景画像が見えるようにする
-    // graphics->setDrawColor(0, 0, 0, 100);
-    // graphics->drawRect(0, 0, screenWidth, screenHeight, true);
-    
     // JSONからプレイヤーと敵の位置を取得
     auto& config = UIConfig::UIConfigManager::getInstance();
     auto battleConfig = config.getBattleConfig();
     
     int playerBaseX, playerBaseY;
     config.calculatePosition(playerBaseX, playerBaseY, battleConfig.playerPosition, screenWidth, screenHeight);
-    
     // 窮地モードではplayer_adversity.pngを使用
     SDL_Texture* playerTex = hasUsedLastChanceMode ? graphics->getTexture("player_adversity") : graphics->getTexture("player");
     if (!playerTex && hasUsedLastChanceMode) {
@@ -449,12 +448,24 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
     SDL_Texture* enemyTex = nullptr;
-    if (enemy->isResident()) {
+    bool isResident = false;
+    try {
+        isResident = enemy->isResident();
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Exception in enemy->isResident(): " << e.what() << std::endl;
+        return;
+    } catch (...) {
+        std::cerr << "[ERROR] Unknown exception in enemy->isResident()" << std::endl;
+        return;
+    }
+    
+    if (isResident) {
         int textureIndex = enemy->getResidentTextureIndex();
         std::string textureName = "resident_" + std::to_string(textureIndex + 1);
         enemyTex = graphics->getTexture(textureName);
     } else {
-        enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+        std::string typeName = enemy->getTypeName();
+        enemyTex = graphics->getTexture("enemy_" + typeName);
     }
     
     if (enemyTex) {
@@ -463,7 +474,6 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         graphics->setDrawColor(255, 100, 100, 255);
         graphics->drawRect(enemyBaseX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, enemyBaseY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, true);
     }
-    
     // 住民戦の場合は10ターン制限を表示
     if (params.residentTurnCount > 0) {
         renderTurnNumber(params.residentTurnCount, 10, params.isDesperateMode);
@@ -476,11 +486,26 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         return; // battleLogicがnullの場合は描画をスキップ
     }
     
-    auto playerCmds = battleLogic->getPlayerCommands();
+    std::vector<int> playerCmds;
+    try {
+        playerCmds = battleLogic->getPlayerCommands();
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Exception in battleLogic->getPlayerCommands(): " << e.what() << std::endl;
+        return;
+    } catch (...) {
+        std::cerr << "[ERROR] Unknown exception in battleLogic->getPlayerCommands()" << std::endl;
+        return;
+    }
+    
     auto& cmdSelectConfig = battleConfig.commandSelection;
     
     // currentOptionsがnullptrの場合は描画をスキップ
     if (!params.currentOptions) {
+        return;
+    }
+    
+    if (!animationController) {
+        std::cerr << "[ERROR] animationController is null!" << std::endl;
         return;
     }
     
@@ -571,6 +596,7 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
     }
     
     auto& cmdSelectState = animationController->getCommandSelectState();
+    
     float buttonSlideProgress = std::min(1.0f, cmdSelectState.commandSelectSlideProgress);
     int baseY = static_cast<int>(centerY + cmdSelectConfig.buttonBaseOffsetY);
     int slideOffset = (int)((1.0f - buttonSlideProgress) * 200);
@@ -585,7 +611,6 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         int buttonY = startY + (int)(i * buttonSpacing);
         
         bool isSelected = (static_cast<int>(i) == params.selectedOption);
-        
         SDL_Color bgColor;
         if (isSelected) {
             float glowProgress = std::sin(cmdSelectState.commandSelectAnimationTimer * 3.14159f * 4.0f) * 0.3f + 0.7f;
@@ -601,7 +626,6 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
         
         graphics->setDrawColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
         graphics->drawRect(startX - 10, buttonY - 5, buttonWidth + 20, buttonHeight + 10, true);
-        
         if (isSelected) {
             graphics->setDrawColor(cmdSelectConfig.selectedBorderColor.r, cmdSelectConfig.selectedBorderColor.g, cmdSelectConfig.selectedBorderColor.b, cmdSelectConfig.selectedBorderColor.a);
             graphics->drawRect(startX - 10, buttonY - 5, buttonWidth + 20, buttonHeight + 10, false);
@@ -670,25 +694,25 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
             int imageX = startX + (buttonWidth / 2) - (displayWidth / 2);
             int imageY = buttonY + (buttonHeight / 2) - (displayHeight / 2);
             
-        if (isSelected) {
+            if (isSelected) {
                 graphics->drawText("▶", startX + 10, buttonY + (buttonHeight / 2) - 15, "default", cmdSelectConfig.selectedBorderColor);
-        }
+            }
             // テクスチャが有効な場合のみ描画
             if (commandImage && displayWidth > 0 && displayHeight > 0) {
                 graphics->drawTexture(commandImage, imageX, imageY, displayWidth, displayHeight);
             }
         } else {
             // フォールバック：テキスト表示
-        int textX = startX + (buttonWidth / 2) - 50;
-        int textY = buttonY + (buttonHeight / 2) - 15;
-        
-        if (isSelected) {
-            graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
+            int textX = startX + (buttonWidth / 2) - 50;
+            int textY = buttonY + (buttonHeight / 2) - 15;
+            
+            if (isSelected) {
+                graphics->drawText("▶", textX - 30, textY, "default", {255, 215, 0, 255});
                 graphics->drawText(commandName, textX, textY, "default", textColor);
-        } else {
+            } else {
                 graphics->drawText(commandName, textX, textY, "default", textColor);
+            }
         }
-    }
     }
     
     // コマンド選択ヒントテキスト（JSONから設定を取得）
@@ -940,12 +964,14 @@ void BattleUI::renderCharacters(int playerX, int playerY, int enemyX, int enemyY
     
     // 住民の場合は住民の画像を使用、それ以外は通常の敵画像を使用
     SDL_Texture* enemyTex = nullptr;
-    if (enemy->isResident()) {
-        int textureIndex = enemy->getResidentTextureIndex();
-        std::string textureName = "resident_" + std::to_string(textureIndex + 1);
-        enemyTex = graphics->getTexture(textureName);
-    } else {
-        enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+    if (enemy) {
+        if (enemy->isResident()) {
+            int textureIndex = enemy->getResidentTextureIndex();
+            std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+            enemyTex = graphics->getTexture(textureName);
+        } else {
+            enemyTex = graphics->getTexture("enemy_" + enemy->getTypeName());
+        }
     }
     
     if (enemyTex) {
@@ -1053,7 +1079,7 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     bool hasHint = false;
     std::string hintText = "";
     
-    if (enemy->isResident() && !residentBehaviorHint.empty()) {
+    if (enemy && enemy->isResident() && !residentBehaviorHint.empty()) {
         // 住民戦の場合は住民の様子を表示
         hintText = residentBehaviorHint;
         hasHint = true;
@@ -1073,15 +1099,22 @@ void BattleUI::renderHP(int playerX, int playerY, int enemyX, int enemyY,
     
     // 敵の名前とレベル（HPの位置に表示、体力に応じて色を変更）
     // 住民の場合は住民の名前を使用、それ以外は通常の敵名を使用
-    std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
-    std::string enemyNameText = enemyName + " Lv." + std::to_string(enemy->getLevel());
+    std::string enemyName = enemy ? (enemy->isResident() ? enemy->getName() : enemy->getTypeName()) : "敵";
+    std::string enemyNameText = enemyName + " Lv." + std::to_string(enemy ? enemy->getLevel() : 0);
     
     // 体力に応じて色を決定
     SDL_Color whiteColor = {255, 255, 255, 255};
     SDL_Color enemyNameColor = whiteColor;
-    int enemyHp = enemy->getHp();
-    int enemyMaxHp = enemy->getMaxHp();
-    float hpRatio = static_cast<float>(enemyHp) / static_cast<float>(enemyMaxHp);
+    // enemyは既にnullチェック済み（hideEnemyUIがfalseの場合のみこの関数が呼ばれる）
+    int enemyHp = enemy ? enemy->getHp() : 0;
+    int enemyMaxHp = enemy ? enemy->getMaxHp() : 1;
+    // ゼロ除算を防ぐ
+    float hpRatio = 0.0f;
+    if (enemyMaxHp > 0) {
+        hpRatio = static_cast<float>(enemyHp) / static_cast<float>(enemyMaxHp);
+        if (hpRatio < 0.0f) hpRatio = 0.0f;
+        if (hpRatio > 1.0f) hpRatio = 1.0f;
+    }
     
     if (hpRatio <= 0.3f) {
         // 3割以下: 赤色
@@ -1238,6 +1271,14 @@ void BattleUI::drawCommandImage(const std::string& commandName, int x, int y, in
 SDL_Texture* BattleUI::getBattleBackgroundTexture() const {
     // 住民の場合は夜の背景、衛兵・王様の場合は城の背景、魔王の場合は魔王の背景、それ以外は通常の戦闘背景を使用
     SDL_Texture* bgTexture = nullptr;
+    // enemyがnullの場合はデフォルトの背景を使用
+    if (!enemy) {
+        bgTexture = graphics->getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics->loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        return bgTexture;
+    }
     if (enemy->isResident()) {
         bgTexture = graphics->getTexture("night_bg");
         if (!bgTexture) {
