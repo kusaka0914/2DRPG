@@ -1064,24 +1064,46 @@ void BattleState::render(Graphics& graphics) {
             graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
         }
         
-        // 勝利メッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
-        std::string victoryText = victoryEnemyName + "を倒した。経験値が" + std::to_string(victoryExpGained);
-        SDL_Color textColor = {255, 255, 255, 255};
+        // 勝利メッセージを中央に表示（JSON設定を使用）
+        auto& victoryDisplayConfig = battleConfig.victoryDisplay;
+        
+        std::string victoryText = victoryDisplayConfig.format;
+        // プレースホルダーを置換
+        size_t pos = victoryText.find("{enemyName}");
+        if (pos != std::string::npos) {
+            victoryText = victoryText.substr(0, pos) + victoryEnemyName + victoryText.substr(pos + 11);
+        }
+        pos = victoryText.find("{expGained}");
+        if (pos != std::string::npos) {
+            victoryText = victoryText.substr(0, pos) + std::to_string(victoryExpGained) + victoryText.substr(pos + 11);
+        }
+        
+        SDL_Color textColor = victoryDisplayConfig.textColor;
         
         SDL_Texture* textTexture = graphics.createTextTexture(victoryText, "default", textColor);
         if (textTexture) {
             int textWidth, textHeight;
             SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
             
-            int textX = centerX - textWidth / 2;
-            int textY = centerY - textHeight / 2 - 100;
-            int padding = 12;
+            // 位置を計算（JSONから取得）
+            int textX, textY;
+            if (victoryDisplayConfig.position.useRelative) {
+                textX = centerX - textWidth / 2;
+                textY = static_cast<int>(centerY + victoryDisplayConfig.position.offsetY - textHeight / 2);
+            } else {
+                textX = static_cast<int>(victoryDisplayConfig.position.absoluteX);
+                textY = static_cast<int>(victoryDisplayConfig.position.absoluteY);
+            }
+            
+            int padding = victoryDisplayConfig.padding;
             
             // 背景を描画
-            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.setDrawColor(victoryDisplayConfig.backgroundColor.r, victoryDisplayConfig.backgroundColor.g, 
+                                 victoryDisplayConfig.backgroundColor.b, victoryDisplayConfig.backgroundColor.a);
             graphics.drawRect(textX - padding, textY - padding,
                              textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.setDrawColor(victoryDisplayConfig.borderColor.r, victoryDisplayConfig.borderColor.g, 
+                                victoryDisplayConfig.borderColor.b, victoryDisplayConfig.borderColor.a);
             graphics.drawRect(textX - padding, textY - padding,
                              textWidth + padding * 2, textHeight + padding * 2, false);
             
@@ -1162,39 +1184,80 @@ void BattleState::render(Graphics& graphics) {
             graphics.drawRect(playerX - BattleConstants::BATTLE_CHARACTER_SIZE / 2, playerY - BattleConstants::BATTLE_CHARACTER_SIZE / 2, BattleConstants::BATTLE_CHARACTER_SIZE, BattleConstants::BATTLE_CHARACTER_SIZE, false);
         }
         
-        // レベルアップメッセージを中央に表示（renderResultAnnouncementの勝敗テキストの位置）
+        // レベルアップメッセージを中央に表示（JSON設定を使用）
+        auto& levelUpDisplayConfig = battleConfig.levelUpDisplay;
+        
         int hpGain = player->getMaxHp() - oldMaxHp;
         int mpGain = player->getMaxMp() - oldMaxMp;
         int attackGain = player->getAttack() - oldAttack;
         int defenseGain = player->getDefense() - oldDefense;
         
-        std::string levelUpText = "レベルアップ！\n" + player->getName() + "はレベル" + std::to_string(player->getLevel()) + "になった！\n";
-        levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
-        
         int levelGained = player->getLevel() - oldLevel;
+        std::string levelUpText;
         if (levelGained > 1) {
-            levelUpText = "レベルアップ！\n" + player->getName() + "はレベル" + std::to_string(oldLevel) + "からレベル" + std::to_string(player->getLevel()) + "になった！\n";
-            levelUpText += "HP+" + std::to_string(hpGain) + " MP+" + std::to_string(mpGain) + " 攻撃力+" + std::to_string(attackGain) + " 防御力+" + std::to_string(defenseGain);
+            levelUpText = levelUpDisplayConfig.multiLevelFormat;
+        } else {
+            levelUpText = levelUpDisplayConfig.singleLevelFormat;
+        }
+        
+        // プレースホルダーを置換
+        size_t pos = levelUpText.find("{playerName}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + player->getName() + levelUpText.substr(pos + 12);
+        }
+        pos = levelUpText.find("{oldLevel}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(oldLevel) + levelUpText.substr(pos + 10);
+        }
+        pos = levelUpText.find("{newLevel}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(player->getLevel()) + levelUpText.substr(pos + 10);
+        }
+        pos = levelUpText.find("{hpGain}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(hpGain) + levelUpText.substr(pos + 8);
+        }
+        pos = levelUpText.find("{mpGain}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(mpGain) + levelUpText.substr(pos + 8);
+        }
+        pos = levelUpText.find("{attackGain}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(attackGain) + levelUpText.substr(pos + 12);
+        }
+        pos = levelUpText.find("{defenseGain}");
+        if (pos != std::string::npos) {
+            levelUpText = levelUpText.substr(0, pos) + std::to_string(defenseGain) + levelUpText.substr(pos + 13);
         }
         
         // 新しいシステム：魔法は初期から覚えているため、魔法習得メッセージは表示しない
         
-        SDL_Color textColor = {255, 255, 255, 255};
+        SDL_Color textColor = levelUpDisplayConfig.textColor;
         
         SDL_Texture* textTexture = graphics.createTextTexture(levelUpText, "default", textColor);
         if (textTexture) {
             int textWidth, textHeight;
             SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
             
-            int textX = centerX - textWidth / 2;
-            int textY = centerY - textHeight / 2 - 100;
-            int padding = 12;
+            // 位置を計算（JSONから取得）
+            int textX, textY;
+            if (levelUpDisplayConfig.position.useRelative) {
+                textX = centerX - textWidth / 2;
+                textY = static_cast<int>(centerY + levelUpDisplayConfig.position.offsetY - textHeight / 2);
+            } else {
+                textX = static_cast<int>(levelUpDisplayConfig.position.absoluteX);
+                textY = static_cast<int>(levelUpDisplayConfig.position.absoluteY);
+            }
+            
+            int padding = levelUpDisplayConfig.padding;
             
             // 背景を描画
-            graphics.setDrawColor(0, 0, 0, 200);
+            graphics.setDrawColor(levelUpDisplayConfig.backgroundColor.r, levelUpDisplayConfig.backgroundColor.g, 
+                                 levelUpDisplayConfig.backgroundColor.b, levelUpDisplayConfig.backgroundColor.a);
             graphics.drawRect(textX - padding, textY - padding,
                              textWidth + padding * 2, textHeight + padding * 2, true);
-            graphics.setDrawColor(255, 255, 255, 255);
+            graphics.setDrawColor(levelUpDisplayConfig.borderColor.r, levelUpDisplayConfig.borderColor.g, 
+                                levelUpDisplayConfig.borderColor.b, levelUpDisplayConfig.borderColor.a);
             graphics.drawRect(textX - padding, textY - padding,
                              textWidth + padding * 2, textHeight + padding * 2, false);
             
@@ -1741,7 +1804,7 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
                 if (residentTurnCount > 10) {
                     if (stateManager) {
                         stateManager->changeState(std::make_unique<GameOverState>(
-                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                            player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
                             true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                     }
                     return;
@@ -1772,7 +1835,7 @@ void BattleState::processResidentTurn(int playerCommand, int residentCommand) {
         if (residentTurnCount > 10) {
             if (stateManager) {
                 stateManager->changeState(std::make_unique<GameOverState>(
-                    player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                    player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
                     true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
             }
             return;
@@ -3365,6 +3428,7 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
         } else if (enemyWins > playerWins) {
             // 敵が勝った場合の個別攻撃メッセージを表示
             auto& attackTextConfig = battleConfig.winLossUI.attackText;
+            auto& effectMessageTextConfig = battleConfig.winLossUI.effectMessageText;
                     
                     // すべてのpendingDamagesをチェックして、特殊技名と効果メッセージの両方がある最初のターンを見つける
                     std::string skillNameText = "";
@@ -3434,23 +3498,27 @@ void BattleState::renderWinLossUI(Graphics& graphics, bool isResultPhase) {
                             
                             // 効果メッセージがある場合は、特殊技名の下に表示
                             if (!effectMessageText.empty()) {
-                                SDL_Texture* effectMessageTexture = graphics.createTextTexture(effectMessageText, "default", attackTextConfig.color);
+                                SDL_Texture* effectMessageTexture = graphics.createTextTexture(effectMessageText, "default", effectMessageTextConfig.color);
                                 if (effectMessageTexture) {
                                     int effectMessageTextWidth, effectMessageTextHeight;
                                     SDL_QueryTexture(effectMessageTexture, nullptr, nullptr, &effectMessageTextWidth, &effectMessageTextHeight);
                                     
-                                    // 特殊技名の下に配置
-                                    int effectMessageY = skillNameY + skillNameTextHeight + attackPadding;
+                                    // 特殊技名の下に配置（JSON設定のoffsetYを使用、position.offsetYを優先）
+                                    float offsetY = effectMessageTextConfig.position.offsetY != 0.0f ? 
+                                                    effectMessageTextConfig.position.offsetY : 
+                                                    effectMessageTextConfig.offsetY;
+                                    int effectMessageY = skillNameY + skillNameTextHeight + static_cast<int>(offsetY);
                                     
-                                    int effectMessageBgX = centerX - effectMessageTextWidth / 2 - attackPadding;
-                                    int effectMessageBgY = effectMessageY - attackPadding;
+                                    int effectMessagePadding = effectMessageTextConfig.padding;
+                                    int effectMessageBgX = centerX - effectMessageTextWidth / 2 - effectMessagePadding;
+                                    int effectMessageBgY = effectMessageY - effectMessagePadding;
                                     
                                     // 背景黒
                                     graphics.setDrawColor(0, 0, 0, BattleConstants::BATTLE_BACKGROUND_ALPHA);
-                                    graphics.drawRect(effectMessageBgX, effectMessageBgY, effectMessageTextWidth + attackPadding * 2, effectMessageTextHeight + attackPadding * 2, true);
+                                    graphics.drawRect(effectMessageBgX, effectMessageBgY, effectMessageTextWidth + effectMessagePadding * 2, effectMessageTextHeight + effectMessagePadding * 2, true);
                                     
-                                    // テキスト白
-                                    graphics.drawText(effectMessageText, centerX - effectMessageTextWidth / 2, effectMessageY, "default", attackTextConfig.color);
+                                    // テキスト（JSON設定の色を使用）
+                                    graphics.drawText(effectMessageText, centerX - effectMessageTextWidth / 2, effectMessageY, "default", effectMessageTextConfig.color);
                                     
                                     SDL_DestroyTexture(effectMessageTexture);
                                 }
@@ -4106,7 +4174,7 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                         if (residentTurnCount > 10) {
                             if (stateManager) {
                                 stateManager->changeState(std::make_unique<GameOverState>(
-                                    player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                                    player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
                                     true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                             }
                             return;
@@ -4343,7 +4411,7 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                     if (residentTurnCount > 10) {
                         if (stateManager) {
                             stateManager->changeState(std::make_unique<GameOverState>(
-                                player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                                player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
                                 true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                         }
                         return;
@@ -4390,7 +4458,7 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                 if (residentTurnCount > 10) {
                     if (stateManager) {
                         stateManager->changeState(std::make_unique<GameOverState>(
-                            player, "10ターン以内に倒せませんでした。衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
+                            player, "衛兵に見つかりました。", enemy->getType(), enemy->getLevel(),
                             true, enemy->getName(), enemy->getResidentX(), enemy->getResidentY(), enemy->getResidentTextureIndex()));
                     }
                     return;
@@ -4809,13 +4877,14 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
     
     auto stats = battleLogic->getStats();
     int playerWins = stats.playerWins;
+    int enemyWins = stats.enemyWins;
     
     // デバッグログ：関数の最初の状態を確認
     static bool firstCall = true;
     if (firstCall) {
         std::cout << "[DEBUG] LAST_CHANCE: updateLastChanceJudgeResultPhase()初回呼び出し - pendingDamages.size()=" 
                   << pendingDamages.size() << ", currentExecutingTurn=" << currentExecutingTurn 
-                  << ", playerWins=" << playerWins << std::endl;
+                  << ", playerWins=" << playerWins << ", enemyWins=" << enemyWins << std::endl;
         firstCall = false;
     }
     
@@ -4823,8 +4892,8 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
     // LAST_CHANCE_JUDGE_RESULTフェーズでは、前のフェーズで設定されたpendingDamagesをクリアして、
     // 改めて5ターン分のダメージを準備する必要がある
     if (!damageListPrepared) {
-        // 勝利数が3以上の場合のみ、ダメージリストを準備
-        if (playerWins >= 3) {
+        // 勝利数が3以上、または2回以下でも相手の勝利数より多い場合、ダメージリストを準備
+        if (playerWins >= 3 || (playerWins <= 2 && playerWins > enemyWins)) {
             float multiplier = 1.5f; // 最後のチャンスモードでは1.5倍
             std::cout << "[DEBUG] LAST_CHANCE: prepareDamageList()を呼び出します。playerWins=" << playerWins 
                       << ", commandTurnCount=" << battleLogic->getCommandTurnCount() << std::endl;
@@ -4882,8 +4951,8 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
             
             addBattleLog("勝利数: " + std::to_string(playerWins) + "回！連続攻撃を実行！");
         } else {
-            // 勝利数が3未満の場合、即座にゲームオーバー
-            addBattleLog("勝利数が3未満です。ゲームオーバー...");
+            // 勝利数が3未満かつ相手の勝利数以下の場合、即座にゲームオーバー
+            addBattleLog("勝利数が3未満で、相手の勝利数以下です。ゲームオーバー...");
             phaseTimer += deltaTime;
             if (phaseTimer >= 2.0f) {
                 // 敵から攻撃を受けてゲームオーバー

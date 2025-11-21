@@ -773,6 +773,28 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
             mainText = "一発逆転成功！";
             mainTextColor = resultTextConfig.desperateVictory.textColor;
             mainBackgroundColor = resultTextConfig.desperateVictory.backgroundColor;
+        } else if (params.hasThreeWinStreak) {
+            // 3連勝の場合は「3連勝！ダメージ{multiplier}倍ボーナス！」を表示
+            float multiplier = BattleConstants::THREE_WIN_STREAK_MULTIPLIER;
+            std::string multiplierStr;
+            // 小数点以下が0の場合は整数として表示、そうでない場合は小数点以下1桁まで表示
+            if (multiplier == static_cast<int>(multiplier)) {
+                multiplierStr = std::to_string(static_cast<int>(multiplier));
+            } else {
+                multiplierStr = std::to_string(multiplier);
+                // 小数点以下1桁までに制限（例: 2.5 → "2.5", 2.50 → "2.5"）
+                size_t dotPos = multiplierStr.find('.');
+                if (dotPos != std::string::npos && dotPos + 2 < multiplierStr.length()) {
+                    multiplierStr = multiplierStr.substr(0, dotPos + 2);
+                    // 末尾の0を削除（例: "2.50" → "2.5"）
+                    if (multiplierStr.back() == '0') {
+                        multiplierStr.pop_back();
+                    }
+                }
+            }
+            mainText = "3連勝！ダメージ" + multiplierStr + "倍ボーナス！";
+            mainTextColor = resultTextConfig.victory.textColor;
+            mainBackgroundColor = resultTextConfig.victory.backgroundColor;
         } else {
             mainText = "勝利！";
             mainTextColor = resultTextConfig.victory.textColor;
@@ -829,46 +851,6 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
         graphics->drawRect(textX - 50, textY - 50, scaledWidth + 100, scaledHeight + 100, false);
         graphics->drawRect(textX - 45, textY - 45, scaledWidth + 90, scaledHeight + 90, false);
     }
-    
-    if (params.hasThreeWinStreak && params.isVictory) {
-        auto& threeWinStreakConfig = battleConfig.judgeResult.threeWinStreak;
-        // テキストは動かないように固定スケール（1.0f）を使用
-        float streakScale = 1.0f;
-        // 3連勝ボーナスのテキストを直接生成（プレースホルダーを使わずに固定文字列）
-        std::string streakText = "3連勝！ダメージ2.5倍ボーナス！";
-        SDL_Color streakColor = threeWinStreakConfig.color;
-        
-        int streakTextWidth = threeWinStreakConfig.baseWidth;
-        int streakTextHeight = threeWinStreakConfig.baseHeight;
-        // テキストのサイズは固定（スケール1.0f）
-        int streakScaledWidth = streakTextWidth;
-        int streakScaledHeight = streakTextHeight;
-        
-        // 背景とグロー効果は固定サイズ（アニメーションなし）
-        float bgScale = 1.0f;
-        int bgScaledWidth = (int)(streakTextWidth * bgScale);
-        int bgScaledHeight = (int)(streakTextHeight * bgScale);
-        int bgX = centerX - bgScaledWidth / 2;
-        int bgY = static_cast<int>(centerY + threeWinStreakConfig.position.offsetY - bgScaledHeight / 2);
-        
-        // 背景を黒に変更
-        graphics->setDrawColor(0, 0, 0, 200);
-        graphics->drawRect(bgX - 20, bgY - 20, bgScaledWidth + 40, bgScaledHeight + 40, true);
-        // 背景の周りに白い枠線を描画（他のUIと同じスタイル）
-        graphics->setDrawColor(255, 255, 255, 255);
-        graphics->drawRect(bgX - 20, bgY - 20, bgScaledWidth + 40, bgScaledHeight + 40, false);
-        
-        // グロー効果も固定（アニメーションなし）
-        graphics->setDrawColor(255, 255, 255, 200);
-        graphics->drawRect(bgX - 30, bgY - 30, bgScaledWidth + 60, bgScaledHeight + 60, false);
-        graphics->drawRect(bgX - 25, bgY - 25, bgScaledWidth + 50, bgScaledHeight + 50, false);
-        
-        // テキストを背景の中央に配置
-        int streakTextX = bgX + bgScaledWidth / 2 - streakScaledWidth / 2;
-        int streakTextY = bgY + bgScaledHeight / 2 - streakScaledHeight / 2;
-        graphics->drawText(streakText, streakTextX, streakTextY, "default", streakColor);
-    }
-    
     
     // if (params.hasThreeWinStreak && params.isVictory) {
     //     auto& damageBonusConfig = battleConfig.judgeResult.damageBonus;

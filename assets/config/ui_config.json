@@ -295,16 +295,6 @@
           "backgroundColor": [255, 0, 0, 255]
         }
       },
-      "threeWinStreak": {
-        "position": {
-          "useRelative": true,
-          "offsetY": -80
-        },
-        "baseWidth": 400,
-        "baseHeight": 40,
-        "color": [255, 255, 0, 255],
-        "format": "3連勝！ダメージ{multiplier}倍ボーナス！"
-      },
       "damageBonus": {
         "position": {
           "useRelative": true,
@@ -354,7 +344,7 @@
       "attackText": {
         "position": {
           "useRelative": false,
-          "offsetY": -70
+          "offsetY": -120
         },
         "color": [255, 255, 255, 255],
         "padding": 8,
@@ -365,6 +355,14 @@
         "attackSpellFormat": "{playerName}が攻撃呪文発動！",
         "defaultSpellFormat": "{playerName}が呪文発動！",
         "defaultAttackFormat": "{playerName}の攻撃！"
+      },
+      "effectMessageText": {
+        "position": {
+          "useRelative": false,
+          "offsetY": 30
+        },
+        "color": [255, 255, 255, 255],
+        "padding": 8
       }
     },
     "commandHint": {
@@ -403,6 +401,31 @@
       "baseHeight": 60,
       "backgroundPadding": 20,
       "glowColor": [255, 215, 0, 255]
+    },
+    "victoryDisplay": {
+      "position": {
+        "useRelative": true,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "textColor": [255, 255, 255, 255],
+      "backgroundColor": [0, 0, 0, 200],
+      "borderColor": [255, 255, 255, 255],
+      "padding": 12,
+      "format": "{enemyName}を倒した。経験値が{expGained}"
+    },
+    "levelUpDisplay": {
+      "position": {
+        "useRelative": true,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      "textColor": [255, 255, 255, 255],
+      "backgroundColor": [0, 0, 0, 200],
+      "borderColor": [255, 255, 255, 255],
+      "padding": 12,
+      "singleLevelFormat": "レベルアップ！\n{playerName}はレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}",
+      "multiLevelFormat": "レベルアップ！\n{playerName}はレベル{oldLevel}からレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}"
     }
   },
   "room": {

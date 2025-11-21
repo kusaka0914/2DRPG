@@ -229,13 +229,6 @@ namespace UIConfig {
         battleConfig.judgeResult.resultText.desperateDefeat.textColor = {255, 255, 255, 255};
         battleConfig.judgeResult.resultText.desperateDefeat.backgroundColor = {255, 0, 0, 255};
         
-        battleConfig.judgeResult.threeWinStreak.position.useRelative = true;
-        battleConfig.judgeResult.threeWinStreak.position.offsetY = -150.0f;
-        battleConfig.judgeResult.threeWinStreak.baseWidth = 300;
-        battleConfig.judgeResult.threeWinStreak.baseHeight = 80;
-        battleConfig.judgeResult.threeWinStreak.color = {255, 215, 0, 255};
-        battleConfig.judgeResult.threeWinStreak.format = "3連勝！ダメージ{multiplier}倍ボーナス！";
-        
         battleConfig.judgeResult.damageBonus.position.useRelative = true;
         battleConfig.judgeResult.damageBonus.position.offsetY = 80.0f;
         battleConfig.judgeResult.damageBonus.position.offsetX = -150.0f;
@@ -270,6 +263,13 @@ namespace UIConfig {
         battleConfig.winLossUI.attackText.defaultSpellFormat = "{playerName}が呪文発動！";
         battleConfig.winLossUI.attackText.defaultAttackFormat = "{playerName}の攻撃！";
         
+        // 特殊技の効果メッセージテキストの設定
+        battleConfig.winLossUI.effectMessageText.position.useRelative = false;
+        battleConfig.winLossUI.effectMessageText.position.offsetY = 8.0f;  // デフォルトはattackText.paddingと同じ
+        battleConfig.winLossUI.effectMessageText.offsetY = 8.0f;  // 後方互換性のため
+        battleConfig.winLossUI.effectMessageText.color = {255, 255, 255, 255};
+        battleConfig.winLossUI.effectMessageText.padding = 8;
+        
         // コマンド選択ヒントテキストの設定
         battleConfig.commandHint.position.useRelative = true;
         battleConfig.commandHint.position.offsetY = -100.0f;
@@ -296,6 +296,27 @@ namespace UIConfig {
         battleConfig.judgePhase.baseHeight = 60;
         battleConfig.judgePhase.backgroundPadding = 20;
         battleConfig.judgePhase.glowColor = {255, 215, 0, 255};
+        
+        // 勝利表示UI設定
+        battleConfig.victoryDisplay.position.useRelative = true;
+        battleConfig.victoryDisplay.position.offsetX = 0.0f;
+        battleConfig.victoryDisplay.position.offsetY = -100.0f;
+        battleConfig.victoryDisplay.textColor = {255, 255, 255, 255};
+        battleConfig.victoryDisplay.backgroundColor = {0, 0, 0, 200};
+        battleConfig.victoryDisplay.borderColor = {255, 255, 255, 255};
+        battleConfig.victoryDisplay.padding = 12;
+        battleConfig.victoryDisplay.format = "{enemyName}を倒した。経験値が{expGained}";
+        
+        // レベルアップ表示UI設定
+        battleConfig.levelUpDisplay.position.useRelative = true;
+        battleConfig.levelUpDisplay.position.offsetX = 0.0f;
+        battleConfig.levelUpDisplay.position.offsetY = -100.0f;
+        battleConfig.levelUpDisplay.textColor = {255, 255, 255, 255};
+        battleConfig.levelUpDisplay.backgroundColor = {0, 0, 0, 200};
+        battleConfig.levelUpDisplay.borderColor = {255, 255, 255, 255};
+        battleConfig.levelUpDisplay.padding = 12;
+        battleConfig.levelUpDisplay.singleLevelFormat = "レベルアップ！\n{playerName}はレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}";
+        battleConfig.levelUpDisplay.multiLevelFormat = "レベルアップ！\n{playerName}はレベル{oldLevel}からレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}";
         
         // ステータス上昇呪文の攻撃倍率表示UI設定
         battleConfig.attackMultiplier.position.useRelative = false;
@@ -1138,16 +1159,6 @@ namespace UIConfig {
                     }
                     
                     // 3連勝テキスト
-                    if (jr.contains("threeWinStreak")) {
-                        auto& tws = jr["threeWinStreak"];
-                        if (tws.contains("position")) loadPosition(tws["position"], battleConfig.judgeResult.threeWinStreak.position);
-                        if (tws.contains("offsetY")) battleConfig.judgeResult.threeWinStreak.offsetY = tws["offsetY"];
-                        if (tws.contains("baseWidth")) battleConfig.judgeResult.threeWinStreak.baseWidth = tws["baseWidth"];
-                        if (tws.contains("baseHeight")) battleConfig.judgeResult.threeWinStreak.baseHeight = tws["baseHeight"];
-                        if (tws.contains("color")) loadColor(tws["color"], battleConfig.judgeResult.threeWinStreak.color);
-                        if (tws.contains("format")) battleConfig.judgeResult.threeWinStreak.format = tws["format"];
-                    }
-                    
                     // ダメージボーナステキスト
                     if (jr.contains("damageBonus")) {
                         auto& db = jr["damageBonus"];
@@ -1200,6 +1211,25 @@ namespace UIConfig {
                         if (at.contains("attackSpellFormat")) battleConfig.winLossUI.attackText.attackSpellFormat = at["attackSpellFormat"];
                         if (at.contains("defaultSpellFormat")) battleConfig.winLossUI.attackText.defaultSpellFormat = at["defaultSpellFormat"];
                         if (at.contains("defaultAttackFormat")) battleConfig.winLossUI.attackText.defaultAttackFormat = at["defaultAttackFormat"];
+                    }
+                    
+                    // 特殊技の効果メッセージテキスト
+                    if (wl.contains("effectMessageText")) {
+                        auto& emt = wl["effectMessageText"];
+                        if (emt.contains("position")) {
+                            loadPosition(emt["position"], battleConfig.winLossUI.effectMessageText.position);
+                            // position.offsetYがあれば、offsetYメンバーにも設定（後方互換性）
+                            if (emt["position"].contains("offsetY")) {
+                                battleConfig.winLossUI.effectMessageText.offsetY = emt["position"]["offsetY"];
+                            }
+                        }
+                        // 直接offsetYが指定されている場合（後方互換性）
+                        if (emt.contains("offsetY")) {
+                            battleConfig.winLossUI.effectMessageText.offsetY = emt["offsetY"];
+                            battleConfig.winLossUI.effectMessageText.position.offsetY = emt["offsetY"];
+                        }
+                        if (emt.contains("color")) loadColor(emt["color"], battleConfig.winLossUI.effectMessageText.color);
+                        if (emt.contains("padding")) battleConfig.winLossUI.effectMessageText.padding = emt["padding"];
                     }
                 }
                 
@@ -1268,6 +1298,29 @@ namespace UIConfig {
                     if (jp.contains("baseHeight")) battleConfig.judgePhase.baseHeight = jp["baseHeight"];
                     if (jp.contains("backgroundPadding")) battleConfig.judgePhase.backgroundPadding = jp["backgroundPadding"];
                     if (jp.contains("glowColor")) loadColor(jp["glowColor"], battleConfig.judgePhase.glowColor);
+                }
+                
+                // 勝利表示UI設定
+                if (bt.contains("victoryDisplay")) {
+                    auto& vd = bt["victoryDisplay"];
+                    if (vd.contains("position")) loadPosition(vd["position"], battleConfig.victoryDisplay.position);
+                    if (vd.contains("textColor")) loadColor(vd["textColor"], battleConfig.victoryDisplay.textColor);
+                    if (vd.contains("backgroundColor")) loadColor(vd["backgroundColor"], battleConfig.victoryDisplay.backgroundColor);
+                    if (vd.contains("borderColor")) loadColor(vd["borderColor"], battleConfig.victoryDisplay.borderColor);
+                    if (vd.contains("padding")) battleConfig.victoryDisplay.padding = vd["padding"];
+                    if (vd.contains("format")) battleConfig.victoryDisplay.format = vd["format"];
+                }
+                
+                // レベルアップ表示UI設定
+                if (bt.contains("levelUpDisplay")) {
+                    auto& lud = bt["levelUpDisplay"];
+                    if (lud.contains("position")) loadPosition(lud["position"], battleConfig.levelUpDisplay.position);
+                    if (lud.contains("textColor")) loadColor(lud["textColor"], battleConfig.levelUpDisplay.textColor);
+                    if (lud.contains("backgroundColor")) loadColor(lud["backgroundColor"], battleConfig.levelUpDisplay.backgroundColor);
+                    if (lud.contains("borderColor")) loadColor(lud["borderColor"], battleConfig.levelUpDisplay.borderColor);
+                    if (lud.contains("padding")) battleConfig.levelUpDisplay.padding = lud["padding"];
+                    if (lud.contains("singleLevelFormat")) battleConfig.levelUpDisplay.singleLevelFormat = lud["singleLevelFormat"];
+                    if (lud.contains("multiLevelFormat")) battleConfig.levelUpDisplay.multiLevelFormat = lud["multiLevelFormat"];
                 }
                 
                 // ステータス上昇呪文の攻撃倍率表示UI設定
