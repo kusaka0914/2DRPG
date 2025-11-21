@@ -351,6 +351,18 @@ namespace UIConfig {
             SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
         } instruction;
         struct {
+            UITextConfig text;
+            UIRectConfig background;
+            SDL_Color backgroundColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
+        } retry;
+        struct {
+            UITextConfig text;
+            UIRectConfig background;
+            SDL_Color backgroundColor = {0, 0, 0, 255};  // 背景色（黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白）
+        } extendTime;
+        struct {
             int baseSize = 300;  // 画像のベースサイズ
         } image;
     };

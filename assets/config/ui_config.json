@@ -596,6 +596,48 @@
       "backgroundColor": [0, 0, 0, 255],
       "borderColor": [255, 255, 255, 255]
     },
+    "retry": {
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 480,
+          "absoluteY": 450
+        },
+        "color": [255, 255, 255, 255]
+      },
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 440,
+          "absoluteY": 438
+        },
+        "width": 200,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
+    "extendTime": {
+      "text": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 395,
+          "absoluteY": 514
+        },
+        "color": [255, 255, 255, 255]
+      },
+      "background": {
+        "position": {
+          "useRelative": false,
+          "absoluteX": 370,
+          "absoluteY": 502
+        },
+        "width": 335,
+        "height": 40
+      },
+      "backgroundColor": [0, 0, 0, 255],
+      "borderColor": [255, 255, 255, 255]
+    },
     "image": {
       "baseSize": 300
     }

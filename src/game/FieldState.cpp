@@ -137,7 +137,8 @@ void FieldState::enter() {
     nightTimer = TownState::s_nightTimer;
     
     // ゲーム起動時にnightTimerが0またはnightTimerActiveがfalseの場合、確実に起動時にnightTimerを1に、nightTimerActiveをtrueにする
-    if (nightTimer <= 0.0f || !nightTimerActive) {
+    // ただし、初めての戦闘が終わっていない場合（hasSeenFieldFirstVictoryExplanationがfalse）は、nightTimerActiveをtrueにしない
+    if ((nightTimer <= 0.0f || !nightTimerActive) && player->hasSeenFieldFirstVictoryExplanation) {
         nightTimer = 1.0f;
         nightTimerActive = true;
         TownState::s_nightTimer = 1.0f;
