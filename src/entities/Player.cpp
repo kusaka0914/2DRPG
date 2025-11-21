@@ -8,10 +8,6 @@
 #include <nlohmann/json.hpp>
 #include <cstdio>
 #include <filesystem>
-#ifdef _WIN32
-#include <direct.h>
-#include <io.h>
-#endif
 
 Player::Player(const std::string& name)
     : Character(name, 30, 20, 8, 3, 1), inventory(20), equipmentManager(),
@@ -327,25 +323,13 @@ void Player::saveGame(const std::string& filename, float nightTimer, bool nightT
         j["gameOverExit"] = true;
     }
     
-    // ディレクトリが存在しない場合は作成
+    // ディレクトリが存在しない場合は作成（C++17のfilesystemを使用、Windows/macOS/Linux共通）
     std::string dirPath = "assets/saves";
-#ifdef _WIN32
-    // Windowsの場合、_mkdirを使用（親ディレクトリも必要に応じて作成）
-    std::string assetsDir = "assets";
-    if (_access(assetsDir.c_str(), 0) != 0) {
-        _mkdir(assetsDir.c_str());
-    }
-    if (_access(dirPath.c_str(), 0) != 0) {
-        _mkdir(dirPath.c_str());
-    }
-#else
-    // その他のプラットフォームではfilesystemを使用
     try {
         std::filesystem::create_directories(dirPath);
     } catch (const std::exception& e) {
-        std::cerr << "Warning: Could not create directory: " << dirPath << std::endl;
+        std::cerr << "Warning: Could not create directory: " << dirPath << " - " << e.what() << std::endl;
     }
-#endif
     
     // JSONファイルに書き込み（既存ファイルを上書き）
     // まず既存ファイルを削除してから新しく作成（macOSの自動リネームを防ぐため）
