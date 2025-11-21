@@ -54,24 +54,20 @@ NightState::NightState(std::shared_ptr<Player> player)
     guards = TownLayout::GUARDS;
     
     // 衛兵の初期位置を住人の家の周辺に設定（デバッグ用、通常はTownLayout::GUARDSを使用）
-    if (residentHomes.size() >= 4) {
+    if (residentHomes.size() >= 2) {
         guards[0] = {residentHomes[0].first - 1, residentHomes[0].second};
         guards[1] = {residentHomes[1].first, residentHomes[1].second - 1};
-        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second};
-        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1};
     }
     
     guardDirections = {
         {1, 1},   // 右下方向
-        {-1, 1},  // 左下方向
-        {1, -1},  // 右上方向
-        {-1, -1}  // 左上方向
+        {-1, 1}   // 左下方向
     };
     
-    guardTargetHomeIndices.resize(4, 0);
-    guardStayTimers.resize(4, 0.0f);
+    guardTargetHomeIndices.resize(2, 0);
+    guardStayTimers.resize(2, 0.0f);
     
-    guardHp.resize(4, 2);
+    guardHp.resize(2, 2);
     
     setupUI();
 }
