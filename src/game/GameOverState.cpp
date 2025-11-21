@@ -20,7 +20,8 @@ GameOverState::GameOverState(std::shared_ptr<Player> player, const std::string& 
       isResidentBattle(isResident), residentName(residentName),
       residentX(residentX), residentY(residentY), residentTextureIndex(residentTextureIndex),
       isTargetLevelEnemy(isTargetLevelEnemy),
-      titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr) {
+      titleLabel(nullptr), reasonLabel(nullptr), instruction(nullptr),
+      retryLabel(nullptr), extendTimeLabel(nullptr) {
     // 戦闘に敗北した場合または住民戦でゲームオーバーになった場合のみ敵情報を有効にする
     hasBattleEnemyInfo = (gameOverReason.find("戦闘に敗北") != std::string::npos) || isResidentBattle;
 }
@@ -186,6 +187,30 @@ void GameOverState::render(Graphics& graphics) {
         graphics.drawRect(bgX, bgY, gameOverConfig.instruction.background.width, gameOverConfig.instruction.background.height);
     }
     
+    // retry背景
+    if (retryLabel && !retryLabel->getText().empty()) {
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, gameOverConfig.retry.background.position, screenWidth, screenHeight);
+        graphics.setDrawColor(gameOverConfig.retry.backgroundColor.r, gameOverConfig.retry.backgroundColor.g, 
+                             gameOverConfig.retry.backgroundColor.b, gameOverConfig.retry.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.retry.background.width, gameOverConfig.retry.background.height, true);
+        graphics.setDrawColor(gameOverConfig.retry.borderColor.r, gameOverConfig.retry.borderColor.g, 
+                             gameOverConfig.retry.borderColor.b, gameOverConfig.retry.borderColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.retry.background.width, gameOverConfig.retry.background.height);
+    }
+    
+    // extendTime背景
+    if (extendTimeLabel && !extendTimeLabel->getText().empty()) {
+        int bgX, bgY;
+        config.calculatePosition(bgX, bgY, gameOverConfig.extendTime.background.position, screenWidth, screenHeight);
+        graphics.setDrawColor(gameOverConfig.extendTime.backgroundColor.r, gameOverConfig.extendTime.backgroundColor.g, 
+                             gameOverConfig.extendTime.backgroundColor.b, gameOverConfig.extendTime.backgroundColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.extendTime.background.width, gameOverConfig.extendTime.background.height, true);
+        graphics.setDrawColor(gameOverConfig.extendTime.borderColor.r, gameOverConfig.extendTime.borderColor.g, 
+                             gameOverConfig.extendTime.borderColor.b, gameOverConfig.extendTime.borderColor.a);
+        graphics.drawRect(bgX, bgY, gameOverConfig.extendTime.background.width, gameOverConfig.extendTime.background.height);
+    }
+    
     ui.render(graphics);
     
     graphics.present();
@@ -331,7 +356,8 @@ void GameOverState::setupUI() {
     config.calculatePosition(instructionX, instructionY, gameOverConfig.instruction.text.position, 1100, 650);
     std::string instructionText;
     if (isTargetLevelEnemy) {
-        instructionText = "再挑戦 : Rキー / 3分延長してフィールドに戻る : ENTER";
+        // 目標レベル達成用の敵の場合は、retryとextendTimeを別々に表示
+        instructionText = "";  // instructionは表示しない
     } else if (hasBattleEnemyInfo) {
         instructionText = "再挑戦 : ENTER";
     } else {
@@ -341,4 +367,24 @@ void GameOverState::setupUI() {
     instructionLabelPtr->setColor(gameOverConfig.instruction.text.color);
     instruction = instructionLabelPtr.get();
     ui.addElement(std::move(instructionLabelPtr));
+    
+    // 目標レベル達成用の敵の場合は、retryとextendTimeを別々に表示
+    if (isTargetLevelEnemy) {
+        int retryX, retryY;
+        config.calculatePosition(retryX, retryY, gameOverConfig.retry.text.position, 1100, 650);
+        auto retryLabelPtr = std::make_unique<Label>(retryX, retryY, "再挑戦 : Rキー", "default");
+        retryLabelPtr->setColor(gameOverConfig.retry.text.color);
+        retryLabel = retryLabelPtr.get();
+        ui.addElement(std::move(retryLabelPtr));
+        
+        int extendTimeX, extendTimeY;
+        config.calculatePosition(extendTimeX, extendTimeY, gameOverConfig.extendTime.text.position, 1100, 650);
+        auto extendTimeLabelPtr = std::make_unique<Label>(extendTimeX, extendTimeY, "3分延長してフィールドに戻る : ENTER", "default");
+        extendTimeLabelPtr->setColor(gameOverConfig.extendTime.text.color);
+        extendTimeLabel = extendTimeLabelPtr.get();
+        ui.addElement(std::move(extendTimeLabelPtr));
+    } else {
+        retryLabel = nullptr;
+        extendTimeLabel = nullptr;
+    }
 } 

@@ -40,6 +40,8 @@ private:
     Label* titleLabel;
     Label* reasonLabel;
     Label* instruction;
+    Label* retryLabel;
+    Label* extendTimeLabel;
     
 public:
     /**

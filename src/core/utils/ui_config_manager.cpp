@@ -404,6 +404,16 @@ namespace UIConfig {
         gameOverConfig.instruction.text.position.absoluteY = 400.0f;
         gameOverConfig.instruction.text.color = {200, 200, 200, 255};
         
+        gameOverConfig.retry.text.position.useRelative = false;
+        gameOverConfig.retry.text.position.absoluteX = 550.0f;
+        gameOverConfig.retry.text.position.absoluteY = 450.0f;
+        gameOverConfig.retry.text.color = {255, 255, 255, 255};
+        
+        gameOverConfig.extendTime.text.position.useRelative = false;
+        gameOverConfig.extendTime.text.position.absoluteX = 550.0f;
+        gameOverConfig.extendTime.text.position.absoluteY = 514.0f;
+        gameOverConfig.extendTime.text.color = {255, 255, 255, 255};
+        
         // EndingState
         endingConfig.message.position.useRelative = false;
         endingConfig.message.position.absoluteX = 450.0f;
@@ -1581,6 +1591,38 @@ namespace UIConfig {
                     }
                     if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.instruction.backgroundColor);
                     if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.instruction.borderColor);
+                }
+                if (go.contains("retry")) {
+                    auto& cfg = go["retry"];
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.retry.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.retry.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.retry.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.retry.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.retry.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.retry.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.retry.borderColor);
+                }
+                if (go.contains("extendTime")) {
+                    auto& cfg = go["extendTime"];
+                    if (cfg.contains("text")) {
+                        auto& textCfg = cfg["text"];
+                        if (textCfg.contains("position")) loadPosition(textCfg["position"], gameOverConfig.extendTime.text.position);
+                        if (textCfg.contains("color")) loadColor(textCfg["color"], gameOverConfig.extendTime.text.color);
+                    }
+                    if (cfg.contains("background")) {
+                        auto& bgCfg = cfg["background"];
+                        if (bgCfg.contains("position")) loadPosition(bgCfg["position"], gameOverConfig.extendTime.background.position);
+                        if (bgCfg.contains("width")) gameOverConfig.extendTime.background.width = bgCfg["width"].get<int>();
+                        if (bgCfg.contains("height")) gameOverConfig.extendTime.background.height = bgCfg["height"].get<int>();
+                    }
+                    if (cfg.contains("backgroundColor")) loadColor(cfg["backgroundColor"], gameOverConfig.extendTime.backgroundColor);
+                    if (cfg.contains("borderColor")) loadColor(cfg["borderColor"], gameOverConfig.extendTime.borderColor);
                 }
                 if (go.contains("image")) {
                     auto& cfg = go["image"];
