@@ -3068,7 +3068,7 @@ void BattleState::setupGameExplanation() {
     std::string enemyName = enemy->getTypeName();
     gameExplanationTexts.push_back(enemyName + "との戦闘が始まりました！");
     gameExplanationTexts.push_back("戦闘は全てコマンドで行います。中央を見てください！\nこのコマンドには攻撃、防御、呪文の3種類があります。");
-    gameExplanationTexts.push_back("3すくみの関係になっていて、上部の図のように攻撃は呪文に強い、\n呪文は防御に強い、防御は攻撃に強いという特徴を持っています。");
+    gameExplanationTexts.push_back("3すくみの関係になっていて、右上の図のように攻撃は呪文に強い、\n呪文は防御に強い、防御は攻撃に強いという特徴を持っています。");
     gameExplanationTexts.push_back("そして敵には行動パターンが存在しています。\n攻撃型、防御型、呪文型の3種類で、どれをよく使うかというものです。");
     gameExplanationTexts.push_back("つまり攻撃型の敵に対しては\n防御コマンドを使うと効果的だということですね！");
     gameExplanationTexts.push_back("では相手の型はどこに書いているかというと・・・");

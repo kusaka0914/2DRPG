@@ -148,11 +148,31 @@ namespace UIConfig {
                 float offsetY = -100.0f;   // Yオフセット（centerYからの相対位置）
                 int baseWidth = 400;      // ベース幅
                 int baseHeight = 100;     // ベース高さ
-                SDL_Color victoryColor = {255, 215, 0, 255};      // 勝利時の色（金色）
-                SDL_Color defeatColor = {255, 0, 0, 255};         // 敗北時の色（赤色）
-                SDL_Color drawColor = {200, 200, 200, 255};       // 引き分け時の色（グレー）
-                SDL_Color desperateVictoryColor = {255, 215, 0, 255};  // 一発逆転成功時の色
-                SDL_Color desperateDefeatColor = {255, 0, 0, 255};     // 大敗北時の色
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 勝利時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 215, 0, 255};  // 勝利時の背景色（金色）
+                } victory;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 敗北時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 0, 0, 255};    // 敗北時の背景色（赤色）
+                } defeat;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 引き分け時のテキスト色（白色）
+                    SDL_Color backgroundColor = {200, 200, 200, 255}; // 引き分け時の背景色（グレー）
+                } draw;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 一発逆転成功時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 215, 0, 255};  // 一発逆転成功時の背景色（金色）
+                } desperateVictory;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 大敗北時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 0, 0, 255};   // 大敗北時の背景色（赤色）
+                } desperateDefeat;
             } resultText;
             
             // 3連勝テキスト
@@ -231,17 +251,20 @@ namespace UIConfig {
             
             struct {
                 std::string text = "勝ち！";  // 勝利時のテキスト
-                SDL_Color color = {255, 215, 0, 255};  // 勝利時の色（金色）
+                SDL_Color textColor = {255, 255, 255, 255};  // 勝利時のテキスト色（白色）
+                SDL_Color backgroundColor = {255, 215, 0, 255};  // 勝利時の背景色（金色）
             } win;
             
             struct {
                 std::string text = "負け...";  // 敗北時のテキスト
-                SDL_Color color = {255, 0, 0, 255};  // 敗北時の色（赤色）
+                SDL_Color textColor = {255, 255, 255, 255};  // 敗北時のテキスト色（白色）
+                SDL_Color backgroundColor = {255, 0, 0, 255};  // 敗北時の背景色（赤色）
             } lose;
             
             struct {
                 std::string text = "引き分け";  // 引き分け時のテキスト
-                SDL_Color color = {200, 200, 200, 255};  // 引き分け時の色（グレー）
+                SDL_Color textColor = {255, 255, 255, 255};  // 引き分け時のテキスト色（白色）
+                SDL_Color backgroundColor = {200, 200, 200, 255};  // 引き分け時の背景色（グレー）
             } draw;
             
             int baseWidth = 200;      // ベース幅

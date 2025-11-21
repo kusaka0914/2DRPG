@@ -347,20 +347,24 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         auto& judgePhaseConfig = battleConfig.judgePhase;
         
         std::string resultText;
-        SDL_Color resultColor;
+        SDL_Color resultTextColor;
+        SDL_Color resultBackgroundColor;
         
         float scaleProgress = std::min(1.0f, params.judgeDisplayTimer / BattleConstants::JUDGE_RESULT_SCALE_ANIMATION_DURATION);
         float scale = BattleConstants::JUDGE_RESULT_MIN_SCALE + scaleProgress * BattleConstants::JUDGE_RESULT_SCALE_RANGE;
         
         if (result == 1) {
             resultText = judgePhaseConfig.win.text;
-            resultColor = judgePhaseConfig.win.color;
+            resultTextColor = judgePhaseConfig.win.textColor;
+            resultBackgroundColor = judgePhaseConfig.win.backgroundColor;
         } else if (result == -1) {
             resultText = judgePhaseConfig.lose.text;
-            resultColor = judgePhaseConfig.lose.color;
+            resultTextColor = judgePhaseConfig.lose.textColor;
+            resultBackgroundColor = judgePhaseConfig.lose.backgroundColor;
         } else {
             resultText = judgePhaseConfig.draw.text;
-            resultColor = judgePhaseConfig.draw.color;
+            resultTextColor = judgePhaseConfig.draw.textColor;
+            resultBackgroundColor = judgePhaseConfig.draw.backgroundColor;
         }
         
         int textWidth = judgePhaseConfig.baseWidth;
@@ -379,10 +383,12 @@ void BattleUI::renderJudgeAnimation(const JudgeRenderParams& params) {
         }
         
         int backgroundPadding = judgePhaseConfig.backgroundPadding;
-        graphics->setDrawColor(resultColor.r / 2, resultColor.g / 2, resultColor.b / 2, 150);
+        // 背景色を描画（アルファ値を考慮）
+        graphics->setDrawColor(resultBackgroundColor.r, resultBackgroundColor.g, resultBackgroundColor.b, resultBackgroundColor.a);
         graphics->drawRect(textX - backgroundPadding, textY - backgroundPadding, scaledWidth + backgroundPadding * 2, scaledHeight + backgroundPadding * 2, true);
         
-        graphics->drawText(resultText, textX, textY, "default", resultColor);
+        // テキストを描画（テキスト色を使用）
+        graphics->drawText(resultText, textX, textY, "default", resultTextColor);
         
         if (result == 1) {
             float glowProgress = std::sin(params.judgeDisplayTimer * 3.14159f * 4.0f) * 0.5f + 0.5f;
@@ -554,21 +560,12 @@ void BattleUI::renderCommandSelectionUI(const CommandSelectRenderParams& params)
                 }
                 currentX += displayWidth;
                 
-                // 矢印を表示（最後のコマンド以外）
-                if (i < params.currentSelectingTurn - 1) {
-                    graphics->drawText("→", currentX + 5, selectedCmdY - 10, "default", cmdSelectConfig.arrowColor);
-                    currentX += cmdSelectConfig.arrowSpacing;
-                }
             } else {
                 // フォールバック：テキスト表示
                 std::string cmdName = BattleLogic::getCommandName(playerCmds[i]);
                 SDL_Color selectedCmdColor = {255, 255, 255, 255};
                 graphics->drawText(cmdName, currentX, selectedCmdY - 15, "default", selectedCmdColor);
                 currentX += 60;
-                if (i < params.currentSelectingTurn - 1) {
-                    graphics->drawText("→", currentX, selectedCmdY - 15, "default", selectedCmdColor);
-                    currentX += cmdSelectConfig.arrowSpacing;
-                }
             }
         }
     }
@@ -766,29 +763,35 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     
     // メイン結果テキスト（JSONから設定を取得）
     std::string mainText;
-    SDL_Color mainColor;
+    SDL_Color mainTextColor;
+    SDL_Color mainBackgroundColor;
     
     auto& resultTextConfig = battleConfig.judgeResult.resultText;
     
     if (params.isVictory) {
         if (params.isDesperateMode) {
             mainText = "一発逆転成功！";
-            mainColor = resultTextConfig.desperateVictoryColor;
+            mainTextColor = resultTextConfig.desperateVictory.textColor;
+            mainBackgroundColor = resultTextConfig.desperateVictory.backgroundColor;
         } else {
             mainText = "勝利！";
-            mainColor = resultTextConfig.victoryColor;
+            mainTextColor = resultTextConfig.victory.textColor;
+            mainBackgroundColor = resultTextConfig.victory.backgroundColor;
         }
     } else if (params.isDefeat) {
         if (params.isDesperateMode) {
             mainText = "大敗北...";
-            mainColor = resultTextConfig.desperateDefeatColor;
+            mainTextColor = resultTextConfig.desperateDefeat.textColor;
+            mainBackgroundColor = resultTextConfig.desperateDefeat.backgroundColor;
         } else {
             mainText = "敗北...";
-            mainColor = resultTextConfig.defeatColor;
+            mainTextColor = resultTextConfig.defeat.textColor;
+            mainBackgroundColor = resultTextConfig.defeat.backgroundColor;
         }
     } else {
         mainText = "引き分け";
-        mainColor = resultTextConfig.drawColor;
+        mainTextColor = resultTextConfig.draw.textColor;
+        mainBackgroundColor = resultTextConfig.draw.backgroundColor;
     }
     
     auto& resultState = animationController->getResultState();
@@ -810,15 +813,19 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
     }
     
     float glowIntensity = std::sin(resultState.resultAnimationTimer * 3.14159f * 4.0f) * 0.3f + 0.7f;
-    graphics->setDrawColor((Uint8)(mainColor.r * glowIntensity * 0.5f), 
-                          (Uint8)(mainColor.g * glowIntensity * 0.5f), 
-                          (Uint8)(mainColor.b * glowIntensity * 0.5f), 
-                          200);
+    graphics->setDrawColor((Uint8)(mainBackgroundColor.r * glowIntensity), 
+                          (Uint8)(mainBackgroundColor.g * glowIntensity), 
+                          (Uint8)(mainBackgroundColor.b * glowIntensity), 
+                          mainBackgroundColor.a);
     graphics->drawRect(textX - 30, textY - 30, scaledWidth + 60, scaledHeight + 60, true);
+    
+    graphics->drawText(mainText, textX, textY, "default", mainTextColor);
     
     if (params.isVictory) {
         float outerGlow = std::sin(resultState.resultAnimationTimer * 3.14159f * 6.0f) * 0.5f + 0.5f;
-        graphics->setDrawColor(255, 215, 0, (Uint8)(outerGlow * 150));
+        // 勝利時の背景色を使用してグロー効果を描画
+        SDL_Color glowColor = params.isDesperateMode ? resultTextConfig.desperateVictory.backgroundColor : resultTextConfig.victory.backgroundColor;
+        graphics->setDrawColor(glowColor.r, glowColor.g, glowColor.b, (Uint8)(outerGlow * 150));
         graphics->drawRect(textX - 50, textY - 50, scaledWidth + 100, scaledHeight + 100, false);
         graphics->drawRect(textX - 45, textY - 45, scaledWidth + 90, scaledHeight + 90, false);
     }
@@ -861,8 +868,6 @@ void BattleUI::renderResultAnnouncement(const ResultAnnouncementRenderParams& pa
         int streakTextY = bgY + bgScaledHeight / 2 - streakScaledHeight / 2;
         graphics->drawText(streakText, streakTextX, streakTextY, "default", streakColor);
     }
-    
-    graphics->drawText(mainText, textX, textY, "default", mainColor);
     
     
     // if (params.hasThreeWinStreak && params.isVictory) {

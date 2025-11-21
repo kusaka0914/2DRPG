@@ -218,11 +218,16 @@ namespace UIConfig {
         battleConfig.judgeResult.resultText.position.offsetY = -100.0f;
         battleConfig.judgeResult.resultText.baseWidth = 400;
         battleConfig.judgeResult.resultText.baseHeight = 100;
-        battleConfig.judgeResult.resultText.victoryColor = {255, 215, 0, 255};
-        battleConfig.judgeResult.resultText.defeatColor = {255, 0, 0, 255};
-        battleConfig.judgeResult.resultText.drawColor = {200, 200, 200, 255};
-        battleConfig.judgeResult.resultText.desperateVictoryColor = {255, 215, 0, 255};
-        battleConfig.judgeResult.resultText.desperateDefeatColor = {255, 0, 0, 255};
+        battleConfig.judgeResult.resultText.victory.textColor = {255, 255, 255, 255};
+        battleConfig.judgeResult.resultText.victory.backgroundColor = {255, 215, 0, 255};
+        battleConfig.judgeResult.resultText.defeat.textColor = {255, 255, 255, 255};
+        battleConfig.judgeResult.resultText.defeat.backgroundColor = {255, 0, 0, 255};
+        battleConfig.judgeResult.resultText.draw.textColor = {255, 255, 255, 255};
+        battleConfig.judgeResult.resultText.draw.backgroundColor = {200, 200, 200, 255};
+        battleConfig.judgeResult.resultText.desperateVictory.textColor = {255, 255, 255, 255};
+        battleConfig.judgeResult.resultText.desperateVictory.backgroundColor = {255, 215, 0, 255};
+        battleConfig.judgeResult.resultText.desperateDefeat.textColor = {255, 255, 255, 255};
+        battleConfig.judgeResult.resultText.desperateDefeat.backgroundColor = {255, 0, 0, 255};
         
         battleConfig.judgeResult.threeWinStreak.position.useRelative = true;
         battleConfig.judgeResult.threeWinStreak.position.offsetY = -150.0f;
@@ -279,11 +284,14 @@ namespace UIConfig {
         battleConfig.judgePhase.position.offsetX = 0.0f;
         battleConfig.judgePhase.position.offsetY = 0.0f;
         battleConfig.judgePhase.win.text = "勝ち！";
-        battleConfig.judgePhase.win.color = {255, 215, 0, 255};
+        battleConfig.judgePhase.win.textColor = {255, 255, 255, 255};
+        battleConfig.judgePhase.win.backgroundColor = {255, 215, 0, 255};
         battleConfig.judgePhase.lose.text = "負け...";
-        battleConfig.judgePhase.lose.color = {255, 0, 0, 255};
+        battleConfig.judgePhase.lose.textColor = {255, 255, 255, 255};
+        battleConfig.judgePhase.lose.backgroundColor = {255, 0, 0, 255};
         battleConfig.judgePhase.draw.text = "引き分け";
-        battleConfig.judgePhase.draw.color = {200, 200, 200, 255};
+        battleConfig.judgePhase.draw.textColor = {255, 255, 255, 255};
+        battleConfig.judgePhase.draw.backgroundColor = {200, 200, 200, 255};
         battleConfig.judgePhase.baseWidth = 200;
         battleConfig.judgePhase.baseHeight = 60;
         battleConfig.judgePhase.backgroundPadding = 20;
@@ -1067,11 +1075,66 @@ namespace UIConfig {
                         if (rt.contains("offsetY")) battleConfig.judgeResult.resultText.offsetY = rt["offsetY"];
                         if (rt.contains("baseWidth")) battleConfig.judgeResult.resultText.baseWidth = rt["baseWidth"];
                         if (rt.contains("baseHeight")) battleConfig.judgeResult.resultText.baseHeight = rt["baseHeight"];
-                        if (rt.contains("victoryColor")) loadColor(rt["victoryColor"], battleConfig.judgeResult.resultText.victoryColor);
-                        if (rt.contains("defeatColor")) loadColor(rt["defeatColor"], battleConfig.judgeResult.resultText.defeatColor);
-                        if (rt.contains("drawColor")) loadColor(rt["drawColor"], battleConfig.judgeResult.resultText.drawColor);
-                        if (rt.contains("desperateVictoryColor")) loadColor(rt["desperateVictoryColor"], battleConfig.judgeResult.resultText.desperateVictoryColor);
-                        if (rt.contains("desperateDefeatColor")) loadColor(rt["desperateDefeatColor"], battleConfig.judgeResult.resultText.desperateDefeatColor);
+                        
+                        // 勝利時の設定
+                        if (rt.contains("victory")) {
+                            auto& v = rt["victory"];
+                            if (v.contains("textColor")) loadColor(v["textColor"], battleConfig.judgeResult.resultText.victory.textColor);
+                            if (v.contains("backgroundColor")) loadColor(v["backgroundColor"], battleConfig.judgeResult.resultText.victory.backgroundColor);
+                        }
+                        // 後方互換性のため、victoryColorがあればtextColorとbackgroundColorの両方に設定
+                        if (rt.contains("victoryColor") && !rt.contains("victory")) {
+                            loadColor(rt["victoryColor"], battleConfig.judgeResult.resultText.victory.textColor);
+                            loadColor(rt["victoryColor"], battleConfig.judgeResult.resultText.victory.backgroundColor);
+                        }
+                        
+                        // 敗北時の設定
+                        if (rt.contains("defeat")) {
+                            auto& d = rt["defeat"];
+                            if (d.contains("textColor")) loadColor(d["textColor"], battleConfig.judgeResult.resultText.defeat.textColor);
+                            if (d.contains("backgroundColor")) loadColor(d["backgroundColor"], battleConfig.judgeResult.resultText.defeat.backgroundColor);
+                        }
+                        // 後方互換性のため、defeatColorがあればtextColorとbackgroundColorの両方に設定
+                        if (rt.contains("defeatColor") && !rt.contains("defeat")) {
+                            loadColor(rt["defeatColor"], battleConfig.judgeResult.resultText.defeat.textColor);
+                            loadColor(rt["defeatColor"], battleConfig.judgeResult.resultText.defeat.backgroundColor);
+                        }
+                        
+                        // 引き分け時の設定
+                        if (rt.contains("draw")) {
+                            auto& dr = rt["draw"];
+                            if (dr.contains("textColor")) loadColor(dr["textColor"], battleConfig.judgeResult.resultText.draw.textColor);
+                            if (dr.contains("backgroundColor")) loadColor(dr["backgroundColor"], battleConfig.judgeResult.resultText.draw.backgroundColor);
+                        }
+                        // 後方互換性のため、drawColorがあればtextColorとbackgroundColorの両方に設定
+                        if (rt.contains("drawColor") && !rt.contains("draw")) {
+                            loadColor(rt["drawColor"], battleConfig.judgeResult.resultText.draw.textColor);
+                            loadColor(rt["drawColor"], battleConfig.judgeResult.resultText.draw.backgroundColor);
+                        }
+                        
+                        // 一発逆転成功時の設定
+                        if (rt.contains("desperateVictory")) {
+                            auto& dv = rt["desperateVictory"];
+                            if (dv.contains("textColor")) loadColor(dv["textColor"], battleConfig.judgeResult.resultText.desperateVictory.textColor);
+                            if (dv.contains("backgroundColor")) loadColor(dv["backgroundColor"], battleConfig.judgeResult.resultText.desperateVictory.backgroundColor);
+                        }
+                        // 後方互換性のため、desperateVictoryColorがあればtextColorとbackgroundColorの両方に設定
+                        if (rt.contains("desperateVictoryColor") && !rt.contains("desperateVictory")) {
+                            loadColor(rt["desperateVictoryColor"], battleConfig.judgeResult.resultText.desperateVictory.textColor);
+                            loadColor(rt["desperateVictoryColor"], battleConfig.judgeResult.resultText.desperateVictory.backgroundColor);
+                        }
+                        
+                        // 大敗北時の設定
+                        if (rt.contains("desperateDefeat")) {
+                            auto& dd = rt["desperateDefeat"];
+                            if (dd.contains("textColor")) loadColor(dd["textColor"], battleConfig.judgeResult.resultText.desperateDefeat.textColor);
+                            if (dd.contains("backgroundColor")) loadColor(dd["backgroundColor"], battleConfig.judgeResult.resultText.desperateDefeat.backgroundColor);
+                        }
+                        // 後方互換性のため、desperateDefeatColorがあればtextColorとbackgroundColorの両方に設定
+                        if (rt.contains("desperateDefeatColor") && !rt.contains("desperateDefeat")) {
+                            loadColor(rt["desperateDefeatColor"], battleConfig.judgeResult.resultText.desperateDefeat.textColor);
+                            loadColor(rt["desperateDefeatColor"], battleConfig.judgeResult.resultText.desperateDefeat.backgroundColor);
+                        }
                     }
                     
                     // 3連勝テキスト
@@ -1165,21 +1228,39 @@ namespace UIConfig {
                     if (jp.contains("win")) {
                         auto& win = jp["win"];
                         if (win.contains("text")) battleConfig.judgePhase.win.text = win["text"];
-                        if (win.contains("color")) loadColor(win["color"], battleConfig.judgePhase.win.color);
+                        if (win.contains("textColor")) loadColor(win["textColor"], battleConfig.judgePhase.win.textColor);
+                        if (win.contains("backgroundColor")) loadColor(win["backgroundColor"], battleConfig.judgePhase.win.backgroundColor);
+                        // 後方互換性のため、colorがあればtextColorとbackgroundColorの両方に設定
+                        if (win.contains("color") && !win.contains("textColor") && !win.contains("backgroundColor")) {
+                            loadColor(win["color"], battleConfig.judgePhase.win.textColor);
+                            loadColor(win["color"], battleConfig.judgePhase.win.backgroundColor);
+                        }
                     }
                     
                     // 敗北時の設定
                     if (jp.contains("lose")) {
                         auto& lose = jp["lose"];
                         if (lose.contains("text")) battleConfig.judgePhase.lose.text = lose["text"];
-                        if (lose.contains("color")) loadColor(lose["color"], battleConfig.judgePhase.lose.color);
+                        if (lose.contains("textColor")) loadColor(lose["textColor"], battleConfig.judgePhase.lose.textColor);
+                        if (lose.contains("backgroundColor")) loadColor(lose["backgroundColor"], battleConfig.judgePhase.lose.backgroundColor);
+                        // 後方互換性のため、colorがあればtextColorとbackgroundColorの両方に設定
+                        if (lose.contains("color") && !lose.contains("textColor") && !lose.contains("backgroundColor")) {
+                            loadColor(lose["color"], battleConfig.judgePhase.lose.textColor);
+                            loadColor(lose["color"], battleConfig.judgePhase.lose.backgroundColor);
+                        }
                     }
                     
                     // 引き分け時の設定
                     if (jp.contains("draw")) {
                         auto& draw = jp["draw"];
                         if (draw.contains("text")) battleConfig.judgePhase.draw.text = draw["text"];
-                        if (draw.contains("color")) loadColor(draw["color"], battleConfig.judgePhase.draw.color);
+                        if (draw.contains("textColor")) loadColor(draw["textColor"], battleConfig.judgePhase.draw.textColor);
+                        if (draw.contains("backgroundColor")) loadColor(draw["backgroundColor"], battleConfig.judgePhase.draw.backgroundColor);
+                        // 後方互換性のため、colorがあればtextColorとbackgroundColorの両方に設定
+                        if (draw.contains("color") && !draw.contains("textColor") && !draw.contains("backgroundColor")) {
+                            loadColor(draw["color"], battleConfig.judgePhase.draw.textColor);
+                            loadColor(draw["color"], battleConfig.judgePhase.draw.backgroundColor);
+                        }
                     }
                     
                     // その他の設定

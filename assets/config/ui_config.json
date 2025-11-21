@@ -274,11 +274,26 @@
         },
         "baseWidth": 400,
         "baseHeight": 40,
-        "victoryColor": [255, 215, 0, 255],
-        "defeatColor": [255, 0, 0, 255],
-        "drawColor": [200, 200, 200, 255],
-        "desperateVictoryColor": [255, 215, 0, 255],
-        "desperateDefeatColor": [255, 0, 0, 255]
+        "victory": {
+          "textColor": [255, 255, 255, 255],
+          "backgroundColor": [255, 215, 0, 255]
+        },
+        "defeat": {
+          "textColor": [255, 255, 255, 255],
+          "backgroundColor": [255, 0, 0, 255]
+        },
+        "draw": {
+          "textColor": [255, 255, 255, 255],
+          "backgroundColor": [200, 200, 200, 255]
+        },
+        "desperateVictory": {
+          "textColor": [255, 255, 255, 255],
+          "backgroundColor": [255, 215, 0, 255]
+        },
+        "desperateDefeat": {
+          "textColor": [255, 255, 255, 255],
+          "backgroundColor": [255, 0, 0, 255]
+        }
       },
       "threeWinStreak": {
         "position": {
@@ -370,16 +385,19 @@
         "offsetY": -100
       },
       "win": {
-        "text": "勝ち！",
-        "color": [255, 215, 0, 255]
+        "text": "勝利！",
+        "textColor": [0, 0, 0, 255],
+        "backgroundColor": [255, 215, 0, 255]
       },
       "lose": {
-        "text": "負け...",
-        "color": [255, 0, 0, 255]
+        "text": "敗北...",
+        "textColor": [255, 255, 255, 255],
+        "backgroundColor": [255, 0, 0, 255]
       },
       "draw": {
         "text": "引き分け",
-        "color": [200, 200, 200, 255]
+        "textColor": [255, 255, 255, 255],
+        "backgroundColor": [200, 200, 200, 255]
       },
       "baseWidth": 350,
       "baseHeight": 60,
