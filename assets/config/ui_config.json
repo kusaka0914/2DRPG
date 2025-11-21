@@ -412,7 +412,7 @@
       "backgroundColor": [0, 0, 0, 200],
       "borderColor": [255, 255, 255, 255],
       "padding": 12,
-      "format": "{enemyName}を倒した。経験値が{expGained}"
+      "format": "{enemyName}を倒した。経験値を{expGained}獲得した。"
     },
     "levelUpDisplay": {
       "position": {

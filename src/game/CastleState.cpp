@@ -19,7 +19,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
       moveTimer(0), dialogueStep(0), isTalkingToKing(false),
       nightTimerActive(TownState::s_nightTimerActive), nightTimer(TownState::s_nightTimer),
       fromNightState(fromNightState), pendingDialogue(false),
-      kingDefeated(false), guardLeftDefeated(false), guardRightDefeated(false), allDefeated(false) {
+      kingDefeated(false), guardLeftDefeated(true), guardRightDefeated(true), allDefeated(false) {
     isFadingOut = false;
     isFadingIn = false;
     fadeTimer = 0.0f;
@@ -27,7 +27,7 @@ CastleState::CastleState(std::shared_ptr<Player> player, bool fromNightState)
     
     if (fromNightState) {
         kingDialogues = {
-            "住民を襲っていた犯人はやはりお主であったか・・・我が街の完敗である。\nだが、そのおかげでわしの真の力を発揮する時が来た。\nさあ、わしと2人の側近にコテンパンにされるがよい。　"
+            "住民を襲っていた犯人はやはりお主であったか・・・我が街の完敗である。\nだが、そのおかげでわしの真の力を発揮する時が来た。\nさあ、わしにコテンパンにされるがよい。　"
         };
         playerX = 4;
         playerY = 4;
@@ -64,18 +64,26 @@ void CastleState::enter() {
     // fromNightStateがfalseの場合（通常の初回訪問時）、倒したフラグをリセット
     if (!fromNightState) {
         kingDefeated = false;
-        guardLeftDefeated = false;
-        guardRightDefeated = false;
+        guardLeftDefeated = true;  // 兵隊を削除
+        guardRightDefeated = true;  // 兵隊を削除
         allDefeated = false;
+    } else {
+        // fromNightStateがtrueの場合、allDefeatedをfalseに強制設定（王様を倒していないため）
+        // ただし、kingDefeatedがtrueの場合は、王様を倒したのでallDefeatedをtrueにする
+        if (!kingDefeated) {
+            allDefeated = false;
+        }
     }
     
-    // 全員を倒したかどうかを再確認（状態復元後にメッセージが表示されていない場合に備える）
-    if (kingDefeated && guardLeftDefeated && guardRightDefeated) {
-        // 全員倒されている場合、allDefeatedをtrueに設定
+    // 王様を倒したかどうかを再確認（状態復元後にメッセージが表示されていない場合に備える）
+    if (kingDefeated) {
+        // 王様を倒した場合、allDefeatedをtrueに設定
         if (!allDefeated) {
             allDefeated = true;
         }
         // メッセージはrender()でsetupUI()の後に表示する（messageBoardが初期化されるため）
+        // メッセージ表示フラグをリセット（次回render()でメッセージを表示するため）
+        isShowingMessage = false;
         
         // 全員倒された場合は、王様との会話は不要なのでpendingDialogueをfalseにする
         pendingDialogue = false;
@@ -174,9 +182,10 @@ void CastleState::render(Graphics& graphics) {
     }
     lastReloadState = currentReloadState;
     
-    // 全員倒された場合のメッセージを表示（setupUI()の後、messageBoardが初期化されているため）
-    if (messageBoard && kingDefeated && guardLeftDefeated && guardRightDefeated && allDefeated && !isShowingMessage) {
+    // 王様を倒した場合のメッセージを表示（setupUI()の後、messageBoardが初期化されているため）
+    if (messageBoard && kingDefeated && allDefeated && !isShowingMessage) {
         showMessage("ついに街を滅ぼすことに成功しましたね。早速魔王の元へ行って報告しましょう！");
+        isShowingMessage = true; // メッセージを表示したことを記録
     }
     
     // 会話を開始（pendingDialogueがtrueの場合、または初回の夜の街からの入場で会話がまだ開始されていない場合）
@@ -215,11 +224,12 @@ void CastleState::render(Graphics& graphics) {
         if (fromNightState) {
             if (isNearObject(throneX, throneY) && !kingDefeated) {
                 canInteract = true;
-            } else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
-                canInteract = true;
-            } else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
-                canInteract = true;
-            }
+            // 兵隊は削除済みなのでインタラクションをスキップ
+            // } else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
+            //     canInteract = true;
+            // } else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
+            //     canInteract = true;
+            // }
         }
         
         if (canInteract) {
@@ -385,22 +395,24 @@ void CastleState::checkInteraction() {
         if (isNearObject(throneX, throneY) && !kingDefeated) {
             attackKing();
         }
-        else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
-            attackGuardLeft();
-        }
-        else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
-            attackGuardRight();
-        }
+        // 兵隊は削除済みなのでインタラクションをスキップ
+        // else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
+        //     attackGuardLeft();
+        // }
+        // else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
+        //     attackGuardRight();
+        // }
     } else {
         if (isNearObject(throneX, throneY)) {
             interactWithThrone();
         }
-        else if (isNearObject(guardLeftX, guardLeftY)) {
-            interactWithGuard();
-        }
-        else if (isNearObject(guardRightX, guardRightY)) {
-            interactWithGuard();
-        }
+        // 兵隊は削除済みなのでインタラクションをスキップ
+        // else if (isNearObject(guardLeftX, guardLeftY)) {
+        //     interactWithGuard();
+        // }
+        // else if (isNearObject(guardRightX, guardRightY)) {
+        //     interactWithGuard();
+        // }
     }
 }
 
@@ -456,7 +468,8 @@ void CastleState::attackGuardRight() {
 }
 
 void CastleState::checkAllDefeated() {
-    if (kingDefeated && guardLeftDefeated && guardRightDefeated) {
+    // 王様だけを倒したら完了とする（兵隊は削除済み）
+    if (kingDefeated) {
         if (!allDefeated) {
             allDefeated = true;
             // メッセージはrender()でsetupUI()の後に表示する（messageBoardが初期化されるため）
@@ -476,6 +489,8 @@ void CastleState::onGuardDefeated(bool isLeft) {
 void CastleState::onKingDefeated() {
     kingDefeated = true;
     checkAllDefeated();
+    // メッセージ表示フラグをリセット（次回render()でメッセージを表示するため）
+    isShowingMessage = false;
 }
 
 void CastleState::exitToTown() {
@@ -634,33 +649,34 @@ void CastleState::drawCastleObjects(Graphics& graphics) {
         }
     }
     
-    if (!guardLeftDefeated) {
-        if (guardTexture) {
-            // アスペクト比を保持して縦幅に合わせて描画
-            int centerX = ROOM_OFFSET_X + guardLeftX * TILE_SIZE + TILE_SIZE / 2;
-            int centerY = ROOM_OFFSET_Y + guardLeftY * TILE_SIZE + TILE_SIZE / 2;
-            graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
-        } else {
-            graphics.setDrawColor(192, 192, 192, 255);
-            graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
-    }
-    
-    if (!guardRightDefeated) {
-        if (guardTexture) {
-            // アスペクト比を保持して縦幅に合わせて描画
-            int centerX = ROOM_OFFSET_X + guardRightX * TILE_SIZE + TILE_SIZE / 2;
-            int centerY = ROOM_OFFSET_Y + guardRightY * TILE_SIZE + TILE_SIZE / 2;
-            graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
-        } else {
-            graphics.setDrawColor(192, 192, 192, 255);
-            graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
-            graphics.setDrawColor(0, 0, 0, 255);
-            graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
-    }
+    // 兵隊は削除済みなので描画しない
+    // if (!guardLeftDefeated) {
+    //     if (guardTexture) {
+    //         // アスペクト比を保持して縦幅に合わせて描画
+    //         int centerX = ROOM_OFFSET_X + guardLeftX * TILE_SIZE + TILE_SIZE / 2;
+    //         int centerY = ROOM_OFFSET_Y + guardLeftY * TILE_SIZE + TILE_SIZE / 2;
+    //         graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
+    //     } else {
+    //         graphics.setDrawColor(192, 192, 192, 255);
+    //         graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    //         graphics.setDrawColor(0, 0, 0, 255);
+    //         graphics.drawRect(ROOM_OFFSET_X + guardLeftX * TILE_SIZE, ROOM_OFFSET_Y + guardLeftY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    //     }
+    // }
+    // 
+    // if (!guardRightDefeated) {
+    //     if (guardTexture) {
+    //         // アスペクト比を保持して縦幅に合わせて描画
+    //         int centerX = ROOM_OFFSET_X + guardRightX * TILE_SIZE + TILE_SIZE / 2;
+    //         int centerY = ROOM_OFFSET_Y + guardRightY * TILE_SIZE + TILE_SIZE / 2;
+    //         graphics.drawTextureAspectRatio(guardTexture, centerX, centerY, TILE_SIZE, true, true);
+    //     } else {
+    //         graphics.setDrawColor(192, 192, 192, 255);
+    //         graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
+    //         graphics.setDrawColor(0, 0, 0, 255);
+    //         graphics.drawRect(ROOM_OFFSET_X + guardRightX * TILE_SIZE, ROOM_OFFSET_Y + guardRightY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    //     }
+    // }
     
     graphics.setDrawColor(139, 69, 19, 255);
     graphics.drawRect(ROOM_OFFSET_X + doorX * TILE_SIZE, ROOM_OFFSET_Y + doorY * TILE_SIZE, TILE_SIZE, TILE_SIZE, true);
@@ -701,13 +717,14 @@ bool CastleState::isValidPosition(int x, int y) const {
         return false;
     }
     
-    if (GameUtils::isColliding(x, y, 1, 1, guardLeftX, guardLeftY, 1, 1)) {
-        return false;
-    }
-    
-    if (GameUtils::isColliding(x, y, 1, 1, guardRightX, guardRightY, 1, 1)) {
-        return false;
-    }
+    // 兵隊は削除済みなので当たり判定をスキップ
+    // if (GameUtils::isColliding(x, y, 1, 1, guardLeftX, guardLeftY, 1, 1)) {
+    //     return false;
+    // }
+    // 
+    // if (GameUtils::isColliding(x, y, 1, 1, guardRightX, guardRightY, 1, 1)) {
+    //     return false;
+    // }
     
     if (GameUtils::isColliding(x, y, 1, 1, doorX, doorY, 2, 1)) {
         return false;

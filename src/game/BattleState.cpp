@@ -557,7 +557,17 @@ void BattleState::render(Graphics& graphics) {
     }
     
     if (uiJustInitialized && !battleLog.empty() && battleLogLabel) {
-        battleLogLabel->setText(battleLog);
+        if (isValidPointer(battleLogLabel)) {
+            try {
+                battleLogLabel->setText(battleLog);
+            } catch (const std::exception& e) {
+                std::cerr << "[ERROR] battleLogLabel->setText() exception in render: " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "[ERROR] battleLogLabel->setText() unknown error in render" << std::endl;
+            }
+        } else {
+            std::cerr << "[ERROR] battleLogLabel has invalid pointer in render: " << (void*)battleLogLabel << std::endl;
+        }
     }
     
     // 初回の戦闘時のみ説明を開始（UI初期化後、住民戦以外）
