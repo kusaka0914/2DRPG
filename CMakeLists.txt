@@ -1,4 +1,27 @@
 cmake_minimum_required(VERSION 3.16)
+
+# Windowsでvcpkgのツールチェインファイルを自動検出（project()の前に設定する必要がある）
+if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    # 環境変数VCPKG_ROOTから検出
+    if(DEFINED ENV{VCPKG_ROOT})
+        set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
+    # 一般的なvcpkgのインストール場所を検索
+    elseif(EXISTS "C:/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
+    elseif(EXISTS "$ENV{USERPROFILE}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "$ENV{USERPROFILE}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
+    # ユーザーディレクトリのvcpkgを検索（Windows形式のパス）
+    elseif(EXISTS "C:/Users/$ENV{USERNAME}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "C:/Users/$ENV{USERNAME}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
+    endif()
+    # vcpkgツールチェインファイルが見つかった場合、メッセージを表示
+    if(DEFINED CMAKE_TOOLCHAIN_FILE)
+        message(STATUS "Using vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+    else()
+        message(WARNING "vcpkg toolchain file not found. Please set CMAKE_TOOLCHAIN_FILE manually or install vcpkg.")
+    endif()
+endif()
+
 project(FallenHeroAndTheDoomedCapital VERSION 1.0.0 LANGUAGES CXX)
 
 # C++標準を設定

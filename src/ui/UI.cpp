@@ -1,4 +1,5 @@
 #include "UI.h"
+#include <iostream>
 
 // UIElement
 UIElement::UIElement(int x, int y, int width, int height) 
@@ -39,9 +40,18 @@ void Button::render(Graphics& graphics) {
     graphics.drawRect(x, y, width, height, false);
     
     if (!text.empty()) {
-        int textX = x + width / 2 - (text.length() * 6); // 簡易的な中央寄せ
-        int textY = y + height / 2 - 8;
-        graphics.drawText(text, textX, textY, fontName, textColor);
+        // フォントが読み込まれているか確認（Windows特有の問題：フォントが読み込まれていない場合にクラッシュする可能性がある）
+        if (graphics.getFont(fontName)) {
+            int textX = x + width / 2 - (text.length() * 6); // 簡易的な中央寄せ
+            int textY = y + height / 2 - 8;
+            try {
+                graphics.drawText(text, textX, textY, fontName, textColor);
+            } catch (const std::exception& e) {
+                std::cerr << "Button::render drawTextエラー: " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "Button::render drawTextエラー: 不明なエラー" << std::endl;
+            }
+        }
     }
 }
 
@@ -93,12 +103,23 @@ Label::~Label() {
 void Label::render(Graphics& graphics) {
     if (!visible || text.empty()) return;
     
+    // フォントが読み込まれているか確認（Windows特有の問題：フォントが読み込まれていない場合にクラッシュする可能性がある）
+    if (!graphics.getFont(fontName)) {
+        return; // フォントが読み込まれていない場合は描画をスキップ
+    }
+    
     splitTextIntoLines();
     
     int currentY = y;
     for (const auto& line : lines) {
         if (!line.empty()) {
-            graphics.drawText(line, x, currentY, fontName, textColor);
+            try {
+                graphics.drawText(line, x, currentY, fontName, textColor);
+            } catch (const std::exception& e) {
+                std::cerr << "Label::render drawTextエラー: " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "Label::render drawTextエラー: 不明なエラー" << std::endl;
+            }
             currentY += 20; // 仮の行間
         }
     }
@@ -143,8 +164,31 @@ void UIManager::update(float deltaTime) {
 }
 
 void UIManager::render(Graphics& graphics) {
-    for (auto& element : elements) {
-        element->render(graphics);
+    // elementsが変更される可能性があるため、コピーを作成してループ
+    // ただし、パフォーマンスを考慮して、通常は直接ループする
+    // Windows特有の問題：elementsが変更される可能性があるため、安全のためチェック
+    try {
+        // elementsが空の場合は何もしない
+        if (elements.empty()) {
+            return;
+        }
+        
+        // 各要素を個別にtry-catchで囲む（1つの要素でエラーが発生しても他の要素は描画する）
+        for (auto& element : elements) {
+            if (element) {
+                try {
+                    element->render(graphics);
+                } catch (const std::exception& e) {
+                    std::cerr << "UIManager::render: 個別UI要素の描画中にエラー: " << e.what() << std::endl;
+                } catch (...) {
+                    std::cerr << "UIManager::render: 個別UI要素の描画中に不明なエラー" << std::endl;
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "UIManager::renderエラー: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "UIManager::renderエラー: 不明なエラー" << std::endl;
     }
 }
 
@@ -171,21 +215,21 @@ StoryMessageBox::~StoryMessageBox() {
     clearTextures();
 }
 
-void StoryMessageBox::render(Graphics& graphics) {
+void StoryMessageBox::render(Graphics& gfx) {
     if (!visible) return;
     
     if (lineTextures.empty() && !lines.empty()) {
-        updateTextures(graphics);
+        updateTextures(gfx);
     }
     
     // 背景描画（半透明黒）
-    graphics.setDrawColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
-    graphics.drawRect(x, y, width, height, true);
+    gfx.setDrawColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+    gfx.drawRect(x, y, width, height, true);
     
     // 枠線描画（白）
-    graphics.setDrawColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a);
-    graphics.drawRect(x, y, width, height, false);
-    graphics.drawRect(x + 1, y + 1, width - 2, height - 2, false); // 二重枠
+    gfx.setDrawColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+    gfx.drawRect(x, y, width, height, false);
+    gfx.drawRect(x + 1, y + 1, width - 2, height - 2, false); // 二重枠
     
     // テキスト描画
     if (!lineTextures.empty()) {
@@ -193,10 +237,17 @@ void StoryMessageBox::render(Graphics& graphics) {
         for (size_t i = 0; i < lineTextures.size(); ++i) {
             if (lineTextures[i]) {
                 // テクスチャがある場合は描画
-                graphics.drawTexture(lineTextures[i], x + padding, currentY);
+                gfx.drawTexture(lineTextures[i], x + padding, currentY);
                 
-                int textHeight;
-                SDL_QueryTexture(lineTextures[i], nullptr, nullptr, nullptr, &textHeight);
+                int textHeight = 20; // デフォルト値
+                if (SDL_QueryTexture(lineTextures[i], nullptr, nullptr, nullptr, &textHeight) != 0) {
+                    // エラーが発生した場合はデフォルト値を使用
+                    textHeight = 20;
+                }
+                // 無効な値の場合はデフォルト値を使用
+                if (textHeight <= 0) {
+                    textHeight = 20;
+                }
                 currentY += textHeight + lineSpacing;
             } else {
                 currentY += 20 + lineSpacing; // 20は標準的なフォント高さ
@@ -235,17 +286,34 @@ void StoryMessageBox::hide() {
     displayTimer = 0;
 }
 
-void StoryMessageBox::updateTextures(Graphics& graphics) {
+void StoryMessageBox::updateTextures(Graphics& gfx) {
     clearTextures();
-    this->graphics = &graphics;
+    this->graphics = &gfx;
+    
+    // フォントが読み込まれているか確認（Windows特有の問題：フォントが読み込まれていない場合にクラッシュする可能性がある）
+    if (!gfx.getFont(fontName)) {
+        // フォントが読み込まれていない場合は空のテクスチャリストを返す
+        for (size_t i = 0; i < lines.size(); ++i) {
+            lineTextures.push_back(nullptr);
+        }
+        return;
+    }
     
     for (const std::string& line : lines) {
         if (!line.empty()) {
-            SDL_Texture* texture = graphics.createTextTexture(line, fontName, textColor);
-            if (texture) {
-                lineTextures.push_back(texture);
-            } else {
-                lineTextures.push_back(nullptr); // テクスチャ作成失敗時
+            try {
+                SDL_Texture* texture = gfx.createTextTexture(line, fontName, textColor);
+                if (texture) {
+                    lineTextures.push_back(texture);
+                } else {
+                    lineTextures.push_back(nullptr); // テクスチャ作成失敗時
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "StoryMessageBox::updateTextures createTextTextureエラー: " << e.what() << std::endl;
+                lineTextures.push_back(nullptr);
+            } catch (...) {
+                std::cerr << "StoryMessageBox::updateTextures createTextTextureエラー: 不明なエラー" << std::endl;
+                lineTextures.push_back(nullptr);
             }
         } else {
             lineTextures.push_back(nullptr); // 空行用

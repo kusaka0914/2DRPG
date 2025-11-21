@@ -204,6 +204,12 @@ public:
     
 private:
     void setupUI(Graphics& graphics);
+    /**
+     * @brief ポインタの有効性をチェック（Windows特有の問題：無効なポインタを検出）
+     * @param ptr チェックするポインタ
+     * @return ポインタが有効なアドレス範囲内かどうか
+     */
+    bool isValidPointer(void* ptr) const;
     void updateStatus();
     void addBattleLog(const std::string& message);
     void showMessage(const std::string& message);

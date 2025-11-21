@@ -54,24 +54,20 @@ NightState::NightState(std::shared_ptr<Player> player)
     guards = TownLayout::GUARDS;
     
     // 衛兵の初期位置を住人の家の周辺に設定（デバッグ用、通常はTownLayout::GUARDSを使用）
-    if (residentHomes.size() >= 4) {
+    if (residentHomes.size() >= 2) {
         guards[0] = {residentHomes[0].first - 1, residentHomes[0].second};
         guards[1] = {residentHomes[1].first, residentHomes[1].second - 1};
-        guards[2] = {residentHomes[2].first + 1, residentHomes[2].second};
-        guards[3] = {residentHomes[3].first, residentHomes[3].second + 1};
     }
     
     guardDirections = {
         {1, 1},   // 右下方向
-        {-1, 1},  // 左下方向
-        {1, -1},  // 右上方向
-        {-1, -1}  // 左上方向
+        {-1, 1}   // 左下方向
     };
     
-    guardTargetHomeIndices.resize(4, 0);
-    guardStayTimers.resize(4, 0.0f);
+    guardTargetHomeIndices.resize(2, 0);
+    guardStayTimers.resize(2, 0.0f);
     
-    guardHp.resize(4, 2);
+    guardHp.resize(2, 2);
     
     setupUI();
 }
@@ -1089,13 +1085,25 @@ void NightState::loadTextures(Graphics& graphics) {
             guardTexture = graphics.loadTexture("assets/textures/characters/guard.png", "guard");
         }
         
-        shopTexture = graphics.getTexture("shop");
-        weaponShopTexture = graphics.getTexture("weapon_shop");
-        houseTexture = graphics.getTexture("house");
-        castleTexture = graphics.getTexture("castle");
+        if (!shopTexture) {
+            shopTexture = graphics.loadTexture("assets/textures/buildings/shop.png", "shop");
+        }
+        if (!weaponShopTexture) {
+            weaponShopTexture = graphics.loadTexture("assets/textures/buildings/weaponshop.png", "weapon_shop");
+        }
+        if (!houseTexture) {
+            houseTexture = graphics.loadTexture("assets/textures/buildings/house.png", "house");
+        }
+        if (!castleTexture) {
+            castleTexture = graphics.loadTexture("assets/textures/buildings/castle.png", "castle");
+        }
         stoneTileTexture = graphics.loadTexture("assets/textures/tiles/nightstonetile.png", "night_stone_tile");
-        residentHomeTexture = graphics.getTexture("resident_home");
-        toriiTexture = graphics.getTexture("torii");
+        if (!residentHomeTexture) {
+            residentHomeTexture = graphics.loadTexture("assets/textures/buildings/resident_home.png", "resident_home");
+        }
+        if (!toriiTexture) {
+            toriiTexture = graphics.loadTexture("assets/textures/objects/torii.png", "torii");
+        }
     } catch (const std::exception& e) {
     }
 }

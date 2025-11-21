@@ -323,10 +323,33 @@ void GameOverState::handleInput(const InputManager& input) {
                 std::cout << "GameOverState: 静的変数に復元 - s_nightTimer: " << TownState::s_nightTimer 
                           << ", s_nightTimerActive: " << (TownState::s_nightTimerActive ? "true" : "false") << std::endl;
             } else {
-                auto newPlayer = std::make_shared<Player>("勇者");
-                newPlayer->setKingTrust(50);
-                newPlayer->setCurrentNight(1);
-                stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                // autoLoad()が失敗した場合でも、再戦可能な場合は再戦処理を実行
+                if ((gameOverReason.find("戦闘に敗北") != std::string::npos || isResidentBattle) && hasBattleEnemyInfo) {
+                    // プレイヤーのHP/MPを回復してから再戦
+                    player->heal(player->getMaxHp());
+                    player->restoreMp(player->getMaxMp());
+                    
+                    // 住民戦の場合は住民の情報を復元して再戦
+                    if (isResidentBattle) {
+                        auto enemy = std::make_unique<Enemy>(EnemyType::SLIME);
+                        enemy->setName(residentName);
+                        enemy->setResidentTextureIndex(residentTextureIndex);
+                        enemy->setResidentPosition(residentX, residentY);
+                        stateManager->changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+                    } else {
+                        // 通常の敵との戦闘を再開（魔王を含む）
+                        auto enemy = std::make_unique<Enemy>(battleEnemyType);
+                        // 敵のレベルを目標レベルまで上げる
+                        enemy->setLevel(battleEnemyLevel);
+                        stateManager->changeState(std::make_unique<BattleState>(player, std::move(enemy)));
+                    }
+                } else {
+                    // 再戦不可能な場合のみタイトル画面に戻る
+                    auto newPlayer = std::make_shared<Player>("勇者");
+                    newPlayer->setKingTrust(50);
+                    newPlayer->setCurrentNight(1);
+                    stateManager->changeState(std::make_unique<MainMenuState>(newPlayer));
+                }
             }
         }
     }

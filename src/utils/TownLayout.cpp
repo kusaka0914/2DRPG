@@ -34,9 +34,7 @@ const std::vector<std::pair<int, int>> TownLayout::RESIDENTS = {
 
 const std::vector<std::pair<int, int>> TownLayout::GUARDS = {
     {12, 2},  // 衛兵1
-    {12, 3},  // 衛兵2
-    {15, 2},   // 衛兵3
-    {15, 3}   // 衛兵4
+    {15, 2}   // 衛兵2
 };
 
 int TownLayout::findResidentIndex(int x, int y) {

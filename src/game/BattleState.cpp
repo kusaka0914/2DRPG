@@ -557,7 +557,17 @@ void BattleState::render(Graphics& graphics) {
     }
     
     if (uiJustInitialized && !battleLog.empty() && battleLogLabel) {
-        battleLogLabel->setText(battleLog);
+        if (isValidPointer(battleLogLabel)) {
+            try {
+                battleLogLabel->setText(battleLog);
+            } catch (const std::exception& e) {
+                std::cerr << "[ERROR] battleLogLabel->setText() exception in render: " << e.what() << std::endl;
+            } catch (...) {
+                std::cerr << "[ERROR] battleLogLabel->setText() unknown error in render" << std::endl;
+            }
+        } else {
+            std::cerr << "[ERROR] battleLogLabel has invalid pointer in render: " << (void*)battleLogLabel << std::endl;
+        }
     }
     
     // 初回の戦闘時のみ説明を開始（UI初期化後、住民戦以外）
@@ -861,12 +871,14 @@ void BattleState::render(Graphics& graphics) {
         int enemyY = enemyBaseY + (int)charState.enemyAttackOffsetY + (int)charState.enemyHitOffsetY;
         
         SDL_Texture* enemyTexture = nullptr;
-        if (enemy->isResident()) {
-            int textureIndex = enemy->getResidentTextureIndex();
-            std::string textureName = "resident_" + std::to_string(textureIndex + 1);
-            enemyTexture = graphics.getTexture(textureName);
-        } else {
-            enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+        if (enemy) {
+            if (enemy->isResident()) {
+                int textureIndex = enemy->getResidentTextureIndex();
+                std::string textureName = "resident_" + std::to_string(textureIndex + 1);
+                enemyTexture = graphics.getTexture(textureName);
+            } else {
+                enemyTexture = graphics.getTexture("enemy_" + enemy->getTypeName());
+            }
         }
         
         int enemyHeight = BattleConstants::BATTLE_CHARACTER_SIZE;
@@ -885,7 +897,7 @@ void BattleState::render(Graphics& graphics) {
         }
         
         // HP表示
-        if (battleUI) {
+        if (battleUI && enemy) {
             std::string enemyName = enemy->isResident() ? enemy->getName() : enemy->getTypeName();
             std::string residentBehaviorHint = enemy->isResident() ? getResidentBehaviorHint() : "";
             int hitCount = enemy->isResident() ? residentHitCount : 0;
@@ -930,6 +942,18 @@ void BattleState::render(Graphics& graphics) {
             return;
         }
         
+        // currentOptionsが空の場合は初期化（Windows特有の問題：render()がselectCommandForTurn()より先に呼ばれる場合がある）
+        if (currentOptions.empty()) {
+            if (enemy && enemy->isResident()) {
+                currentOptions.push_back("攻撃");
+                currentOptions.push_back("身を隠す");
+            } else if (enemy) {
+                currentOptions.push_back("攻撃");
+                currentOptions.push_back("防御");
+                currentOptions.push_back("呪文");
+            }
+        }
+        
         BattleUI::CommandSelectRenderParams params;
         params.currentSelectingTurn = currentSelectingTurn;
         params.commandTurnCount = battleLogic->getCommandTurnCount();
@@ -937,7 +961,7 @@ void BattleState::render(Graphics& graphics) {
         params.selectedOption = selectedOption;
         params.currentOptions = &currentOptions;
         // 住民戦の場合は住民の様子を渡す
-        if (enemy->isResident()) {
+        if (enemy && enemy->isResident()) {
             params.residentBehaviorHint = getResidentBehaviorHint();
             params.residentTurnCount = residentTurnCount;  // 住民戦の現在のターン数
             params.residentHitCount = residentHitCount;  // 住民戦で攻撃が成功した回数
@@ -950,13 +974,13 @@ void BattleState::render(Graphics& graphics) {
         try {
             battleUI->renderCommandSelectionUI(params);
         } catch (const std::exception& e) {
-            std::cerr << "renderCommandSelectionUIエラー: " << e.what() << std::endl;
+            std::cerr << "[ERROR] renderCommandSelectionUI exception: " << e.what() << std::endl;
         } catch (...) {
-            std::cerr << "renderCommandSelectionUIエラー: 不明なエラー" << std::endl;
+            std::cerr << "[ERROR] renderCommandSelectionUI unknown error" << std::endl;
         }
-        
         // 説明UIを表示（初回の戦闘時のみ）
         if (showGameExplanation && explanationMessageBoard && !explanationMessageBoard->getText().empty()) {
+            std::cerr << "[DEBUG] Drawing explanation UI" << std::endl;
             auto& config = UIConfig::UIConfigManager::getInstance();
             auto mbConfig = config.getMessageBoardConfig();
             
@@ -974,21 +998,59 @@ void BattleState::render(Graphics& graphics) {
         }
         
         // 古いUI要素を非表示にする（テキストを空にする）
+        // Windows特有の問題：ポインタが無効な場合があるため、有効性チェックを追加
         if (battleLogLabel) {
-            battleLogLabel->setText("");
+            if (!isValidPointer(battleLogLabel)) {
+                std::cerr << "[ERROR] battleLogLabel has invalid pointer: " << (void*)battleLogLabel << ", reinitializing UI" << std::endl;
+                setupUI(graphics);
+            } else {
+                try {
+                    battleLogLabel->setText("");
+                } catch (const std::exception& e) {
+                    std::cerr << "[ERROR] battleLogLabel->setText() exception: " << e.what() << std::endl;
+                    setupUI(graphics);
+                } catch (...) {
+                    std::cerr << "[ERROR] battleLogLabel->setText() unknown error" << std::endl;
+                    setupUI(graphics);
+                }
+            }
+        } else {
+            // battleLogLabelがnullptrの場合はsetupUI()を呼ぶ
+            setupUI(graphics);
         }
-        if (playerStatusLabel) {
-            playerStatusLabel->setText("");
+        
+        if (playerStatusLabel && isValidPointer(playerStatusLabel)) {
+            try {
+                playerStatusLabel->setText("");
+            } catch (...) {
+                setupUI(graphics);
+            }
         }
-        if (enemyStatusLabel) {
-            enemyStatusLabel->setText("");
+        if (enemyStatusLabel && isValidPointer(enemyStatusLabel)) {
+            try {
+                enemyStatusLabel->setText("");
+            } catch (...) {
+                setupUI(graphics);
+            }
         }
-        if (messageLabel) {
-            messageLabel->setText("");
+        if (messageLabel && isValidPointer(messageLabel)) {
+            try {
+                messageLabel->setText("");
+            } catch (...) {
+                setupUI(graphics);
+            }
         }
         
         // UIを描画（説明メッセージボードを含む）
-        ui.render(graphics);
+        try {
+            if (graphics.getFont("default") && battleLogLabel && isValidPointer(battleLogLabel)) {
+                ui.render(graphics);
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] ui.render exception: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[ERROR] ui.render unknown error" << std::endl;
+        }
         
         // 夜のタイマーUIを表示
         if (nightTimerActive) {
@@ -1598,6 +1660,13 @@ void BattleState::handleInput(const InputManager& input) {
 }
 
 void BattleState::setupUI(Graphics& graphics) {
+    // ラベルポインタを先にnullptrに設定してからclear()を呼ぶ（Windows特有の問題：clear()後に無効なポインタにアクセスするのを防ぐ）
+    battleLogLabel = nullptr;
+    playerStatusLabel = nullptr;
+    enemyStatusLabel = nullptr;
+    messageLabel = nullptr;
+    explanationMessageBoard = nullptr;
+    
     ui.clear();
     
     auto& config = UIConfig::UIConfigManager::getInstance();
@@ -1641,6 +1710,13 @@ void BattleState::setupUI(Graphics& graphics) {
     ui.addElement(std::move(explanationLabelPtr));
 }
 
+bool BattleState::isValidPointer(void* ptr) const {
+    if (!ptr) return false;
+    // 64bit Windowsでは、ユーザー空間アドレスは通常0x0000000000100000～0x00007FFFFFFFFFFFの範囲
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+    return addr >= 0x100000 && addr <= 0x7FFFFFFFFFFF;
+}
+
 void BattleState::updateStatus() {
     // if (playerStatusLabel) {
     //     std::ostringstream playerInfo;
@@ -1669,22 +1745,52 @@ void BattleState::updateStatus() {
 void BattleState::addBattleLog(const std::string& message) {
     battleLog = message;
     if (battleLogLabel) {
-        battleLogLabel->setText(battleLog);
+        if (!isValidPointer(battleLogLabel)) {
+            std::cerr << "[ERROR] battleLogLabel has invalid pointer in addBattleLog: " << (void*)battleLogLabel << std::endl;
+            return; // setupUI()は呼ばない（render()内で呼ばれる）
+        }
+        try {
+            battleLogLabel->setText(battleLog);
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] battleLogLabel->setText() exception in addBattleLog: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[ERROR] battleLogLabel->setText() unknown error in addBattleLog" << std::endl;
+        }
     }
 }
 
 void BattleState::showMessage(const std::string& message) {
     if (messageLabel) {
-        messageLabel->setText(message);
-        
-        // メッセージ表示時に効果音を再生
-        AudioManager::getInstance().playSound("decide", 0);
+        if (!isValidPointer(messageLabel)) {
+            std::cerr << "[ERROR] messageLabel has invalid pointer in showMessage: " << (void*)messageLabel << std::endl;
+            return; // setupUI()は呼ばない（render()内で呼ばれる）
+        }
+        try {
+            messageLabel->setText(message);
+            
+            // メッセージ表示時に効果音を再生
+            AudioManager::getInstance().playSound("decide", 0);
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] messageLabel->setText() exception in showMessage: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[ERROR] messageLabel->setText() unknown error in showMessage" << std::endl;
+        }
     }
 }
 
 void BattleState::hideMessage() {
     if (messageLabel) {
-        messageLabel->setText("");
+        if (!isValidPointer(messageLabel)) {
+            std::cerr << "[ERROR] messageLabel has invalid pointer in hideMessage: " << (void*)messageLabel << std::endl;
+            return; // setupUI()は呼ばない（render()内で呼ばれる）
+        }
+        try {
+            messageLabel->setText("");
+        } catch (const std::exception& e) {
+            std::cerr << "[ERROR] messageLabel->setText() exception in hideMessage: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[ERROR] messageLabel->setText() unknown error in hideMessage" << std::endl;
+        }
     }
 }
 
@@ -1695,6 +1801,14 @@ void BattleState::loadBattleImages() {
 SDL_Texture* BattleState::getBattleBackgroundTexture(Graphics& graphics) const {
     // 住民の場合は夜の背景、衛兵・王様の場合は城の背景、魔王の場合は魔王の背景、それ以外は通常の戦闘背景を使用
     SDL_Texture* bgTexture = nullptr;
+    if (!enemy) {
+        // enemyがnullptrの場合はデフォルトの背景を使用
+        bgTexture = graphics.getTexture("battle_bg");
+        if (!bgTexture) {
+            bgTexture = graphics.loadTexture("assets/textures/bg/battle_bg.png", "battle_bg");
+        }
+        return bgTexture;
+    }
     if (enemy->isResident()) {
         bgTexture = graphics.getTexture("night_bg");
         if (!bgTexture) {
@@ -2128,9 +2242,9 @@ void BattleState::checkBattleEnd() {
             
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
-            // 戦闘曲を停止してclear.oggを再生
+            // 戦闘曲を停止してclear.oggを再生（1回のみ）
             AudioManager::getInstance().stopMusic();
-            AudioManager::getInstance().playMusic("clear", -1);
+            AudioManager::getInstance().playMusic("clear", 0);
         } else if (enemy->isResident()) {
             // 住民との戦闘の場合、経験値・ゴールド・レベルアップをスキップ
             lastResult = BattleResult::PLAYER_VICTORY;
@@ -2203,9 +2317,9 @@ void BattleState::checkBattleEnd() {
             
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
-            // 戦闘曲を停止してclear.oggを再生
+            // 戦闘曲を停止してclear.oggを再生（1回のみ）
             AudioManager::getInstance().stopMusic();
-            AudioManager::getInstance().playMusic("clear", -1);
+            AudioManager::getInstance().playMusic("clear", 0);
         }
     } else if (currentPhase == BattlePhase::ENEMY_TURN_DISPLAY) {
         currentPhase = BattlePhase::PLAYER_TURN;
@@ -3002,6 +3116,17 @@ void BattleState::initializeCommandSelection() {
 void BattleState::selectCommandForTurn(int turnIndex) {
     currentOptions.clear();
     
+    // enemyがnullの場合は通常の戦闘コマンドを設定（Windows特有の問題：render()がselectCommandForTurn()より先に呼ばれる場合がある）
+    if (!enemy) {
+        currentOptions.push_back("攻撃");
+        currentOptions.push_back("防御");
+        currentOptions.push_back("呪文");
+        selectedOption = 0;
+        isShowingOptions = true;
+        animationController->resetCommandSelectAnimation();
+        return;
+    }
+    
     // 住民戦の場合は「攻撃」「身を隠す」のみ
     if (enemy->isResident()) {
         currentOptions.push_back("攻撃");
@@ -3188,7 +3313,7 @@ void BattleState::clearExplanationMessage() {
 
 void BattleState::renderRockPaperScissorsImage(Graphics& graphics) {
     // 住民戦ではない場合のみ表示
-    if (enemy->isResident()) {
+    if (!enemy || enemy->isResident()) {
         return;
     }
     
@@ -3203,15 +3328,37 @@ void BattleState::renderRockPaperScissorsImage(Graphics& graphics) {
         
         // 画像のサイズを取得
         int textureWidth, textureHeight;
-        SDL_QueryTexture(rpsTexture, nullptr, nullptr, &textureWidth, &textureHeight);
+        if (SDL_QueryTexture(rpsTexture, nullptr, nullptr, &textureWidth, &textureHeight) != 0) {
+            std::cerr << "警告: renderRockPaperScissorsImage: SDL_QueryTexture失敗: " << SDL_GetError() << std::endl;
+            return;
+        }
+        
+        // ゼロ除算を防ぐ
+        if (textureWidth <= 0 || textureHeight <= 0) {
+            std::cerr << "警告: renderRockPaperScissorsImage: 無効なテクスチャサイズ" << std::endl;
+            return;
+        }
         
         // JSONから設定を取得
         int displayWidth = battleConfig.rockPaperScissors.width;
         int displayHeight = static_cast<int>(textureHeight * (static_cast<float>(displayWidth) / textureWidth));
         
+        // 表示サイズが無効な場合はスキップ
+        if (displayWidth <= 0 || displayHeight <= 0) {
+            std::cerr << "警告: renderRockPaperScissorsImage: 無効な表示サイズ" << std::endl;
+            return;
+        }
+        
         // 位置を計算（calculatePositionを使用）
         int posX, posY;
-        config.calculatePosition(posX, posY, battleConfig.rockPaperScissors.position, screenWidth, screenHeight);
+        try {
+            config.calculatePosition(posX, posY, battleConfig.rockPaperScissors.position, screenWidth, screenHeight);
+        } catch (const std::exception& e) {
+            std::cerr << "警告: renderRockPaperScissorsImage: calculatePosition失敗: " << e.what() << std::endl;
+            // デフォルト位置を使用
+            posX = (screenWidth - displayWidth) / 2;
+            posY = 50; // 上部に配置
+        }
         
         // absoluteXが0の場合は中央に配置（後方互換性のため）
         if (battleConfig.rockPaperScissors.position.absoluteX == 0.0f && !battleConfig.rockPaperScissors.position.useRelative) {
@@ -4105,6 +4252,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                                 std::string damageMsg = player->getName() + "は" + std::to_string(damage) + "のダメージを受けた！";
                                 addBattleLog(damageMsg);
                             } else {
+                                // プレイヤーが攻撃する場合、専用技効果を適用
+                                std::cout << "[DEBUG] プレイヤー攻撃適用前: damage=" << damage << std::endl;
+                                damage = applyPlayerAttackSkillEffects(damage);
+                                std::cout << "[DEBUG] プレイヤー攻撃適用後: damage=" << damage << std::endl;
                                 enemy->takeDamage(damage);
                                 effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                                 
@@ -4310,6 +4461,10 @@ void BattleState::updateJudgeResultPhase(float deltaTime, bool isDesperateMode) 
                             float shakeDuration = isDesperateMode ? 0.5f : 0.3f;
                             effectManager->triggerScreenShake(intensity, shakeDuration, false, false);
                         } else {
+                            // プレイヤーが攻撃する場合、専用技効果を適用
+                            std::cout << "[DEBUG] プレイヤー攻撃適用前(引き分け): damage=" << damage << std::endl;
+                            damage = applyPlayerAttackSkillEffects(damage);
+                            std::cout << "[DEBUG] プレイヤー攻撃適用後(引き分け): damage=" << damage << std::endl;
                             enemy->takeDamage(damage);
                             effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                                 
@@ -4503,6 +4658,7 @@ int BattleState::applyEnemySpecialSkill(EnemyType enemyType, int baseDamage, std
             skillEffects.playerAttackReduction = 0.5f;
             effectMessage = "次の攻撃50%軽減";
             addBattleLog("粘液が体を覆った！次の攻撃が弱くなる！");
+            std::cout << "[DEBUG] SLIME専用技発動: playerAttackReduction=" << skillEffects.playerAttackReduction << std::endl;
             break;
             
         case EnemyType::GOBLIN:
@@ -4840,7 +4996,10 @@ int BattleState::applyPlayerAttackSkillEffects(int baseDamage) {
     
     // スライムの攻撃ダメージ軽減
     if (skillEffects.playerAttackReduction > 0.0f) {
+        std::cout << "[DEBUG] applyPlayerAttackSkillEffects: playerAttackReduction=" << skillEffects.playerAttackReduction 
+                  << ", baseDamage=" << baseDamage << std::endl;
         finalDamage = static_cast<int>(finalDamage * (1.0f - skillEffects.playerAttackReduction));
+        std::cout << "[DEBUG] applyPlayerAttackSkillEffects: finalDamage=" << finalDamage << std::endl;
         skillEffects.playerAttackReduction = 0.0f; // 1回のみ
     }
     
@@ -5042,6 +5201,10 @@ void BattleState::updateLastChanceJudgeResultPhase(float deltaTime) {
                             AudioManager::getInstance().playSound("attack", 0);
                         }
                         
+                        // プレイヤーが攻撃する場合、専用技効果を適用
+                        std::cout << "[DEBUG] プレイヤー攻撃適用前(終焉): damage=" << damage << std::endl;
+                        damage = applyPlayerAttackSkillEffects(damage);
+                        std::cout << "[DEBUG] プレイヤー攻撃適用後(終焉): damage=" << damage << std::endl;
                         enemy->takeDamage(damage);
                         effectManager->triggerHitEffect(damage, enemyX, enemyY, false);
                         

@@ -120,17 +120,17 @@ std::vector<BattleLogic::DamageInfo> BattleLogic::prepareDamageList(float damage
         for (int i = 0; i < commandTurnCount; i++) {
             if (judgeRound(playerCommands[i], enemyCommands[i]) == BattleConstants::JUDGE_RESULT_ENEMY_WIN) {
                 int damage = calculateEnemyAttackDamage();
-                bool isSpecialSkill = (skillDis(gen) < 50); // 50%の確率で特殊技
                 std::string skillName = "";
+                bool isSpecialSkill = false; // 専用技を無効化
                 
-                if (isSpecialSkill) {
-                    // モンスタータイプに応じた特殊技名を取得
-                    skillName = getEnemySpecialSkillName(enemy->getType());
-                    // 特殊技名が取得できた場合のみ特殊技として扱う
-                    if (skillName.empty()) {
-                        isSpecialSkill = false;
-                    }
-                }
+                // if (isSpecialSkill) {
+                //     // モンスタータイプに応じた特殊技名を取得
+                //     skillName = getEnemySpecialSkillName(enemy->getType());
+                //     // 特殊技名が取得できた場合のみ特殊技として扱う
+                //     if (skillName.empty()) {
+                //         isSpecialSkill = false;
+                //     }
+                // }
                 
                 damages.push_back({damage, true, false, 0, 0, -1, false, false, isSpecialSkill, skillName, ""}); // true = プレイヤーがダメージを受ける
             }
