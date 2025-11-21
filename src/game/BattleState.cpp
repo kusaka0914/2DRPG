@@ -2242,9 +2242,9 @@ void BattleState::checkBattleEnd() {
             
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
-            // 戦闘曲を停止してclear.oggを再生
+            // 戦闘曲を停止してclear.oggを再生（1回のみ）
             AudioManager::getInstance().stopMusic();
-            AudioManager::getInstance().playMusic("clear", -1);
+            AudioManager::getInstance().playMusic("clear", 0);
         } else if (enemy->isResident()) {
             // 住民との戦闘の場合、経験値・ゴールド・レベルアップをスキップ
             lastResult = BattleResult::PLAYER_VICTORY;
@@ -2317,9 +2317,9 @@ void BattleState::checkBattleEnd() {
             
             currentPhase = BattlePhase::VICTORY_DISPLAY;
             phaseTimer = 0;
-            // 戦闘曲を停止してclear.oggを再生
+            // 戦闘曲を停止してclear.oggを再生（1回のみ）
             AudioManager::getInstance().stopMusic();
-            AudioManager::getInstance().playMusic("clear", -1);
+            AudioManager::getInstance().playMusic("clear", 0);
         }
     } else if (currentPhase == BattlePhase::ENEMY_TURN_DISPLAY) {
         currentPhase = BattlePhase::PLAYER_TURN;

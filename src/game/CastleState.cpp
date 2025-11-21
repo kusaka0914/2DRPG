@@ -224,12 +224,8 @@ void CastleState::render(Graphics& graphics) {
         if (fromNightState) {
             if (isNearObject(throneX, throneY) && !kingDefeated) {
                 canInteract = true;
+            }
             // 兵隊は削除済みなのでインタラクションをスキップ
-            // } else if (isNearObject(guardLeftX, guardLeftY) && !guardLeftDefeated) {
-            //     canInteract = true;
-            // } else if (isNearObject(guardRightX, guardRightY) && !guardRightDefeated) {
-            //     canInteract = true;
-            // }
         }
         
         if (canInteract) {
@@ -519,9 +515,14 @@ void CastleState::nextDialogue() {
         
         clearMessage();
         
-        // fromNightStateの場合は、魔王の城への遷移を開始しない
+        // fromNightStateの場合は、会話終了後に自動的に王様との戦闘を開始
+        if (fromNightState) {
+            attackKing();
+            return;
+        }
+        
         // 通常の初回訪問の場合のみ、魔王の城に遷移
-        if (!fromNightState && s_castleFirstTime) {
+        if (s_castleFirstTime) {
             shouldGoToDemonCastle = true;
             // フェードアウト開始（完了時に状態遷移）
             if (!isFading()) {

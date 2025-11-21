@@ -376,6 +376,7 @@ void SDL2Game::initializeGame() {
             player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
             player->hasSeenResidentBattleExplanation = true; // 住民戦の説明も見たことにする
             player->hasSeenCastleStory = false; // 城の会話はまだ見ていない（fromNightStateなので表示される）
+            player->hasSeenDemonCastleStory = true; // 魔王の城には1度行ったことがあることにする
             
             // 信頼度を適切に設定（レベル100なので高い信頼度）
             player->setKingTrust(30); // 住民を倒したので王様からの信頼度は低い
