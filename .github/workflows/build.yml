@@ -1,0 +1,152 @@
+name: Build Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install vcpkg
+        shell: pwsh
+        run: |
+          $vcpkgUrl = "https://github.com/microsoft/vcpkg/archive/refs/heads/master.zip"
+          $vcpkgPath = "$env:RUNNER_TEMP\vcpkg"
+          New-Item -ItemType Directory -Force -Path $vcpkgPath | Out-Null
+          Invoke-WebRequest -Uri $vcpkgUrl -OutFile "$vcpkgPath\vcpkg.zip"
+          Expand-Archive -Path "$vcpkgPath\vcpkg.zip" -DestinationPath $vcpkgPath -Force
+          $vcpkgRoot = Get-ChildItem -Path $vcpkgPath -Directory | Select-Object -First 1
+          & "$vcpkgRoot\bootstrap-vcpkg.bat"
+          echo "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "$vcpkgRoot" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          vcpkg install sdl2:x64-windows sdl2-image:x64-windows sdl2-ttf:x64-windows sdl2-mixer:x64-windows nlohmann-json:x64-windows --triplet x64-windows
+
+      - name: Configure (CMake - Release x64)
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --target FallenHeroAndTheDoomedCapital
+
+      - name: Gather files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\FallenHeroAndTheDoomedCapital | Out-Null
+          
+          # 実行ファイルのパスを確認（Visual Studioジェネレーターの出力パス）
+          $exePath = "build\Release\FallenHeroAndTheDoomedCapital.exe"
+          if (-not (Test-Path $exePath)) {
+            # 代替パスを試す
+            $exePath = "build\x64\Release\FallenHeroAndTheDoomedCapital.exe"
+            if (-not (Test-Path $exePath)) {
+              Write-Error "実行ファイルが見つかりません: build\Release\FallenHeroAndTheDoomedCapital.exe または build\x64\Release\FallenHeroAndTheDoomedCapital.exe"
+              exit 1
+            }
+          }
+          
+          Copy-Item $exePath dist\FallenHeroAndTheDoomedCapital\FallenHeroAndTheDoomedCapital.exe
+          if (Test-Path assets) { Copy-Item assets dist\FallenHeroAndTheDoomedCapital\assets -Recurse }
+          
+          # vcpkgから必要なDLLをコピー
+          $vcpkgInstalled = "$env:VCPKG_ROOT\installed\x64-windows\bin"
+          if (Test-Path $vcpkgInstalled) {
+            Copy-Item "$vcpkgInstalled\*.dll" dist\FallenHeroAndTheDoomedCapital\ -ErrorAction SilentlyContinue
+          }
+
+          # 起動BATを生成
+          @'
+          @echo off
+          cd /d "%~dp0"
+          FallenHeroAndTheDoomedCapital.exe
+          pause
+          '@ | Out-File -Encoding ascii dist\FallenHeroAndTheDoomedCapital\start_game.bat
+
+          Compress-Archive -Path dist\FallenHeroAndTheDoomedCapital -DestinationPath FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install cmake sdl2 sdl2_image sdl2_ttf sdl2_mixer nlohmann-json
+
+      - name: Configure (CMake - Release)
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build
+
+      - name: Gather files
+        run: |
+          mkdir -p dist/FallenHeroAndTheDoomedCapital
+          cp build/FallenHeroAndTheDoomedCapital dist/FallenHeroAndTheDoomedCapital/
+          if [ -d "assets" ]; then cp -r assets dist/FallenHeroAndTheDoomedCapital/assets; fi
+          
+          # 起動スクリプトを生成
+          cat > dist/FallenHeroAndTheDoomedCapital/start_game.sh << 'EOF'
+          #!/bin/bash
+          cd "$(dirname "$0")"
+          ./FallenHeroAndTheDoomedCapital
+          EOF
+          chmod +x dist/FallenHeroAndTheDoomedCapital/start_game.sh
+
+          # zipファイルを作成
+          cd dist
+          zip -r ../FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip FallenHeroAndTheDoomedCapital
+          cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip
+          path: FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip
+
+  create-release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-zip/FallenHeroAndTheDoomedCapital_win_${{ github.ref_name }}.zip
+            artifacts/macos-zip/FallenHeroAndTheDoomedCapital_mac_${{ github.ref_name }}.zip
+          generate_release_notes: true
+

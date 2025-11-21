@@ -453,12 +453,10 @@ void NightState::render(Graphics& graphics) {
             }
             
             // 城の近くにいて、入場可能な場合
-            bool nearCastle = false;
             if (!canInteract && canEnterCastle) {
                 int distanceToCastle = std::max(abs(playerX - castleX), abs(playerY - castleY));
                 if (distanceToCastle <= 2) {
                     canInteract = true;
-                    nearCastle = true;
                 }
             }
             
@@ -503,66 +501,6 @@ void NightState::render(Graphics& graphics) {
                 } else {
                     // フォールバック: drawTextを使用
                     graphics.drawText("ENTER", textX, textY, "default", textColor);
-                }
-            }
-            
-            // 城に入れる時、城の周りにも「ENTER」を表示
-            if (canEnterCastle && !nearCastle) {
-                // 城の周り（距離2以内）の位置に「ENTER」を表示
-                for (int dy = -2; dy <= 2; dy++) {
-                    for (int dx = -2; dx <= 2; dx++) {
-                        int checkX = castleX + dx;
-                        int checkY = castleY + dy;
-                        int distanceToCastle = std::max(abs(dx), abs(dy));
-                        
-                        // 距離2以内で、プレイヤーがその位置にいない場合
-                        if (distanceToCastle <= 2 && distanceToCastle > 0 && 
-                            (checkX != playerX || checkY != playerY) &&
-                            isValidPosition(checkX, checkY)) {
-                            
-                            int textX = checkX * TILE_SIZE + TILE_SIZE / 2;
-                            int textY = checkY * TILE_SIZE + TILE_SIZE + 5;
-                            
-                            // テキストを中央揃えにするため、テキストの幅を取得して調整
-                            SDL_Color textColor = {255, 255, 255, 255};
-                            SDL_Texture* enterTexture = graphics.createTextTexture("ENTER", "default", textColor);
-                            if (enterTexture) {
-                                int textWidth, textHeight;
-                                SDL_QueryTexture(enterTexture, nullptr, nullptr, &textWidth, &textHeight);
-                                
-                                // テキストサイズを小さくする（80%に縮小）
-                                const float SCALE = 0.8f;
-                                int scaledWidth = static_cast<int>(textWidth * SCALE);
-                                int scaledHeight = static_cast<int>(textHeight * SCALE);
-                                
-                                // パディングを追加
-                                const int PADDING = 4;
-                                int bgWidth = scaledWidth + PADDING * 2;
-                                int bgHeight = scaledHeight + PADDING * 2;
-                                
-                                // 背景の位置を計算（中央揃え）
-                                int bgX = textX - bgWidth / 2;
-                                int bgY = textY;
-                                
-                                // 黒背景を描画
-                                graphics.setDrawColor(0, 0, 0, 200); // 半透明の黒
-                                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, true);
-                                
-                                // 白い枠線を描画
-                                graphics.setDrawColor(255, 255, 255, 255); // 白
-                                graphics.drawRect(bgX, bgY, bgWidth, bgHeight, false);
-                                
-                                // テキストを小さく描画（中央揃え）
-                                int drawX = textX - scaledWidth / 2;
-                                int drawY = textY + PADDING;
-                                graphics.drawTexture(enterTexture, drawX, drawY, scaledWidth, scaledHeight);
-                                SDL_DestroyTexture(enterTexture);
-                            } else {
-                                // フォールバック: drawTextを使用
-                                graphics.drawText("ENTER", textX, textY, "default", textColor);
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -624,7 +562,7 @@ void NightState::handleInput(const InputManager& input) {
                 // 全ての衛兵を倒した場合は、次のメッセージを表示
                 if (showAllGuardsKilledMessage) {
                     showAllGuardsKilledMessage = false;
-                    showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。城の近くに行き、Enterで城に入れます。");
+                    showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。\n城の近くに行き、Enterで城に入れます。");
                     return;
                 }
                 return;
@@ -834,7 +772,7 @@ void NightState::attackResident(int x, int y) {
         player->setKingTrust(0); // 王様からの信頼度を0に設定
         
         if (stateManager) {
-            stateManager->changeState(std::make_unique<GameOverState>(player, "衛兵に見つかりました。王様からの信頼度が0になりました。"));
+            stateManager->changeState(std::make_unique<GameOverState>(player, "衛兵に見つかりました。"));
         }
         return;
     }
@@ -1315,7 +1253,7 @@ void NightState::checkGameProgress() {
     if (allResidentsKilled && !allGuardsKilled && guards.empty()) {
         allGuardsKilled = true;
         canEnterCastle = true;
-        showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。城の近くに行き、Enterで城に入れます。");
+        showMessage("衛兵も全て倒せたようですね。それでは最後は城に入って王様を倒しましょう。\n城の近くに行き、Enterで城に入れます。");
     }
 }
 
@@ -1331,7 +1269,7 @@ void NightState::checkGuardInteraction() {
             currentGuardY = guard.second;
             
             // メッセージを表示
-            showMessage("衛兵：「勇者！やはりお前だったのか！俺はお前が怪しいと思っていたんだ！これ以上は好きにはさせない！」");
+            showMessage("衛兵：「勇者！やはりお前だったのか！俺はお前が怪しいと思っていたんだ！\nこれ以上は好きにはさせない！」");
             showGuardMessage = true;
             return;
         }

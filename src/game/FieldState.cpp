@@ -136,6 +136,15 @@ void FieldState::enter() {
     nightTimerActive = TownState::s_nightTimerActive;
     nightTimer = TownState::s_nightTimer;
     
+    // ゲーム起動時にnightTimerが0またはnightTimerActiveがfalseの場合、確実に起動時にnightTimerを1に、nightTimerActiveをtrueにする
+    if (nightTimer <= 0.0f || !nightTimerActive) {
+        nightTimer = 1.0f;
+        nightTimerActive = true;
+        TownState::s_nightTimer = 1.0f;
+        TownState::s_nightTimerActive = true;
+        std::cout << "FieldState: 起動時にnightTimerを1、nightTimerActiveをtrueに設定しました" << std::endl;
+    }
+    
     // 目標レベルが設定されていない場合は初期化（初回フィールドに入った場合など）
     if (TownState::s_targetLevel == 0) {
         TownState::s_targetLevel = 25 * (TownState::s_nightCount + 1);
@@ -906,7 +915,7 @@ void FieldState::setupGameExplanation(bool isFirstVictory) {
     
     if (isFirstVictory) {
         // 初勝利後の説明
-        gameExplanationTexts.push_back("初勝利おめでとうございます！これでレベル2になりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
+        gameExplanationTexts.push_back("初勝利おめでとうございます！これでが上がりましたね！\nちなみにレベルが高いモンスターを倒した方が得られる経験値が多いんですよ！");
         gameExplanationTexts.push_back("目標レベルは25ですのでどんどんモンスターを倒してレベルを上げてください");
         gameExplanationTexts.push_back("ここからは夜の街までのタイマーが起動します。\nタイマーが0になるまでに目標レベルに達してください！");
         gameExplanationTexts.push_back("ではまた夜の街でお会いしましょう！頑張って！");

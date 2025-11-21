@@ -109,7 +109,7 @@ void EndingState::render(Graphics& graphics) {
                 config.calculatePosition(theEndX, theEndY, endingConfig.theEnd.position, graphics.getScreenWidth(), graphics.getScreenHeight());
                 config.calculatePosition(returnX, returnY, endingConfig.returnToMenu.position, graphics.getScreenWidth(), graphics.getScreenHeight());
                 graphics.drawText("THE END", theEndX, theEndY, "default", endingConfig.theEnd.color);
-                graphics.drawText("Enterでメインメニューに戻る", returnX, returnY, "default", endingConfig.returnToMenu.color);
+                graphics.drawText("タイトルに戻る: ENTER", returnX, returnY, "default", endingConfig.returnToMenu.color);
             }
             break;
     }
@@ -153,12 +153,12 @@ void EndingState::setupUI() {
 
 void EndingState::setupEndingMessages() {
     endingMessages = {
-        "魔王を倒した勇者" + player->getName() + "は...",
+        "魔王を倒した勇者は・・・",
         "世界の支配者となった。",
         "かつての街は廃墟と化し、",
         "人々は新たな支配者の下で暮らすこととなった。",
-        "しかし、これは本当に正しい選択だったのだろうか...",
-        "勇者は世界を救ったのか、それとも...",
+        "しかし、これは本当に正しい選択だったのだろうか・・・",
+        "勇者は魔王から世界を救ったのか、それとも・・・",
         "新たな魔王となったのか。"
     };
 }
@@ -176,15 +176,12 @@ void EndingState::setupStaffRoll() {
         "GRAPHICS",
         "TAKUMI KUSAKA",
         "",
-        "MUSIC & SOUND",
-        "TAKUMI KUSAKA",
-        "",
         "SPECIAL THANKS",
         "PLAYERS",
         "",
         "THANK YOU FOR PLAYING",
         "",
-        "勇者だって強者に逆らえない。",
+        "堕天勇者と終焉の王都 -魔王に捧ぐ反逆の剣-",
         "THE END"
     };
 }

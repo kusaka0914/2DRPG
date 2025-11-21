@@ -9,7 +9,7 @@ bin/
 
 # Executables
 rpg_game_2d
-DragonQuestRPG
+FallenHeroAndTheDoomedCapital
 *.exe
 
 # Emscripten build files
@@ -19,10 +19,10 @@ DragonQuestRPG
 *.data
 
 # Web build files
-web/DragonQuestRPG_Web.js
-web/DragonQuestRPG_Web.wasm
-web/DragonQuestRPG_Web.html
-web/DragonQuestRPG_Web.data
+web/FallenHeroAndTheDoomedCapital_Web.js
+web/FallenHeroAndTheDoomedCapital_Web.wasm
+web/FallenHeroAndTheDoomedCapital_Web.html
+web/FallenHeroAndTheDoomedCapital_Web.data
 web/assets/
 
 # Debug files (macOS)
@@ -124,3 +124,4 @@ jspm_packages/
 
 SlimesSkyTravel/
 cursor/
+assets/saves/

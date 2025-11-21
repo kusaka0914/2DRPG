@@ -14,7 +14,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 13;
             baseDefense = 4;
             goldReward = 5;
-            expReward = 30;
+            expReward = 60;
             break;
             
         case EnemyType::GOBLIN:
@@ -27,7 +27,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 26;
             baseDefense = 6;
             goldReward = 8;
-            expReward = 50;
+            expReward = 100;
             break;
             
         case EnemyType::ORC:
@@ -40,7 +40,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 42;
             baseDefense = 13;
             goldReward = 15;
-            expReward = 100;
+            expReward = 200;
             break;
             
         case EnemyType::DRAGON:
@@ -53,7 +53,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 58;
             baseDefense = 18;
             goldReward = 50;
-            expReward = 150;
+            expReward = 300;
             break;
             
         case EnemyType::SKELETON:
@@ -66,7 +66,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 74;
             baseDefense = 23;
             goldReward = 80;
-            expReward = 200;
+            expReward = 400;
             break;
             
         case EnemyType::GHOST:
@@ -79,7 +79,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 90;
             baseDefense = 28;
             goldReward = 120;
-            expReward = 250;
+            expReward = 500;
             break;
             
         case EnemyType::VAMPIRE:
@@ -92,7 +92,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 106;
             baseDefense = 33;
             goldReward = 200;
-            expReward = 300;
+            expReward = 600;
             break;
             
         case EnemyType::DEMON_SOLDIER:
@@ -105,7 +105,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 122;
             baseDefense = 38;
             goldReward = 300;
-            expReward = 350;
+            expReward = 700;
             break;
             
         case EnemyType::WEREWOLF:
@@ -118,7 +118,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 138;
             baseDefense = 43;
             goldReward = 400;
-            expReward = 400;
+            expReward = 800;
             break;
             
         case EnemyType::MINOTAUR:
@@ -131,7 +131,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 154;
             baseDefense = 48;
             goldReward = 500;
-            expReward = 450;
+            expReward = 900;
             break;
             
         case EnemyType::CYCLOPS:
@@ -144,7 +144,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 170;
             baseDefense = 53;
             goldReward = 600;
-            expReward = 500;
+            expReward = 1000;
             break;
             
         case EnemyType::GARGOYLE:
@@ -157,7 +157,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 186;
             baseDefense = 58;
             goldReward = 650;
-            expReward = 550;
+            expReward = 1100;
             break;
             
         case EnemyType::PHANTOM:
@@ -170,7 +170,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 202;
             baseDefense = 63;
             goldReward = 800;
-            expReward = 600;
+            expReward = 1200;
             break;
             
         case EnemyType::DARK_KNIGHT:
@@ -183,7 +183,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 218;
             baseDefense = 68;
             goldReward = 1000;
-            expReward = 650;
+            expReward = 1300;
             break;
             
         case EnemyType::ICE_GIANT:
@@ -196,7 +196,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 234;
             baseDefense = 73;
             goldReward = 1200;
-            expReward = 700;
+            expReward = 1400;
             break;
             
         case EnemyType::FIRE_DEMON:
@@ -209,7 +209,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 250;
             baseDefense = 78;
             goldReward = 1400;
-            expReward = 750;
+            expReward = 1500;
             break;
             
         case EnemyType::SHADOW_LORD:
@@ -222,7 +222,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 266;
             baseDefense = 83;
             goldReward = 1600;
-            expReward = 800;
+            expReward = 1600;
             break;
             
         case EnemyType::ANCIENT_DRAGON:
@@ -235,7 +235,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 282;
             baseDefense = 88;
             goldReward = 2000;
-            expReward = 850;
+            expReward = 1700;
             break;
             
         case EnemyType::CHAOS_BEAST:
@@ -248,7 +248,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 298;
             baseDefense = 93;
             goldReward = 2500;
-            expReward = 900;
+            expReward = 1800;
             break;
             
         case EnemyType::ELDER_GOD:
@@ -261,7 +261,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 314;
             baseDefense = 98;
             goldReward = 3000;
-            expReward = 950;
+            expReward = 1900;
             break;
             
         case EnemyType::DEMON_LORD:
@@ -287,7 +287,7 @@ Enemy::Enemy(EnemyType type) : Character("", 0, 0, 0, 0, 1), type(type), canCast
             baseAttack = 330;
             baseDefense = 110;
             goldReward = 5000;
-            expReward = 1000;
+            expReward = 0;
             break;
             
         case EnemyType::KING:

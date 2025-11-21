@@ -183,6 +183,7 @@ private:
     float introScale;                  /**< @brief 敵出現演出のスケール（0.0から1.0へ） */
     float introTextScale;              /**< @brief テキスト出現演出のスケール（0.0から1.0へ） */
     float introTimer;                  /**< @brief INTROフェーズのタイマー（秒） */
+    float lastIntroTimer;              /**< @brief 前回のINTROタイマー値（intro.ogg再生判定用、-1.0fで未再生状態） */
 
 public:
     BattleState(std::shared_ptr<Player> player, std::unique_ptr<Enemy> enemy);

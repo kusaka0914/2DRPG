@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
-project(DragonQuestRPG VERSION 1.0.0 LANGUAGES CXX)
+project(FallenHeroAndTheDoomedCapital VERSION 1.0.0 LANGUAGES CXX)
 
 # C++標準を設定
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # コンパイラフラグ
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+if(MSVC)
+    # MSVC用のフラグ
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /utf-8")
+else()
+    # GCC/Clang用のフラグ
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+endif()
 
 # ビルドタイプの設定
 if(NOT CMAKE_BUILD_TYPE)
@@ -14,11 +20,48 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # SDL2の検索
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SDL2 REQUIRED sdl2)
-pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
-pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
-pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
+if(UNIX AND NOT APPLE)
+    # Linux: PkgConfigを使用
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+    pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
+    pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
+elseif(APPLE)
+    # macOS: PkgConfigを使用
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+    pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
+    pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
+else()
+    # Windows: find_packageを使用（vcpkg経由）
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_image REQUIRED)
+    find_package(SDL2_ttf REQUIRED)
+    find_package(SDL2_mixer REQUIRED)
+    
+    # Windows用の変数設定
+    set(SDL2_INCLUDE_DIRS ${SDL2_INCLUDE_DIR})
+    set(SDL2_IMAGE_INCLUDE_DIRS ${SDL2_image_INCLUDE_DIR})
+    set(SDL2_TTF_INCLUDE_DIRS ${SDL2_ttf_INCLUDE_DIR})
+    set(SDL2_MIXER_INCLUDE_DIRS ${SDL2_mixer_INCLUDE_DIR})
+    
+    set(SDL2_LIBRARY_DIRS ${SDL2_LIB_DIR})
+    set(SDL2_IMAGE_LIBRARY_DIRS ${SDL2_image_LIB_DIR})
+    set(SDL2_TTF_LIBRARY_DIRS ${SDL2_ttf_LIB_DIR})
+    set(SDL2_MIXER_LIBRARY_DIRS ${SDL2_mixer_LIB_DIR})
+    
+    set(SDL2_LIBRARIES SDL2::SDL2main SDL2::SDL2)
+    set(SDL2_IMAGE_LIBRARIES SDL2_image::SDL2_image)
+    set(SDL2_TTF_LIBRARIES SDL2_ttf::SDL2_ttf)
+    set(SDL2_MIXER_LIBRARIES SDL2_mixer::SDL2_mixer)
+    
+    set(SDL2_CFLAGS_OTHER "")
+    set(SDL2_IMAGE_CFLAGS_OTHER "")
+    set(SDL2_TTF_CFLAGS_OTHER "")
+    set(SDL2_MIXER_CFLAGS_OTHER "")
+endif()
 
 # JSON library (nlohmann/json)
 find_package(nlohmann_json REQUIRED)
@@ -152,4 +195,8 @@ install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
 
-# assets�
+# assetsディレクトリをビルドディレクトリにコピー（開発用）
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}
+    FILES_MATCHING PATTERN "*.png" PATTERN "*.ttf" PATTERN "*.md" PATTERN "*.json" PATTERN "*.ogg"
+)
+

@@ -105,4 +105,74 @@ void AudioManager::stopMusic() {
     }
 }
 
-void Audi
+void AudioManager::pauseMusic() {
+    if (isInitialized) {
+        Mix_PauseMusic();
+    }
+}
+
+void AudioManager::resumeMusic() {
+    if (isInitialized) {
+        Mix_ResumeMusic();
+    }
+}
+
+void AudioManager::setMusicVolume(int volume) {
+    if (isInitialized) {
+        Mix_VolumeMusic(volume);
+    }
+}
+
+bool AudioManager::isMusicPlaying() const {
+    if (!isInitialized) {
+        return false;
+    }
+    return Mix_PlayingMusic() == 1;
+}
+
+bool AudioManager::loadSound(const std::string& filePath, const std::string& name) {
+    if (!isInitialized) {
+        std::cerr << "AudioManagerが初期化されていません" << std::endl;
+        return false;
+    }
+    
+    // 既に読み込まれている場合は解放
+    if (soundMap.find(name) != soundMap.end()) {
+        Mix_FreeChunk(soundMap[name]);
+    }
+    
+    Mix_Chunk* chunk = Mix_LoadWAV(filePath.c_str());
+    if (!chunk) {
+        std::cerr << "効果音読み込みエラー (" << filePath << "): " << Mix_GetError() << std::endl;
+        return false;
+    }
+    
+    soundMap[name] = chunk;
+    return true;
+}
+
+bool AudioManager::playSound(const std::string& name, int loops, int channel) {
+    if (!isInitialized) {
+        std::cerr << "AudioManagerが初期化されていません" << std::endl;
+        return false;
+    }
+    
+    if (soundMap.find(name) == soundMap.end()) {
+        std::cerr << "効果音が見つかりません: " << name << std::endl;
+        return false;
+    }
+    
+    if (Mix_PlayChannel(channel, soundMap[name], loops) == -1) {
+        std::cerr << "効果音再生エラー: " << Mix_GetError() << std::endl;
+        return false;
+    }
+    
+    return true;
+}
+
+void AudioManager::setSoundVolume(int volume) {
+    if (isInitialized) {
+        Mix_Volume(-1, volume);
+    }
+}
+

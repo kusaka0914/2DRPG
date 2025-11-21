@@ -148,22 +148,32 @@ namespace UIConfig {
                 float offsetY = -100.0f;   // Yオフセット（centerYからの相対位置）
                 int baseWidth = 400;      // ベース幅
                 int baseHeight = 100;     // ベース高さ
-                SDL_Color victoryColor = {255, 215, 0, 255};      // 勝利時の色（金色）
-                SDL_Color defeatColor = {255, 0, 0, 255};         // 敗北時の色（赤色）
-                SDL_Color drawColor = {200, 200, 200, 255};       // 引き分け時の色（グレー）
-                SDL_Color desperateVictoryColor = {255, 215, 0, 255};  // 一発逆転成功時の色
-                SDL_Color desperateDefeatColor = {255, 0, 0, 255};     // 大敗北時の色
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 勝利時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 215, 0, 255};  // 勝利時の背景色（金色）
+                } victory;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 敗北時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 0, 0, 255};    // 敗北時の背景色（赤色）
+                } defeat;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 引き分け時のテキスト色（白色）
+                    SDL_Color backgroundColor = {200, 200, 200, 255}; // 引き分け時の背景色（グレー）
+                } draw;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 一発逆転成功時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 215, 0, 255};  // 一発逆転成功時の背景色（金色）
+                } desperateVictory;
+                
+                struct {
+                    SDL_Color textColor = {255, 255, 255, 255};      // 大敗北時のテキスト色（白色）
+                    SDL_Color backgroundColor = {255, 0, 0, 255};   // 大敗北時の背景色（赤色）
+                } desperateDefeat;
             } resultText;
-            
-            // 3連勝テキスト
-            struct {
-                UIPosition position;      // 位置（centerYからの相対位置）
-                float offsetY = -150.0f;  // Yオフセット（centerYからの相対位置）
-                int baseWidth = 300;      // ベース幅
-                int baseHeight = 80;      // ベース高さ
-                SDL_Color color = {255, 215, 0, 255};  // 色（金色）
-                std::string format = "3連勝！ダメージ{multiplier}倍ボーナス！";  // テキストフォーマット（{multiplier}が置換される）
-            } threeWinStreak;
             
             // ダメージボーナステキスト
             struct {
@@ -212,6 +222,14 @@ namespace UIConfig {
                 std::string defaultSpellFormat = "{playerName}が呪文発動！";  // デフォルト呪文のフォーマット
                 std::string defaultAttackFormat = "{playerName}の攻撃！";  // デフォルト攻撃のフォーマット
             } attackText;
+            
+            // 特殊技の効果メッセージテキスト（「（〜効果）」など）
+            struct {
+                UIPosition position;      // 位置（特殊技名の下からの相対位置）
+                float offsetY = 0.0f;     // Yオフセット（特殊技名の下からの相対位置、デフォルトは0でattackText.padding分の間隔）
+                SDL_Color color = {255, 255, 255, 255};  // 色（白色）
+                int padding = 8;           // 背景のパディング
+            } effectMessageText;
         } winLossUI;
         
         // コマンド選択ヒントテキストの設定
@@ -231,17 +249,20 @@ namespace UIConfig {
             
             struct {
                 std::string text = "勝ち！";  // 勝利時のテキスト
-                SDL_Color color = {255, 215, 0, 255};  // 勝利時の色（金色）
+                SDL_Color textColor = {255, 255, 255, 255};  // 勝利時のテキスト色（白色）
+                SDL_Color backgroundColor = {255, 215, 0, 255};  // 勝利時の背景色（金色）
             } win;
             
             struct {
                 std::string text = "負け...";  // 敗北時のテキスト
-                SDL_Color color = {255, 0, 0, 255};  // 敗北時の色（赤色）
+                SDL_Color textColor = {255, 255, 255, 255};  // 敗北時のテキスト色（白色）
+                SDL_Color backgroundColor = {255, 0, 0, 255};  // 敗北時の背景色（赤色）
             } lose;
             
             struct {
                 std::string text = "引き分け";  // 引き分け時のテキスト
-                SDL_Color color = {200, 200, 200, 255};  // 引き分け時の色（グレー）
+                SDL_Color textColor = {255, 255, 255, 255};  // 引き分け時のテキスト色（白色）
+                SDL_Color backgroundColor = {200, 200, 200, 255};  // 引き分け時の背景色（グレー）
             } draw;
             
             int baseWidth = 200;      // ベース幅
@@ -249,6 +270,29 @@ namespace UIConfig {
             int backgroundPadding = 20;  // 背景のパディング
             SDL_Color glowColor = {255, 215, 0, 255};  // 勝利時のグロー色（金色）
         } judgePhase;
+        
+        // 勝利表示UI設定（「〜を倒した。経験値が〜」）
+        struct {
+            UIPosition position;      // 位置（画面中央からの相対位置）
+            float offsetY = -100.0f;  // Yオフセット（centerYからの相対位置）
+            SDL_Color textColor = {255, 255, 255, 255};  // テキスト色（白色）
+            SDL_Color backgroundColor = {0, 0, 0, 200};  // 背景色（半透明の黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白色）
+            int padding = 12;         // 背景のパディング
+            std::string format = "{enemyName}を倒した。経験値が{expGained}";  // テキストフォーマット（{enemyName}, {expGained}が置換される）
+        } victoryDisplay;
+        
+        // レベルアップ表示UI設定
+        struct {
+            UIPosition position;      // 位置（画面中央からの相対位置）
+            float offsetY = -100.0f;  // Yオフセット（centerYからの相対位置）
+            SDL_Color textColor = {255, 255, 255, 255};  // テキスト色（白色）
+            SDL_Color backgroundColor = {0, 0, 0, 200};  // 背景色（半透明の黒）
+            SDL_Color borderColor = {255, 255, 255, 255};  // ボーダー色（白色）
+            int padding = 12;         // 背景のパディング
+            std::string singleLevelFormat = "レベルアップ！\n{playerName}はレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}";  // 1レベルアップ時のフォーマット
+            std::string multiLevelFormat = "レベルアップ！\n{playerName}はレベル{oldLevel}からレベル{newLevel}になった！\nHP+{hpGain} MP+{mpGain} 攻撃力+{attackGain} 防御力+{defenseGain}";  // 複数レベルアップ時のフォーマット
+        } levelUpDisplay;
         
         // ステータス上昇呪文の攻撃倍率表示UI設定
         struct {

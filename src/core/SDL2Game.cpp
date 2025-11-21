@@ -154,6 +154,11 @@ void SDL2Game::initializeGame() {
         loaded = player->autoLoad(nightTimer, nightTimerActive);
     }
     
+    // ゲーム起動時にHPが最大値でない場合、最大値まで回復
+    if (player->getHp() < player->getMaxHp()) {
+        player->setHp(player->getMaxHp());
+    }
+    
     if (loaded) {
         // セーブファイルからロード成功
         TownState::s_nightTimer = nightTimer;
@@ -438,7 +443,7 @@ void SDL2Game::initializeGame() {
             player->hasSeenNightExplanation = true; // 夜の説明も見たことにする
             player->hasSeenResidentBattleExplanation = true; // 住民戦の説明も見たことにする
             player->hasSeenCastleStory = true; // 城の会話は見たことにする
-            player->hasSeenDemonCastleStory = false; // 魔王の城の会話はまだ見ていない（fromCastleStateなので表示される）
+            player->hasSeenDemonCastleStory = true; // 魔王の城の会話は見たことにする（2回目以降として扱う）
             
             // 信頼度を適切に設定（レベル100なので高い信頼度）
             player->setKingTrust(30); // 住民を倒したので王様からの信頼度は低い
@@ -771,6 +776,48 @@ void SDL2Game::initializeGame() {
 void SDL2Game::loadResources() {
     bool fontLoaded = false;
     
+#ifdef _WIN32
+    // Windows用フォント（複数のパス形式を試行）
+    const char* fontPaths[] = {
+        "C:/Windows/Fonts/meiryo.ttc",
+        "C:\\Windows\\Fonts\\meiryo.ttc",
+        "C:/Windows/Fonts/msgothic.ttc",
+        "C:\\Windows\\Fonts\\msgothic.ttc",
+        "C:/Windows/Fonts/msmincho.ttc",
+        "C:\\Windows\\Fonts\\msmincho.ttc",
+        "C:/Windows/Fonts/YuGothM.ttc",
+        "C:\\Windows\\Fonts\\YuGothM.ttc",
+        "C:/Windows/Fonts/yugothic.ttf",
+        "C:\\Windows\\Fonts\\yugothic.ttf"
+    };
+    
+    for (const char* fontPath : fontPaths) {
+        if (graphics.loadFont(fontPath, 16, "default")) {
+            fontLoaded = true;
+            std::cerr << "フォント読み込み成功: " << fontPath << std::endl;
+            break;
+        }
+    }
+    
+    if (fontLoaded) {
+        // タイトル用フォント（同じフォントで大きいサイズ）
+        const char* titleFontPaths[] = {
+            "C:/Windows/Fonts/meiryo.ttc",
+            "C:\\Windows\\Fonts\\meiryo.ttc",
+            "C:/Windows/Fonts/msgothic.ttc",
+            "C:\\Windows\\Fonts\\msgothic.ttc"
+        };
+        
+        for (const char* fontPath : titleFontPaths) {
+            if (graphics.loadFont(fontPath, 32, "title")) {
+                break;
+            }
+        }
+    } else {
+        std::cerr << "警告: 日本語フォントが見つかりません。UIが正しく表示されない可能性があります。" << std::endl;
+    }
+#elif __APPLE__
+    // macOS用フォント
     // 1. ヒラギノ角ゴシック W3 - 確実な日本語フォント
     if (graphics.loadFont("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc", 16, "default")) {
         fontLoaded = true;
@@ -791,6 +838,21 @@ void SDL2Game::loadResources() {
     else if (graphics.loadFont("/System/Library/Fonts/Hiragino Sans GB.ttc", 16, "default")) {
         fontLoaded = true;
     }
+#else
+    // Linux用フォント
+    if (graphics.loadFont("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc", 16, "default")) {
+        fontLoaded = true;
+    }
+    else if (graphics.loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16, "default")) {
+        fontLoaded = true;
+    }
+    
+    if (fontLoaded) {
+        if (!graphics.loadFont("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc", 32, "title")) {
+            graphics.loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32, "title");
+        }
+    }
+#endif
     // 画像リソース読み込み
     loadGameImages();
     

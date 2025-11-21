@@ -21,22 +21,29 @@ DemonCastleState::DemonCastleState(std::shared_ptr<Player> player, bool fromCast
     fadeTimer = 0.0f;
     fadeDuration = 0.5f;
     
+    // fromCastleStateがtrueで、hasSeenDemonCastleStoryがtrueの場合（2回目以降の訪問）、
+    // s_demonCastleFirstTimeをfalseにして、2回目以降の状態にする
+    if (fromCastleState && player->hasSeenDemonCastleStory) {
+        s_demonCastleFirstTime = false;
+    }
+    
     // fromCastleStateがtrueでも、最初の方のイベント（s_demonCastleFirstTimeがtrue）の場合は
     // 「ここは？」のメッセージを表示する
     if (fromCastleState && !s_demonCastleFirstTime) {
         demonDialogues = {
-            "ついに街を滅ぼせたか。よくやった、勇者よ。これで我ら2人が世界を支配できる。",
-            "どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
-            "誰がお前を生かしておくと言った？最後はお前だ。覚悟しろ！"
+            "魔王: ついに街を滅ぼしたのか。よくやった、勇者。これで我ら2人が世界を支配できる。",
+            "魔王: どうした、なぜ喜ばない？もうお前の好きなようにしていいのだぞ？",
+            "勇者: フッ、我ら2人？笑わせるナ。もうお前を生かしてオク必要もないダロ？",
+            "勇者: もう前までの私ではないからナァ・・・もう分かるナ・・・？サア、逃ゲルナヨッ！！"
         };
     } else if (s_demonCastleFirstTime) {
         demonDialogues = {
-            "天の声: ここは、、？魔王の城？なぜ勇者と魔王が話しているのでしょうか？\nちょっと聞いてみましょう！",
+            "ここは、、？魔王の城？なぜ勇者と魔王が話しているのでしょうか？\nちょっと聞いてみましょう！",
             "魔王: 王様に魔王討伐を頼まれただと？\nハハハ、実に愉快だ。よくやったぞ、" + player->getName() + "。",
             "魔王: お前は完全に王様に信用されている。このまま王様に気づかれないように街を滅ぼすのだ。\nだが、、なにも功績を上げずに街を滅ぼすのはさすがに王様に勘付かれるであろう。", 
             "魔王: そこでお前は我が手下たちを倒すことで王様からの信頼を得るのだ。\nその合間に街の住民を倒していくことで、勘付かれずに街を滅ぼすことができる。", 
             "魔王: 頼んだぞ、勇者よ。我々2人で最高の世界を作り上げようじゃないか。\nもしも街を滅ぼせなかった時は、、分かっているだろうな？",
-            "天の声: 勇者は魔王より弱いため逆らえないみたいですね、、\nそれでは、街を滅ぼすために頑張っていきましょう。",
+            "勇者は魔王より弱いため逆らえないみたいですね、、\nそれでは、街を滅ぼすために頑張っていきましょう。",
         };
     } else {
         demonDialogues = {
