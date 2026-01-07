@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# ドラクエ風RPG 起動スクリプト (macOS/Linux)
-
 # スクリプトのディレクトリに移動
 cd "$(dirname "$0")"
 

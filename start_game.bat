@@ -1,5 +1,4 @@
 @echo off
-REM ドラクエ風RPG 起動スクリプト (Windows)
 
 REM スクリプトのディレクトリに移動
 cd /d "%~dp0"
