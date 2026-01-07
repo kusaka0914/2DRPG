@@ -24,7 +24,7 @@ SDL2Game::~SDL2Game() {
 }
 
 bool SDL2Game::initialize() {
-    if (!graphics.initialize("ドラクエ風RPG", SCREEN_WIDTH, SCREEN_HEIGHT)) {
+    if (!graphics.initialize("堕天勇者と終焉の王都 -魔王に捧ぐ反逆の剣-", SCREEN_WIDTH, SCREEN_HEIGHT)) {
         std::cerr << "グラフィックス初期化に失敗しました。" << std::endl;
         return false;
     }
